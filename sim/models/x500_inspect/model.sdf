@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 巡检机型：PX4 的 x500 机体 + 本项目的双相机云台（结构与 PX4 的 x500_gimbal 相同）。 -->
+<sdf version='1.9'>
+  <model name='x500_inspect'>
+    <include merge='true'>
+      <uri>model://x500</uri>
+    </include>
+    <include merge='true'>
+      <uri>model://inspect_gimbal</uri>
+      <pose>0 0 0.26 0 0 3.14</pose>
+    </include>
+    <joint name="GimbalAttachJoint" type="fixed">
+      <parent>base_link</parent>
+      <child>cgo3_mount_link</child>
+    </joint>
+  </model>
+</sdf>

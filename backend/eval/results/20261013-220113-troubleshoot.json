@@ -1,0 +1,68 @@
+{
+ "suite": "troubleshoot",
+ "rows": [
+  {
+   "fault": "rate_gain_high",
+   "label": "横滚 / 俯仰角速度环增益过大",
+   "correct": false,
+   "params": [],
+   "flights": 2,
+   "minutes": 2.2,
+   "cost_yuan": 0.00224,
+   "root_cause": "所有指标均在阈值内，抖动与啸叫并非由参数差异导致，恢复PID参数后指标无实质改善",
+   "rule_baseline_param": "MC_ROLLRATE_D",
+   "rule_baseline_correct": true
+  },
+  {
+   "fault": "attitude_gain_low",
+   "label": "姿态增益过小",
+   "correct": true,
+   "params": [
+    "MC_ROLL_P",
+    "MC_PITCH_P"
+   ],
+   "flights": 2,
+   "minutes": 1.9,
+   "cost_yuan": 0.00237,
+   "root_cause": "横滚/俯仰姿态环P增益被调得过低（1.2 vs 参考4.0），导致姿态响应迟缓、横移后长时间晃动，且振动偏高。",
+   "rule_baseline_param": "COM_DISARM_LAND",
+   "rule_baseline_correct": false
+  },
+  {
+   "fault": "yaw_slow",
+   "label": "航向控制增益过小",
+   "correct": true,
+   "params": [
+    "MC_YAWRATE_P",
+    "MC_YAW_P"
+   ],
+   "flights": 3,
+   "minutes": 3.2,
+   "cost_yuan": 0.00294,
+   "root_cause": "偏航角速度环增益 MC_YAWRATE_P 与偏航角增益 MC_YAW_P 均被调得过低，导致转机头响应迟缓、偏航跟踪误差超限。",
+   "rule_baseline_param": "COM_DISARM_LAND",
+   "rule_baseline_correct": false
+  },
+  {
+   "fault": "altitude_weak",
+   "label": "高度控制增益过小",
+   "correct": true,
+   "params": [
+    "MPC_Z_P",
+    "MPC_Z_VEL_P_ACC",
+    "MPC_Z_VEL_I_ACC"
+   ],
+   "flights": 2,
+   "minutes": 2.8,
+   "cost_yuan": 0.0023,
+   "root_cause": "高度控制环增益（MPC_Z_P、MPC_Z_VEL_P_ACC、MPC_Z_VEL_I_ACC）被调得过低，导致高度保持不稳、爬升慢。",
+   "rule_baseline_param": "COM_DISARM_LAND",
+   "rule_baseline_correct": false
+  }
+ ],
+ "summary": {
+  "accuracy": 0.75,
+  "rule_baseline_accuracy": 0.25,
+  "avg_flights": 2.2
+ }
+}

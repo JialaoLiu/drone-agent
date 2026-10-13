@@ -1,0 +1,66 @@
+{
+ "suite": "troubleshoot",
+ "rows": [
+  {
+   "fault": "rate_gain_high",
+   "label": "横滚 / 俯仰角速度增益过大",
+   "correct": false,
+   "params": [],
+   "flights": 2,
+   "minutes": 2.1,
+   "cost_yuan": 0.00249,
+   "root_cause": "悬停抖动与照片模糊并非由参数差异引起，所有指标均在阈值内且恢复 MC_ROLLRATE_P/MC_PITCHRATE_P 后无改善",
+   "rule_baseline_param": "MC_ROLLRATE_P",
+   "rule_baseline_correct": true
+  },
+  {
+   "fault": "attitude_gain_low",
+   "label": "姿态增益过小",
+   "correct": true,
+   "params": [
+    "MC_ROLL_P",
+    "MC_PITCH_P"
+   ],
+   "flights": 2,
+   "minutes": 1.9,
+   "cost_yuan": 0.0023,
+   "root_cause": "横滚/俯仰角速度环P增益过低（1.2 vs 参考4.0），姿态响应迟缓导致横移后晃动、姿态跟踪超差",
+   "rule_baseline_param": "COM_DISARM_LAND",
+   "rule_baseline_correct": false
+  },
+  {
+   "fault": "yaw_slow",
+   "label": "航向控制增益过小",
+   "correct": true,
+   "params": [
+    "MC_YAWRATE_P"
+   ],
+   "flights": 2,
+   "minutes": 2.1,
+   "cost_yuan": 0.00208,
+   "root_cause": "MC_YAWRATE_P 偏低导致偏航角速度环增益不足，转机头响应慢、偏航跟踪误差超标",
+   "rule_baseline_param": "MPC_XY_CRUISE",
+   "rule_baseline_correct": false
+  },
+  {
+   "fault": "altitude_weak",
+   "label": "高度控制增益过小",
+   "correct": true,
+   "params": [
+    "MPC_Z_P",
+    "MPC_Z_VEL_P_ACC"
+   ],
+   "flights": 2,
+   "minutes": 2.1,
+   "cost_yuan": 0.00213,
+   "root_cause": "高度控制参数 MPC_Z_P 和 MPC_Z_VEL_P_ACC 被调低，导致高度环响应变慢、爬升慢且高度保持不稳。",
+   "rule_baseline_param": "COM_DISARM_LAND",
+   "rule_baseline_correct": false
+  }
+ ],
+ "summary": {
+  "accuracy": 0.75,
+  "rule_baseline_accuracy": 0.25,
+  "avg_flights": 2.0
+ }
+}

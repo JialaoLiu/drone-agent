@@ -1,0 +1,18 @@
+# 模型单价（元 / 百万 Token），来源：DeepSeek 官网“模型细节”页面，2026-10-13 抄录（与 data-agent 相同）。OpenAI 等未列出的模型费用记为空。
+# 价格变化时只改这个文件。计费按接口返回的实际模型名（例如请求 deepseek-chat，实际由 deepseek-flash 提供服务）。
+#
+# 高峰时段：北京时间周一至周五 9:00–12:00、14:00–18:00；其余时间（含周末与法定节假日）为空闲时段，价格为高峰的一半。
+# 中国法定节假日无法自动推算，需在 holidays 中手动列出（按 YYYY-MM-DD），列出的日期全天按空闲时段计价。
+timezone_offset_hours: 8
+peak_hours: [[9, 12], [14, 18]]
+holidays: []
+
+models:
+  deepseek-flash:
+    aliases: [deepseek-chat, deepseek-v4-flash, deepseek-v4-flash-vision-exp]
+    peak: {input_cache_hit: 0.04, input_cache_miss: 2.0, output: 8.0}
+    idle: {input_cache_hit: 0.02, input_cache_miss: 1.0, output: 4.0}
+  deepseek-v4-pro:
+    aliases: []
+    peak: {input_cache_hit: 0.30, input_cache_miss: 9.0, output: 27.0}
+    idle: {input_cache_hit: 0.15, input_cache_miss: 4.5, output: 13.5}

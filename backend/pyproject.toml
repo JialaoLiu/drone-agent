@@ -1,0 +1,40 @@
+[project]
+name = "droneagent"
+version = "0.1.0"
+description = "无人机巡检多 Agent 系统：任务规划、安全校验、仿真飞行、视觉巡检与报告"
+readme = "README.md"
+authors = [
+    { name = "JialaoLiu", email = "Jarvis_Ishiyari@outlook.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "duckdb>=1.5.6",
+    "fastapi>=0.143.0",
+    "httpx>=0.28.1",
+    "langgraph>=1.2.15",
+    "langgraph-checkpoint-sqlite>=3.1.2",
+    "mavsdk>=4.0.6",
+    "mcp>=2.3.0",
+    "numpy>=2.5.4",
+    "pillow>=12.3.0",
+    "pydantic>=2.14.1",
+    "pyulog>=1.2.4",
+    "pyyaml>=6.0.3",
+    "scipy>=1.18.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+# 桌面目录下虚拟环境的 .pth 文件可能被系统标记为隐藏而被 Python 忽略，测试直接指定源码路径。
+pythonpath = ["src"]
+testpaths = ["tests"]

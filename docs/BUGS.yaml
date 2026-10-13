@@ -1,0 +1,164 @@
+# 问题记录。每个真实遇到的问题一条，详细过程见 engineering-log.md。
+# status: open / fixed / verified（修复后经评测或实测确认）
+format_version: 1
+project: drone-agent
+updated: "2026-10-13"
+bugs:
+  - id: DR-001
+    title: PX4 与 Gazebo 互相找不到
+    status: verified
+    found_by: 首次启动仿真
+    cause: Gazebo 的服务发现默认走组播，本机报 “No route to host”。
+    fix: 启动脚本固定 GZ_IP=127.0.0.1，只走本机回环。
+    verification: PX4 正常连接 Gazebo 世界，飞行试验通过。
+  - id: DR-002
+    title: 加了 Metal 渲染参数后，相机和整个仿真卡住
+    status: verified
+    found_by: 按日志里的渲染错误提示排查
+    cause: 传感器渲染线程卡在初始化，阻塞仿真步进；原来那条 Ogre 错误只是插件探测失败，渲染其实正常。
+    fix: 不加 Metal 参数；脚本中注明那条错误可以忽略。
+    verification: 用只有一个相机的最小场景逐个比较参数，相机出图正常、飞控可解锁。
+  - id: DR-003
+    title: MAVSDK v4 接口变化，旧写法报错
+    status: verified
+    found_by: 第一次飞行脚本
+    cause: v4 改为原生绑定，插件需要显式构造。
+    fix: 按 v4 重写飞行封装；同一个 UDP 端口只建一个 MAVSDK 实例，重连时复用。
+    verification: 起飞、移动、云台、取图、返航全流程通过。
+  - id: DR-004
+    title: PX4 不认自定义机型目录
+    status: verified
+    found_by: 接入双相机机型
+    cause: PX4 启动脚本内部会重新加载自己的环境，覆盖外部设置的 PX4_GZ_MODELS。
+    fix: 巡检机直接写进场景文件；PX4 用 PX4_GZ_MODEL_NAME 连接已有的模型。
+    verification: PX4 日志显示连接到 x500_inspect_0，两台相机都出图。
+  - id: DR-005
+    title: 相机桥端口被占用
+    status: verified
+    found_by: 启动相机桥
+    cause: 本机 8765 端口已被另一个程序使用。
+    fix: 改用 8874，可配置。
+    verification: 相机桥正常提供照片和位姿。
+  - id: DR-006
+    title: 第一版场景太简单，体现不出近距复核的价值
+    status: verified
+    found_by: 视觉模型首次测试（只初筛就 10/10，没有误报）
+    cause: 缺陷太明显，也没有干扰。
+    fix: 轻微缺陷改细、改暗；15% 的正常板加阴影或反光；太阳方向随场景随机。
+    verification: 只初筛检出 7/10、误报 4 块；全部复核后检出 10/10、误报 0 块。
+  - id: DR-007
+    title: 复核把真缺陷悄悄排除
+    status: verified
+    found_by: 实时任务对照标准答案（检出率 0%）
+    cause: 复核结论无法识别时，代码默认判为“正常”。
+    fix: 结论严格规范化，无法识别时判为“不确定”；初筛很确定、复核却判正常时再看一次；规则放进 inspection.py，实时任务与评测共用。
+    verification: 同一场景重新执行，3/3 检出、误报 0；新增单元测试。
+  - id: DR-008
+    title: 后排板的下边缘被前排挡住，误判为“缺失”
+    status: verified
+    found_by: 全面巡检对照标准答案（误报 D-R2-C04）
+    cause: 斜上方拍摄时，前排板遮住后排板的下边缘，形成黑色条带。
+    fix: 巡检员的判断说明里写明遮挡的样子；“缺失”必须是整块板都看不到电池片。
+    verification: 离线评测中，全部复核的误报降到 0–1 次（6 次运行）。
+  - id: DR-009
+    title: 轻微污损被当成反光
+    status: verified
+    found_by: 离线评测（全部复核仍漏检轻微污损）
+    cause: 场景生成器把轻微污损画成了半透明，和“半透明的亮区是反光”这条规则冲突；是数据不真实。
+    fix: 轻微污损改为面积小但不透明；重新生成场景并重新录制。
+    verification: 全部复核的轻微缺陷检出率提高到 93%。
+  - id: DR-010
+    title: 返航高度超出场地限高
+    status: verified
+    found_by: 检查实时任务的返航过程
+    cause: PX4 默认返航高度是 60 米，场地限高 40 米。
+    fix: 正常返航由程序沿已校验的航线执行；失联保护的返航高度设为 30 米。
+    verification: 多次任务返航高度不超过拍摄高度。
+  - id: DR-011
+    title: 电量估计偏低
+    status: verified
+    found_by: 实时任务（估计 21%，实际 28%）
+    cause: 主要时间花在悬停等待初筛和缓慢降落，旧估计没有计入。
+    fix: 按实测标定各段耗时，并保留 1.2 倍保守系数。
+    verification: 之后的任务实际耗电都低于估计值。
+  - id: DR-012
+    title: 要求“一块都不能漏”，规划员却降低了复核策略
+    status: verified
+    found_by: 全面巡检漏掉两条细裂纹
+    cause: 安全员以电量不足拒绝后，规划员只会降低策略。
+    fix: 增加多架次（降落换电池）；细致任务优先增加架次。
+    verification: 第一架次的 3 列检出全部 7 个缺陷（包括两条细裂纹）。
+  - id: DR-013
+    title: 第二架次云台不听指令，任务中断，飞机悬停在空中
+    status: verified
+    found_by: 多架次实时任务
+    cause: 重新上锁后云台控制权丢失；这个异常没有被捕获。
+    fix: 云台失败时重新获取控制权再试一次；所有飞行异常都转为 FlightError 并返航；任务流程外的异常触发紧急返航；增加一键返航。
+    verification: 一键返航实测落地；之后的多架次任务正常。
+  - id: DR-014
+    title: 报告员误读数据（说“没有复核照片”）
+    status: verified
+    found_by: 检查报告
+    cause: 交给报告员的数据含照片编号这类含义不清的字段。
+    fix: 改为“确认方式”等直白字段；没有内容的项不提。
+    verification: 之后的报告描述与数据一致。
+  - id: DR-015
+    title: 规划员的说明里出现参数名和英文代号
+    status: verified
+    found_by: 网页截图检查
+    fix: 提示词要求面向现场人员的中文说明。
+    verification: 之后的计划说明为自然中文。
+  - id: DR-016
+    title: 人工确认后，“等待确认”的事件重复出现
+    status: fixed
+    found_by: 代码审查
+    cause: LangGraph 恢复中断时会重新执行被中断的节点，副作用写在了中断之前。
+    fix: 状态更新移到单独的节点 request_approval，中断节点只负责中断。
+  - id: DR-017
+    title: 打开网页时不显示等待确认的任务
+    status: verified
+    found_by: 网页截图检查
+    fix: 打开页面时自动接上进行中或等待确认的任务。
+    verification: 截图中显示计划确认卡片。
+  - id: DR-018
+    title: 场景录制在启动仿真时报解码错误
+    status: verified
+    found_by: 录制场景 2、3
+    cause: 启动脚本的输出按 UTF-8 解码失败。
+    fix: 输出按字节读取，出错时容错解码。
+    verification: 三个场景录制完成。
+  - id: DR-019
+    title: 重新生成场景后录制的仍是旧贴图
+    status: verified
+    found_by: 检查录制逻辑
+    cause: 仿真进程不会重新加载贴图。
+    fix: 录制前总是重启仿真。
+    verification: 重新录制的照片使用新贴图。
+  - id: DR-020
+    title: 排障评测中一个故障在仿真里看不出来
+    status: verified
+    found_by: 排障评测（诊断员判“不是参数问题”）
+    cause: 仿真中的飞机比真机宽容，角速度增益提高后仍然稳定；是场景设计错了，不是诊断员错了。
+    fix: 每个故障先试飞标定，只保留指标上稳定可见的；增加“与参数无关”的场景。
+    verification: 两次独立运行均 4/4，规则基线 0/4。
+  - id: DR-021
+    title: “已知良好配置”被本系统自己污染
+    status: verified
+    found_by: 检查参考配置
+    cause: 起飞时调用 set_takeoff_altitude 会改写 MIS_TAKEOFF_ALT，而参考配置是从运行中的飞机快照来的。
+    fix: 参考配置改为 PX4 固件默认值；本系统会写的参数不纳入比较。
+    verification: 参考配置与固件默认一致。
+  - id: DR-022
+    title: 参数恢复不完整，故障带进下一个场景
+    status: verified
+    found_by: 故障标定
+    cause: 陀螺滤波参数不在关注列表里，恢复时漏掉了。
+    fix: 可能注入的参数都纳入列表；试飞中动作超时记为观察结果，不中断。
+    verification: 重启仿真并恢复参数后，健康基线全部正常。
+  - id: DR-023
+    title: 排障评测结束后不写报告
+    status: verified
+    found_by: 评测结果目录缺少新报告
+    cause: asyncio.run 退出时等待 MAVSDK 的后台线程，一直挂起。
+    fix: 手动管理事件循环，写完报告后退出。
+    verification: 报告正常生成。
