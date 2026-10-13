@@ -42,6 +42,7 @@ class Panel:
     corners: list[list[float]]
     defect: dict | None = None
     distractor: str | bool | None = None   # 正常板上的干扰（阴影、反光），不算缺陷
+    yaw: float = 0.0                        # 所在阵列的朝向（弧度，0 为正南朝向）
 
 
 @dataclass
@@ -164,41 +165,136 @@ def _ground(rng: random.Random, size: int = 2048) -> Image.Image:
 
 # ---------- 场地布局 ----------
 
+STANDOFF = 20.0          # 规划时默认的整列拍摄距离，生成布局时保证这个距离的拍摄点可用
+MAX_PANELS = 120         # 单个场景的板数上限，控制拍摄与评测耗时
+NFZ_LABELS = ["变电站", "民房", "高压线塔", "养殖场"]
+
+
+def _inside(poly: list[list[float]], x: float, y: float) -> bool:
+    inside, j = False, len(poly) - 1
+    for i in range(len(poly)):
+        xi, yi = poly[i]
+        xj, yj = poly[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi + 1e-12) + xi:
+            inside = not inside
+        j = i
+    return inside
+
+
+def _edge_distance(poly: list[list[float]], x: float, y: float) -> float:
+    best = float("inf")
+    for i in range(len(poly)):
+        (ax, ay), (bx, by) = poly[i], poly[(i + 1) % len(poly)]
+        dx, dy = bx - ax, by - ay
+        t = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)))
+        best = min(best, math.hypot(x - (ax + t * dx), y - (ay + t * dy)))
+    return best
+
+
+def _array_size(rows: int, cols: int) -> tuple[float, float]:
+    row_pitch = PANEL_L * math.cos(TILT) + 0.4
+    return cols * (PANEL_W + PANEL_GAP) - PANEL_GAP, rows * row_pitch
+
+
+def _viewpoint_xy(center: list[float], yaw: float, distance: float = STANDOFF) -> tuple[float, float]:
+    """整列拍摄点的水平位置：沿板面法线（朝南偏 yaw）退后 distance 米。"""
+    s = math.sin(TILT) * distance
+    return center[0] + s * math.sin(yaw), center[1] - s * math.cos(yaw)
+
+
 def _layout(rng: random.Random) -> dict:
-    arrays = []
-    names = "ABCD"
-    for i, (x, y) in enumerate([(14, 18), (14, 30), (34, 18), (34, 30)]):
-        arrays.append({"id": names[i], "center": [x + rng.uniform(-1, 1), y + rng.uniform(-1, 1)], "rows": 2, "cols": 10})
-    return {
-        "geofence": [[-25, -20], [70, -20], [70, 60], [-25, 60]],
-        "max_altitude": 40.0,
-        "min_altitude": 5.0,
-        "no_fly_zones": [{"id": "NFZ-1", "label": "变电站", "center": [-12.0, 35.0], "radius": 9.0}],
-        "obstacles": [{"id": f"T{k + 1}", "label": "树", "center": c, "radius": 2.5, "height": 9.0}
-                      for k, c in enumerate([[52, 8], [55, 44], [2, 48], [-5, 5]])],
-        "arrays": arrays,
-    }
+    """完全随机的场地布局：围栏形状、禁飞区、阵列数量 / 位置 / 朝向 / 行列数、树的位置都随种子变化。
+
+    用拒绝采样保证布局可飞：阵列互不重叠且在围栏内；每列在默认拍摄距离处的拍摄点在围栏内、
+    远离禁飞区和树；起飞点不在阵列或禁飞区里。生成失败时换一个子种子重试。
+    """
+    for _ in range(200):
+        # 围栏：以场地中心为圆心、半径随机起伏的六边形，起飞点 (0, 0) 位于其中靠边的位置
+        cx, cy = rng.uniform(15, 35), rng.uniform(10, 30)
+        sides = rng.randint(5, 7)
+        base = rng.uniform(55, 70)
+        start = rng.uniform(0, 2 * math.pi)
+        fence = [[round(cx + base * rng.uniform(0.8, 1.15) * math.cos(start + 2 * math.pi * k / sides), 1),
+                  round(cy + base * rng.uniform(0.8, 1.15) * math.sin(start + 2 * math.pi * k / sides), 1)] for k in range(sides)]
+        if not _inside(fence, 0, 0) or _edge_distance(fence, 0, 0) < 6:
+            continue
+        # 禁飞区：1–2 个，离起飞点至少 20 米
+        zones = []
+        for k in range(rng.randint(1, 2)):
+            for _ in range(50):
+                zx, zy = rng.uniform(cx - base * 0.8, cx + base * 0.8), rng.uniform(cy - base * 0.8, cy + base * 0.8)
+                r = rng.uniform(6, 11)
+                if (_inside(fence, zx, zy) and math.hypot(zx, zy) > r + 20 and _edge_distance(fence, zx, zy) > 2
+                        and all(math.dist((zx, zy), z["center"]) > z["radius"] + r + 10 for z in zones)):
+                    zones.append({"id": f"NFZ-{k + 1}", "label": rng.choice(NFZ_LABELS), "center": [round(zx, 1), round(zy, 1)], "radius": round(r, 1)})
+                    break
+        # 阵列：2–6 列，行列数与朝向随机（朝南，偏角 ±30°）
+        arrays, panels = [], 0
+        target = rng.randint(2, 6)
+        for _ in range(400):
+            if len(arrays) >= target:
+                break
+            rows, cols = rng.randint(1, 3), rng.randint(6, 14)
+            if panels + rows * cols > MAX_PANELS:
+                continue
+            w, length = _array_size(rows, cols)
+            yaw = math.radians(rng.uniform(-30, 30))
+            ax, ay = rng.uniform(cx - base, cx + base), rng.uniform(cy - base, cy + base)
+            radius = math.hypot(w, length) / 2 + 2
+            vx, vy = _viewpoint_xy([ax, ay], yaw)
+            ok = (_inside(fence, ax, ay) and _edge_distance(fence, ax, ay) > radius + 2
+                  and _inside(fence, vx, vy) and _edge_distance(fence, vx, vy) > 3
+                  and math.hypot(ax, ay) > radius + 6
+                  and all(math.dist((ax, ay), z["center"]) > z["radius"] + radius + 4 for z in zones)
+                  and all(math.dist((vx, vy), z["center"]) > z["radius"] + 6 for z in zones)
+                  and all(math.dist((ax, ay), a["center"]) > radius + a["radius"] + 4 for a in arrays)
+                  and all(math.dist((vx, vy), a["center"]) > a["radius"] + 3 for a in arrays)
+                  and all(math.dist(_viewpoint_xy(a["center"], math.radians(a["yaw_deg"])), (ax, ay)) > radius + 3 for a in arrays))
+            if ok:
+                arrays.append({"id": "ABCDEF"[len(arrays)], "center": [round(ax, 2), round(ay, 2)], "rows": rows, "cols": cols,
+                               "yaw_deg": round(math.degrees(yaw), 1), "radius": round(radius, 2)})
+                panels += rows * cols
+        if len(arrays) < 2:
+            continue
+        # 树：3–8 棵，避开阵列、拍摄点、起飞点
+        trees = []
+        for _ in range(300):
+            if len(trees) >= rng.randint(3, 8):
+                break
+            tx, ty = rng.uniform(cx - base, cx + base), rng.uniform(cy - base, cy + base)
+            if (_inside(fence, tx, ty) and math.hypot(tx, ty) > 8
+                    and all(math.dist((tx, ty), a["center"]) > a["radius"] + 4 for a in arrays)
+                    and all(math.dist((tx, ty), _viewpoint_xy(a["center"], math.radians(a["yaw_deg"]))) > 6 for a in arrays)
+                    and all(math.dist((tx, ty), z["center"]) > z["radius"] + 3 for z in zones)):
+                trees.append({"id": f"T{len(trees) + 1}", "label": "树", "center": [round(tx, 1), round(ty, 1)],
+                              "radius": round(rng.uniform(2, 3.2), 1), "height": round(rng.uniform(6, 11), 1)})
+        return {"geofence": fence, "max_altitude": 40.0, "min_altitude": 5.0, "no_fly_zones": zones, "obstacles": trees,
+                "arrays": arrays}
+    raise RuntimeError("没能生成可飞的布局")
 
 
 def _panels(arrays: list[dict], defect_rate: float, rng: random.Random, distractor_rate: float = 0.15) -> list[Panel]:
-    rotation = rpy_to_matrix(TILT, 0, 0)
     row_pitch = PANEL_L * math.cos(TILT) + 0.4
     panels = []
     for a in arrays:
-        total_w = a["cols"] * (PANEL_W + PANEL_GAP) - PANEL_GAP
-        total_l = a["rows"] * row_pitch
+        yaw = math.radians(a.get("yaw_deg", 0.0))
+        rotation = rpy_to_matrix(TILT, 0, yaw)
+        heading = rpy_to_matrix(0, 0, yaw)
+        total_w, total_l = _array_size(a["rows"], a["cols"])
         a["size"] = [round(total_w, 2), round(total_l, 2)]
         for r in range(a["rows"]):
             for c in range(a["cols"]):
-                cx = a["center"][0] - total_w / 2 + PANEL_W / 2 + c * (PANEL_W + PANEL_GAP)
-                cy = a["center"][1] - total_l / 2 + row_pitch / 2 + r * row_pitch
-                center = (cx, cy, PANEL_HEIGHT)
+                # 阵列坐标系中的偏移（x 沿行、y 朝北坡顶），按阵列朝向旋转到世界坐标
+                dx = -total_w / 2 + PANEL_W / 2 + c * (PANEL_W + PANEL_GAP)
+                dy = -total_l / 2 + row_pitch / 2 + r * row_pitch
+                ox, oy, _ = mat_vec(heading, (dx, dy, 0.0))
+                center = (a["center"][0] + ox, a["center"][1] + oy, PANEL_HEIGHT)
                 corners = []
                 for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
                     off = mat_vec(rotation, (sx * PANEL_W / 2, sy * PANEL_L / 2, PANEL_T / 2))
                     corners.append([round(center[i] + off[i], 4) for i in range(3)])
                 panels.append(Panel(id=f"{a['id']}-R{r + 1}-C{c + 1:02d}", array=a["id"], row=r + 1, col=c + 1,
-                                    center=[round(v, 4) for v in center], corners=corners))
+                                    center=[round(v, 4) for v in center], corners=corners, yaw=round(yaw, 5)))
     count = max(1, round(len(panels) * defect_rate))
     weights = {"crack": 0.35, "soiling": 0.3, "broken": 0.25, "missing": 0.1}
     for p in rng.sample(panels, count):
@@ -224,14 +320,15 @@ def _panel_model(p: Panel, texture: str) -> str:
         f'<visual name="glass"><geometry><box><size>{PANEL_W} {PANEL_L} {PANEL_T}</size></box></geometry>'
         f'<material><diffuse>1 1 1 1</diffuse><ambient>0.9 0.9 0.9 1</ambient><specular>0.3 0.3 0.3 1</specular>'
         f'<pbr><metal><albedo_map>{texture}</albedo_map><roughness>0.35</roughness><metalness>0.1</metalness></metal></pbr></material></visual>')
-    return (f'<model name="panel_{p.id}"><static>true</static><pose>{x} {y} {z} {TILT} 0 0</pose>'
+    return (f'<model name="panel_{p.id}"><static>true</static><pose>{x} {y} {z} {TILT} 0 {p.yaw}</pose>'
             f'<link name="link">{glass}{frame}</link></model>')
 
 
 def _array_stand(a: dict) -> str:
     x, y = a["center"]
     w, length = a["size"]
-    return (f'<model name="stand_{a["id"]}"><static>true</static><pose>{x} {y} 0.45 0 0 0</pose><link name="link">'
+    yaw = math.radians(a.get("yaw_deg", 0.0))
+    return (f'<model name="stand_{a["id"]}"><static>true</static><pose>{x} {y} 0.45 0 0 {yaw:.5f}</pose><link name="link">'
             f'<visual name="beam"><geometry><box><size>{w} 0.12 0.9</size></box></geometry>'
             f'<material><diffuse>0.5 0.5 0.52 1</diffuse></material></visual>'
             f'<collision name="c"><geometry><box><size>{w} {length} 2.0</size></box></geometry></collision></link></model>')
@@ -251,7 +348,7 @@ def _tree(o: dict) -> str:
 
 def _substation(z: dict) -> str:
     x, y = z["center"]
-    return (f'<model name="substation"><static>true</static><pose>{x} {y} 0 0 0 0</pose><link name="link">'
+    return (f'<model name="nfz_{z["id"]}"><static>true</static><pose>{x} {y} 0 0 0 0</pose><link name="link">'
             f'<visual name="house"><pose>0 0 1.5 0 0 0</pose><geometry><box><size>6 4 3</size></box></geometry>'
             f'<material><diffuse>0.7 0.68 0.6 1</diffuse></material></visual>'
             f'<visual name="transformer"><pose>2 3.5 1 0 0 0</pose><geometry><box><size>2 1.5 2</size></box></geometry>'
@@ -266,6 +363,9 @@ def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun
     # 巡检机放在起飞点；PX4 以 PX4_GZ_MODEL_NAME 连接这个实例
     parts.append('<include><uri>model://x500_inspect</uri><name>x500_inspect_0</name><pose>0 0 0.25 0 0 0</pose></include>')
     o = site.origin
+    xs, ys = [p[0] for p in site.geofence], [p[1] for p in site.geofence]
+    gx, gy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    ground_size = max(max(xs) - min(xs), max(ys) - min(ys)) + 40     # 地面覆盖围栏外 20 米
     return f'''<?xml version="1.0" encoding="UTF-8"?>
 <!-- 由 droneagent.sim.scene 生成：场景 {name}，种子 {site.seed}。不要手改，重新生成即可。 -->
 <sdf version="1.9">
@@ -277,9 +377,9 @@ def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun
     <scene><grid>false</grid><ambient>0.55 0.55 0.55 1</ambient><background>0.62 0.75 0.9 1</background><shadows>true</shadows></scene>
     <model name="ground_plane"><static>true</static><link name="link">
       <collision name="collision"><geometry><plane><normal>0 0 1</normal><size>1 1</size></plane></geometry></collision>
-      <visual name="visual"><geometry><plane><normal>0 0 1</normal><size>160 160</size></plane></geometry>
+      <visual name="visual"><geometry><plane><normal>0 0 1</normal><size>{ground_size:.0f} {ground_size:.0f}</size></plane></geometry>
         <material><diffuse>1 1 1 1</diffuse><ambient>0.8 0.8 0.8 1</ambient><pbr><metal><albedo_map>{ground}</albedo_map><roughness>1</roughness></metal></pbr></material></visual>
-    </link><pose>22 20 0 0 0 0</pose></model>
+    </link><pose>{gx:.1f} {gy:.1f} 0 0 0 0</pose></model>
     <light name="sun" type="directional"><pose>0 0 500 0 0 0</pose><cast_shadows>true</cast_shadows><intensity>1</intensity>
       <direction>{sun[0]:.3f} {sun[1]:.3f} {sun[2]:.3f}</direction><diffuse>0.95 0.95 0.92 1</diffuse><specular>0.3 0.3 0.3 1</specular></light>
     {chr(10).join("    " + p for p in parts)}
@@ -290,24 +390,28 @@ def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun
 '''
 
 
-def generate(seed: int, name: str | None = None, defect_rate: float = 0.12, out_dir: Path | None = None) -> Path:
-    """生成场景，返回场景目录。"""
+def generate(seed: int, name: str | None = None, defect_rate: float = 0.12, out_dir: Path | None = None,
+             textures: bool = True) -> Path:
+    """生成场景，返回场景目录。textures=False 时只生成场地信息（用于布局评测，快）。"""
     name = name or f"solar_{seed}"
     rng = random.Random(seed)
     out = (out_dir or config.WORLDS_DIR) / name
     tex_dir = out / "textures"
-    tex_dir.mkdir(parents=True, exist_ok=True)
+    (tex_dir if textures else out).mkdir(parents=True, exist_ok=True)
     layout = _layout(rng)
     site = Site(name=name, seed=seed, origin=ORIGIN, geofence=layout["geofence"], max_altitude=layout["max_altitude"],
                 min_altitude=layout["min_altitude"], no_fly_zones=layout["no_fly_zones"], obstacles=layout["obstacles"],
                 arrays=layout["arrays"])
     site.panels = _panels(site.arrays, defect_rate, rng)
+    if not textures:
+        (out / "site.json").write_text(json.dumps(asdict(site), ensure_ascii=False, indent=1), encoding="utf-8")
+        return out
 
     ground = tex_dir / "ground.png"
     _ground(rng).save(ground)
     normal = tex_dir / "panel_normal.png"
     _panel_base(random.Random(seed * 7 + 1)).save(normal)
-    textures = {}
+    tex_paths = {}
     for p in site.panels:
         if p.defect and p.defect["type"] in DRAW:
             img = _panel_base(rng)
@@ -316,15 +420,15 @@ def generate(seed: int, name: str | None = None, defect_rate: float = 0.12, out_
             img = _panel_base(rng)
             p.distractor = _distractor(img, rng)
         else:
-            textures[p.id] = str(normal)
+            tex_paths[p.id] = str(normal)
             continue
         path = tex_dir / f"panel_{p.id}.png"
         img.save(path)
-        textures[p.id] = str(path)
+        tex_paths[p.id] = str(path)
 
     azimuth, elevation = rng.uniform(0, 2 * math.pi), rng.uniform(math.radians(35), math.radians(70))
     sun = (math.cos(elevation) * math.sin(azimuth), math.cos(elevation) * math.cos(azimuth), -math.sin(elevation))
-    (out / f"{name}.sdf").write_text(_world_sdf(name, site, textures, str(ground), sun), encoding="utf-8")
+    (out / f"{name}.sdf").write_text(_world_sdf(name, site, tex_paths, str(ground), sun), encoding="utf-8")
     data = asdict(site)
     (out / "site.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     return out

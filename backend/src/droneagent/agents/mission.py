@@ -105,7 +105,7 @@ def build_steps(site: dict, plan: dict, with_estimated_closeups: bool = True, ta
             panels = _panels(site, a["id"])
             n = math.ceil(len(panels) * EXPECTED_CLOSEUP_SHARE[plan["closeup_policy"]])
             steps += [survey.closeup_step(p, ov.position, "预估") for p in panels[:n]]
-    return steps
+    return survey.with_detours(steps, site)
 
 
 # ---------- 节点 ----------
@@ -146,6 +146,8 @@ async def planner(state: State) -> dict:
     steps = build_steps(site, params)
     params["estimated_minutes"] = round(sum(survey.route_seconds(build_steps(site, params, targets=s)) for s in params["sorties"]) / 60, 1)
     params["estimated_battery"] = [round(safety.battery_needed(build_steps(site, params, targets=s)), 1) for s in params["sorties"]]
+    # 每个架次的航线（整列拍摄点与绕行点），供地图显示
+    params["routes"] = [[s.as_dict() for s in build_steps(site, params, with_estimated_closeups=False, targets=t)] for t in params["sorties"]]
     revision = state.get("revisions", 0)
     flights = "；".join(f"第 {i + 1} 架次 {'、'.join(s)} 列（耗电约 {b:.0f}%）" for i, (s, b) in enumerate(zip(params["sorties"], params["estimated_battery"], strict=True)))
     _emit(state, "planner", "plan",
@@ -275,6 +277,12 @@ def after_next(state: State) -> str:
 
 async def _shoot(state: State, step: survey.Step, index: int) -> tuple[camera.Frame, int]:
     f = await runtime.flight()
+    site = _site(state)
+    via = survey.detour((f.state.x, f.state.y, f.state.z), step.position, site)   # 航段穿过禁飞区时先绕行
+    if via:
+        _emit(state, "pilot", "detour", f"直飞会穿过禁飞区，经 {len(via)} 个绕行点飞往 {step.target}", {"via": [list(w) for w in via]})
+    for w in via:
+        await f.goto(*w, step.yaw)
     await f.goto(*step.position, step.yaw)
     await f.point_gimbal(step.pitch, settle=2.5 if step.kind == "overview" else 1.5)
     frame = await asyncio.to_thread(camera.capture, step.camera)
@@ -396,8 +404,11 @@ async def return_home(state: State) -> dict:
     if not state.get("airborne"):
         return {}
     f = await runtime.flight()
-    _emit(state, "pilot", "return", f"返航降落（电量 {f.state.battery:.0f}%）")
+    via = survey.detour((f.state.x, f.state.y, f.state.z), (0.0, 0.0, f.state.z), _site(state))
+    _emit(state, "pilot", "return", f"返航降落（电量 {f.state.battery:.0f}%）" + (f"，绕开禁飞区经 {len(via)} 个绕行点" if via else ""))
     try:
+        for w in via:
+            await f.goto(*w, f.state.yaw)
         await f.return_home()
     except FlightError as error:
         _emit(state, "pilot", "error", f"返航异常：{error}，改用飞控自带返航")

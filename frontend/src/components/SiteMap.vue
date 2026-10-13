@@ -34,9 +34,11 @@ const sortieColors = ['var(--map-route)', '#9b59d0', '#16a085']
 const sorties = computed(() => {
   const route = props.plan?.route ?? []
   return (props.plan?.sorties ?? []).map((targets, i) => {
-    const stops = route.filter((s) => targets.includes(s.target))
-    const line = [[0, 0], ...stops.map((s) => [s.position[0], s.position[1]]), [0, 0]]
-    return { color: sortieColors[i % sortieColors.length], line, stops }
+    // 新计划带每个架次的完整航线（含绕开禁飞区的绕行点）；旧计划只有拍摄点
+    const path = props.plan?.routes?.[i] ?? route.filter((s) => targets.includes(s.target))
+    const stops = path.filter((s) => s.kind === 'overview')
+    const line = [[0, 0], ...path.map((s) => [s.position[0], s.position[1]]), [0, 0]]
+    return { color: sortieColors[i % sortieColors.length], line, stops, detours: path.filter((s) => s.kind === 'transit') }
   })
 })
 const drone = computed(() => (props.telemetry && props.telemetry.updated ? props.telemetry : null))
@@ -69,6 +71,7 @@ const drone = computed(() => (props.telemetry && props.telemetry.updated ? props
 
     <g v-for="(s, i) in sorties" :key="i">
       <polyline :points="pts(s.line)" fill="none" :stroke="s.color" stroke-width="2.5" stroke-dasharray="8 6" opacity="0.9" />
+      <circle v-for="(d, j) in s.detours" :key="'d' + j" :cx="sx(d.position[0])" :cy="sy(d.position[1])" r="4" fill="none" :stroke="s.color" stroke-width="2" />
       <g v-for="v in s.stops" :key="v.target">
         <circle :cx="sx(v.position[0])" :cy="sy(v.position[1])" r="7" :fill="s.color" />
         <text :x="sx(v.position[0]) + 10" :y="sy(v.position[1]) + 4" class="label small">{{ v.target }}</text>

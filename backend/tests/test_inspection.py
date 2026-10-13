@@ -1,5 +1,6 @@
 """场景生成、评分、巡检员规则与模型输出的解析（不调用模型）。"""
 import json
+import math
 
 import pytest
 
@@ -13,9 +14,29 @@ def test_scene_is_deterministic(site, tmp_path):
     scene.generate(7, "again", out_dir=tmp_path / "other")
     other = json.loads((tmp_path / "other" / "again" / "site.json").read_text())
     assert [p["defect"] for p in other["panels"]] == [p["defect"] for p in site["panels"]]
+    assert other["arrays"] == site["arrays"] and other["geofence"] == site["geofence"]
     defects = [p for p in site["panels"] if p["defect"]]
-    assert len(site["panels"]) == 80 and 5 <= len(defects) <= 15
+    assert 20 <= len(site["panels"]) <= 120 and len(defects) >= 1
     assert all(not (p["defect"] and p["distractor"]) for p in site["panels"])
+
+
+@pytest.mark.parametrize("seed", range(20, 30))
+def test_random_layout_is_flyable(seed, tmp_path):
+    """随机布局的不变量：阵列在围栏内、互不重叠、避开禁飞区；拍摄点在围栏内；起飞点不在阵列或禁飞区里。"""
+    from droneagent import safety, survey
+    out = scene.generate(seed, f"t{seed}", out_dir=tmp_path, textures=False)
+    site = json.loads((out / "site.json").read_text())
+    assert 2 <= len(site["arrays"]) <= 6
+    for a in site["arrays"]:
+        assert -30 <= a["yaw_deg"] <= 30
+        step = survey.overview_step(a, 20)
+        assert not safety.check_point(site, step.position), f"{a['id']} 的拍摄点不可用"
+        for b in site["arrays"]:
+            if a is not b:
+                assert math.dist(a["center"], b["center"]) > a["radius"] + b["radius"]
+    for p in site["panels"]:
+        assert all(safety._inside(site["geofence"], c[0], c[1]) for c in p["corners"])
+    assert all(math.dist((0, 0), z["center"]) > z["radius"] for z in site["no_fly_zones"])
 
 
 def test_scoring(site):
@@ -28,7 +49,8 @@ def test_scoring(site):
     assert s["precision"] == pytest.approx(len(truth) / (len(truth) + 1), abs=1e-3)
     # 只统计巡检过的列
     only_a = scoring.score(site, {}, ["A"])
-    assert only_a["panels"] == 20 and only_a["recall"] == 0
+    assert only_a["panels"] == sum(1 for p in site["panels"] if p["array"] == "A")
+    assert only_a["recall"] in (0, None)
 
 
 def test_select_targets_policies():
@@ -83,7 +105,7 @@ def test_coordinator_validates_model_output(site, monkeypatch):
     monkeypatch.setattr(roles, "chat_json", lambda *a, **k: ({"type": "task", "targets": ["all"], "reserve_pct": 5,
                                                               "thoroughness": "extreme", "focus": ["crack", "rust"]}, usage))
     brief, _ = roles.coordinate("全部", site, 100)
-    assert brief["targets"] == ["A", "B", "C", "D"] and brief["reserve_pct"] == 15 and brief["thoroughness"] == "standard"
+    assert brief["targets"] == [a["id"] for a in site["arrays"]] and brief["reserve_pct"] == 15 and brief["thoroughness"] == "standard"
     assert brief["focus"] == ["crack"]
     monkeypatch.setattr(roles, "chat_json", lambda *a, **k: ({"type": "something"}, usage))
     assert roles.coordinate("?", site, 100)[0]["type"] == "unsupported"

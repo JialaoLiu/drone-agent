@@ -1,7 +1,7 @@
 # 任务理解与规划评测：只经过调度员、规划员、安全员，不起飞。
 # expect：task（可执行）/ clarify（需追问）/ unsupported（拒绝）
 # 其余字段是对计划的检查；policy 为允许的复核策略集合；min_sorties 为至少几个架次。
-scene: solar_1
+scene: solar_46
 battery: 100
 cases:
   - {task: 检查 A 和 C 两列光伏板有没有破损或污损, expect: task, targets: [A, C], policy: [flagged, flagged_and_unsure]}

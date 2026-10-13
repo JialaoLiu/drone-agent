@@ -40,6 +40,16 @@ export const cancelMission = (id: string) => json<{ status: string }>(`/missions
 export const listFaults = () => json<{ id: string; label: string; symptom: string }[]>('/troubleshoot/faults')
 export const startTroubleshoot = (symptom: string, fault: string | null) =>
   json<{ id: string }>('/troubleshoot', { method: 'POST', body: JSON.stringify({ symptom, fault }) })
+export const getStats = () => json<Record<string, any>>('/stats')
+export const getUsageDetail = (days: number) => json<Record<string, any>>(`/usage/detail?days=${days}`)
+export const listEvals = () => json<{ name: string; suite: string; summary: any; scenes?: string[]; repeat?: number; model?: string }[]>('/evals')
+export const getEval = (name: string) => json<Record<string, any>>(`/evals/${encodeURIComponent(name)}`)
+export const getScore = (id: string) => json<Record<string, any>>(`/missions/${encodeURIComponent(id)}/score`)
+
+export function panelUrl(photoId: number, panelId: string): string {
+  return `/api/photos/${photoId}/panel/${encodeURIComponent(panelId)}`
+}
+
 export const getUsage = () => json<{ by_role: Record<string, number | string>[]; total: Record<string, number> }>('/usage')
 
 export function photoUrl(id: number, overlay = false, width = 960): string {

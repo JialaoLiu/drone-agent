@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import io
+import json
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -27,7 +28,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from PIL import ImageDraw
 from pydantic import BaseModel, Field, StringConstraints
 
-from . import config, scoring, simctl, store
+from . import config, scoring, simctl, store, vision
 from .agents import mission, runtime, troubleshoot
 from .sim import scene
 from .sim.camera import Frame
@@ -301,6 +302,24 @@ def get_score(mid: str) -> dict:
     return scoring.score(scene.load_site(m["scene"]), reported, arrays)
 
 
+@app.get("/photos/{pid}/panel/{panel_id}")
+def get_panel_tile(pid: int, panel_id: str) -> Response:
+    """照片中某块板的正视图（裁切并透视校正），用于发现卡片的缩略图。"""
+    p = store.get_photo(pid)
+    if p is None:
+        raise HTTPException(404, "照片不存在")
+    site = scene.load_site(store.get_mission(p["mission_id"])["scene"])
+    panel = next((x for x in site["panels"] if x["id"] == panel_id), None)
+    if panel is None:
+        raise HTTPException(404, "没有这块板")
+    tile = vision.rectify(Frame.load(Path(p["path"]).with_suffix("")), panel, (vision.CLOSE_W // 2, vision.CLOSE_H // 2))
+    if tile is None:
+        raise HTTPException(404, "这块板不在照片中")
+    buf = io.BytesIO()
+    tile.image.save(buf, "JPEG", quality=88)
+    return Response(buf.getvalue(), media_type="image/jpeg")
+
+
 @app.get("/missions/{mid}/report")
 def get_report(mid: str) -> FileResponse:
     path = mission.photo_dir(mid) / "report.html"
@@ -312,3 +331,38 @@ def get_report(mid: str) -> FileResponse:
 @app.get("/usage")
 def usage() -> dict:
     return store.usage_summary()
+
+
+@app.get("/usage/detail")
+def usage_detail(days: int = Query(30, ge=1, le=365)) -> dict:
+    return store.usage_detail(days)
+
+
+@app.get("/stats")
+def stats() -> dict:
+    return store.overview_stats()
+
+
+EVAL_RESULTS = config.BACKEND_DIR / "eval" / "results"
+
+
+@app.get("/evals")
+def list_evals() -> list[dict]:
+    """评测报告列表（backend/eval/results/*.json），每种评测只返回摘要。"""
+    out = []
+    for path in sorted(EVAL_RESULTS.glob("*.json"), reverse=True):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        out.append({"name": path.stem, "suite": data.get("suite", "gold"), "summary": data.get("summary"),
+                    "scenes": data.get("scenes"), "repeat": data.get("repeat"), "model": data.get("model")})
+    return out
+
+
+@app.get("/evals/{name}")
+def get_eval(name: str) -> dict:
+    path = EVAL_RESULTS / f"{name}.json"
+    if not path.resolve().is_relative_to(EVAL_RESULTS.resolve()) or not path.exists():
+        raise HTTPException(404, "评测报告不存在")
+    return json.loads(path.read_text(encoding="utf-8"))

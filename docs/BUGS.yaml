@@ -2,7 +2,7 @@
 # status: open / fixed / verified（修复后经评测或实测确认）
 format_version: 1
 project: drone-agent
-updated: "2026-10-13"
+updated: "2026-10-14"
 bugs:
   - id: DR-001
     title: PX4 与 Gazebo 互相找不到
@@ -162,3 +162,44 @@ bugs:
     cause: asyncio.run 退出时等待 MAVSDK 的后台线程，一直挂起。
     fix: 手动管理事件循环，写完报告后退出。
     verification: 报告正常生成。
+  - id: DR-024
+    title: 场景布局固定，只有缺陷位置随种子变化
+    status: verified
+    found_by: 用户提问（面试时会被问航线是否写死）
+    cause: 早期生成器的阵列数量、位置、朝向都是常量。
+    fix: 围栏、禁飞区、阵列数量 / 位置 / 偏角 / 行列数、树全部随种子生成；拒绝采样保证可飞；拍摄点按阵列偏角计算。
+    verification: 单元测试检查种子 20–29 的不变量；随机场景 solar_46 实时任务检出率、精确率均 100%。
+  - id: DR-025
+    title: 随机布局下航段穿过禁飞区
+    status: verified
+    found_by: evaluate layouts 回测（50 个种子通过 78%）
+    cause: 只校验了拍摄点，直线航段会穿过禁飞区；固定布局下从未暴露。
+    fix: 在航段之间插入绕行点，返航航段同样处理；网页显示绕行点。
+    verification: 见 DR-026。
+  - id: DR-026
+    title: 两个相邻禁飞区之间的切线绕行来回振荡
+    status: verified
+    found_by: evaluate layouts 回测（种子 10，通过率 98%）
+    cause: 递归切线绕行绕开一个禁飞区后进入另一个。
+    fix: 改为 2 米网格的 A* 搜索加视线平滑。
+    verification: 100 个种子、三种复核策略全部通过安全校验。
+  - id: DR-027
+    title: 用量统计接口报 500
+    status: verified
+    found_by: 网页截图检查
+    cause: 字符串替换加表前缀时把别名也替换了（AS c.prompt_tokens），另缺少 timedelta 导入。
+    fix: 用按表别名生成聚合字段的函数代替字符串替换。
+    verification: 用量页面 24 小时到 90 天均正常显示。
+  - id: DR-028
+    title: 任务输入框缺少 id，自动化脚本找不到
+    status: verified
+    found_by: 截图脚本超时
+    fix: 输入框加回 id="task"。
+    verification: 使用说明配图脚本完成一次完整任务。
+  - id: DR-029
+    title: 主机负载过高时近照对不准，疑似缺陷全部停在“待确认”
+    status: open
+    found_by: 制作使用说明配图的实时任务（任务 934c1c4e15、4a30e36808）
+    cause: 主机负载平均值约 34（其他程序与磁盘映像读写），仿真步进变慢，PX4 报加速度计超时，高度估计与真实位置偏差 2–3 米；变焦相机按估计位置瞄准，板落在画面外。第二次任务直接因无法在 25 秒内到达航点而失败返航。
+    fix: 未修复。现有行为是安全的（对不准的板标为待确认，不会默认判正常；到不了航点即返航）。计划在飞行前检查单中加入仿真与传感器健康检查（仿真实时率、传感器超时），不健康时安全员拒绝起飞。
+    verification: 同一场景在主机空闲时的任务检出率、精确率均为 100%（任务 64dc76a536）。

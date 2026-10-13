@@ -63,14 +63,21 @@ async def _record(scene: str, standoff: float) -> Path:
                 camera.capture("zoom").save(out / f"closeup_{p['id']}")
             print(f"{a['id']} 列已拍摄，电量 {f.state.battery:.0f}%", flush=True)
         await f.return_home()
+    (out / "site.json").write_text(json.dumps(site, ensure_ascii=False), encoding="utf-8")
     (out / "meta.json").write_text(json.dumps({"scene": scene, "standoff_m": standoff, "recorded_at": datetime.now().isoformat()}), encoding="utf-8")
     return out
 
 
 # ---------- vision ----------
 
+def _captured_site(scene: str) -> dict:
+    """录制时保存的场地文件（场景生成器更新后，旧录制仍与当时的场地一致）。"""
+    path = CAPTURES / scene / "site.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else load_site(scene)
+
+
 def _vision_once(scene: str, provider: str | None) -> dict:
-    site = load_site(scene)
+    site = _captured_site(scene)
     cap = CAPTURES / scene
     pool = ThreadPoolExecutor(8)
     parallel = lambda fn, items: list(pool.map(fn, items))   # noqa: E731
@@ -232,6 +239,42 @@ def run_planning(repeat: int) -> dict:
             "runs": runs}
 
 
+# ---------- layouts ----------
+
+def run_layouts(seeds: list[int]) -> dict:
+    """随机布局的泛化检查（不调用模型、不起飞）：每个种子生成一个新布局，按三种复核策略展开航线、
+    按电量分架次，交给安全员校验。用来回答“换一个完全不同的布局，规划还能不能用”。"""
+    import tempfile
+
+    from .agents.mission import build_steps, split_sorties
+    from .sim import scene as scene_mod
+
+    rows = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for seed in seeds:
+            out = scene_mod.generate(seed, f"layout_{seed}", out_dir=Path(tmp), textures=False)
+            site = json.loads((out / "site.json").read_text(encoding="utf-8"))
+            row = {"seed": seed, "arrays": len(site["arrays"]), "panels": len(site["panels"]),
+                   "no_fly_zones": len(site["no_fly_zones"]), "trees": len(site["obstacles"])}
+            for policy in ("none", "flagged_and_unsure", "all"):
+                plan = {"targets": [a["id"] for a in site["arrays"]], "closeup_policy": policy, "standoff_m": 20.0, "max_sorties": 3}
+                sorties = split_sorties(site, plan, 100.0, 25.0)
+                violations = []
+                for targets in sorties:
+                    violations += [v.code for v in safety.check_plan(site, build_steps(site, plan, targets=targets), battery=100.0, reserve=25.0)]
+                row[policy] = {"sorties": len(sorties), "ok": not violations, "violations": sorted(set(violations))}
+            rows.append(row)
+            print(f"种子 {seed}：{row['arrays']} 列 {row['panels']} 块板；" +
+                  "；".join(f"{STRATEGY_LABELS.get(k, k)} {'通过' if row[k]['ok'] else '未通过 ' + str(row[k]['violations'])}（{row[k]['sorties']} 架次）"
+                           for k in ("none", "flagged_and_unsure", "all")), flush=True)
+    summary = {k: {"pass_rate": round(sum(r[k]["ok"] for r in rows) / len(rows), 3),
+                   "sorties": {n: sum(1 for r in rows if r[k]["sorties"] == n) for n in (1, 2, 3)}}
+               for k in ("none", "flagged_and_unsure", "all")}
+    summary["arrays_range"] = [min(r["arrays"] for r in rows), max(r["arrays"] for r in rows)]
+    summary["panels_range"] = [min(r["panels"] for r in rows), max(r["panels"] for r in rows)]
+    return {"suite": "layouts", "seeds": seeds, "summary": summary, "rows": rows}
+
+
 # ---------- troubleshoot ----------
 
 async def _troubleshoot(faults: list[str]) -> dict:
@@ -290,6 +333,16 @@ def write_report(report: dict) -> Path:
                 if v["missed"] or v["false_alarms"] or v["wrong_type"]:
                     lines.append(f"- 第 {run['round']} 轮 {run['scene']} {STRATEGY_LABELS[k]}：漏检 {v['missed'] or '无'}，误报 {v['false_alarms'] or '无'}，"
                                  f"类型错 {[w['panel'] for w in v['wrong_type']] or '无'}")
+    elif report["suite"] == "layouts":
+        s = report["summary"]
+        lines += [f"{len(report['seeds'])} 个随机布局：每个 {s['arrays_range'][0]}–{s['arrays_range'][1]} 列、"
+                  f"{s['panels_range'][0]}–{s['panels_range'][1]} 块板；围栏形状、禁飞区、树的位置均随机。", "",
+                  "| 复核策略 | 通过安全校验 | 1 架次 | 2 架次 | 3 架次 |", "| --- | ---: | ---: | ---: | ---: |"]
+        lines += [f"| {STRATEGY_LABELS[k]} | {v['pass_rate']:.0%} | {v['sorties'][1]} | {v['sorties'][2]} | {v['sorties'][3]} |"
+                  for k, v in s.items() if k in STRATEGY_LABELS]
+        bad = [r for r in report["rows"] if not all(r[k]["ok"] for k in ("none", "flagged_and_unsure", "all"))]
+        lines += ["", "## 未通过的布局", ""] + ([f"- 种子 {r['seed']}：" + "；".join(f"{STRATEGY_LABELS[k]} {r[k]['violations']}"
+                                                                         for k in ("none", "flagged_and_unsure", "all") if not r[k]["ok"]) for r in bad] or ["无"])
     elif report["suite"] == "troubleshoot":
         s = report["summary"]
         lines += [f"排障准确率 {s['accuracy']}（只看参数差异的规则基线 {s['rule_baseline_accuracy']}），平均试飞 {s['avg_flights']} 次", "",
@@ -328,6 +381,8 @@ def main() -> None:
     vis.add_argument("--provider", choices=["deepseek", "openai"])
     pl = sub.add_parser("planning", help="任务理解与规划")
     pl.add_argument("--repeat", type=int, default=1)
+    ly = sub.add_parser("layouts", help="随机布局的规划与安全校验（不起飞、不调用模型）")
+    ly.add_argument("--seeds", default="1-50", help="例如 1-50")
     ts = sub.add_parser("troubleshoot", help="排障：注入已知故障，检验诊断员能否找到原因（需要仿真）")
     ts.add_argument("--faults", default="all")
     args = parser.parse_args()
@@ -339,6 +394,9 @@ def main() -> None:
         from .agents import troubleshoot
         faults = list(troubleshoot.FAULTS) if args.faults == "all" else args.faults.split(",")
         report = _run_async(_troubleshoot(faults))
+    elif args.cmd == "layouts":
+        lo, _, hi = args.seeds.partition("-")
+        report = run_layouts(list(range(int(lo), int(hi or lo) + 1)))
     elif args.cmd == "vision":
         report = run_vision(args.scenes.split(","), args.repeat, args.provider)
     else:

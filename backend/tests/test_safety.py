@@ -48,10 +48,27 @@ def test_battery_reserve(site):
     assert "battery" in codes(safety.check_plan(site, build_steps(site, {**plan, "closeup_policy": "none"}), battery=20, reserve=25))
 
 
+def test_detour_avoids_no_fly_zones(site):
+    """航段穿过禁飞区时插入绕行点；绕行后的每一段都通过安全员校验。"""
+    z = site["no_fly_zones"][0]
+    cx, cy = z["center"]
+    r = z["radius"] + safety.MARGIN + 2
+    a, b = (cx, cy - r, 20.0), (cx, cy + r, 20.0)
+    via = survey.detour(a, b, site)
+    assert via, "应当需要绕行"
+    route = [a, *via, b]
+    for i in range(len(route) - 1):
+        assert not [v for v in safety.check_segment(site, route[i], route[i + 1], i) if v.code == "no_fly_zone"]
+    assert survey.detour((0, 0, 20), (0.5, 0.5, 20), site) == []        # 不穿过禁飞区时不绕
+
+
 def test_split_sorties_respects_battery(site):
     plan = {"targets": [a["id"] for a in site["arrays"]], "closeup_policy": "all", "standoff_m": 20, "max_sorties": 3}
     sorties = split_sorties(site, plan, battery=100, reserve=25)
-    assert len(sorties) >= 2 and sorted(sum(sorties, [])) == sorted(plan["targets"])
+    assert sorted(sum(sorties, [])) == sorted(plan["targets"])
+    one = split_sorties(site, {**plan, "max_sorties": 1}, battery=100, reserve=25)
+    if safety.check_plan(site, build_steps(site, plan, targets=one[0]), battery=100, reserve=25):
+        assert len(sorties) >= 2                                          # 一个架次装不下时会拆分
     for targets in sorties:
         assert safety.check_plan(site, build_steps(site, plan, targets=targets), battery=100, reserve=25) == []
     # 只允许一个架次时不拆分，交给安全员拒绝

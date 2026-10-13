@@ -33,11 +33,14 @@ def test_look_angles():
 
 
 def test_overview_faces_panel_normal(site):
-    array = site["arrays"][0]
-    step = survey.overview_step(array, 20)
-    assert math.dist(step.position[:2], array["center"]) < 20
-    assert step.position[1] < array["center"][1]                   # 板朝南，拍摄点在南侧
-    assert -70 < step.pitch < -60 and (step.yaw < 1 or step.yaw > 359)
+    for array in site["arrays"]:
+        step = survey.overview_step(array, 20)
+        assert math.dist(step.position[:2], array["center"]) < 20
+        assert step.position[1] < array["center"][1]                   # 板朝南（偏角不超过 30°），拍摄点在南侧
+        assert -70 < step.pitch < -60
+        # 机头正对阵列：航向等于阵列朝向（北为 0、顺时针；阵列偏角为逆时针）
+        heading = (-array["yaw_deg"]) % 360
+        assert abs(((step.yaw - heading + 180) % 360) - 180) < 1
 
 
 def test_route_time_grows_with_closeups(site):

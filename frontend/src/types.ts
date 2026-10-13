@@ -23,6 +23,7 @@ export interface RouteStep { kind: string; target: string; position: number[]; y
 export interface Plan {
   targets: string[]; closeup_policy: string; standoff_m: number; sorties: string[][]; estimated_minutes: number
   estimated_battery: number[]; rationale: string; violations: { code: string; message: string; suggestion: string }[]; route?: RouteStep[]
+  routes?: RouteStep[][]
 }
 export interface MissionSummary { id: string; task: string; scene: string; status: string; created_at: string; updated_at: string }
 export interface Mission extends MissionSummary {

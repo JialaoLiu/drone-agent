@@ -10,7 +10,7 @@ import threading
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from . import config
 
@@ -237,3 +237,39 @@ def usage_summary(mid: str | None = None) -> dict:
     total = {"calls": sum(r["calls"] for r in by_role), "cost_yuan": round(sum(r["cost_yuan"] or 0 for r in by_role), 5),
              "prompt_tokens": sum(r["prompt_tokens"] or 0 for r in by_role), "images": sum(r["images"] or 0 for r in by_role)}
     return {"by_role": by_role, "total": total}
+
+
+def usage_detail(days: int = 30) -> dict:
+    """用量明细：按角色、模型、日期（北京时间）、任务汇总，以及 Token 构成。评测脚本的调用单独列出。"""
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+    def agg(t: str = "") -> str:
+        return (f"COUNT(*) AS calls, COALESCE(SUM({t}prompt_tokens), 0) AS prompt_tokens, "
+                f"COALESCE(SUM({t}completion_tokens), 0) AS completion_tokens, COALESCE(SUM({t}cache_hit_tokens), 0) AS cache_hit_tokens, "
+                f"COALESCE(SUM({t}images), 0) AS images, ROUND(COALESCE(SUM({t}cost_yuan), 0), 5) AS cost_yuan, ROUND(AVG({t}latency_ms)) AS avg_ms")
+    cols = agg()
+    with connect() as con:
+        total = dict(con.execute(f"SELECT {cols} FROM model_calls WHERE created_at >= ?", (since,)).fetchone())
+        by_role = [dict(r) for r in con.execute(f"SELECT role, {cols} FROM model_calls WHERE created_at >= ? GROUP BY role ORDER BY cost_yuan DESC", (since,))]
+        by_model = [dict(r) for r in con.execute(f"SELECT model, {cols} FROM model_calls WHERE created_at >= ? GROUP BY model ORDER BY calls DESC", (since,))]
+        by_day = [dict(r) for r in con.execute(
+            f"SELECT strftime('%Y-%m-%d', created_at, '+8 hours') AS day, {cols} FROM model_calls WHERE created_at >= ? GROUP BY day ORDER BY day", (since,))]
+        by_mission = [dict(r) for r in con.execute(
+            f"""SELECT c.mission_id, m.task, m.scene, m.status, m.created_at, {agg("c.")}
+                FROM model_calls c LEFT JOIN missions m ON m.id = c.mission_id
+                WHERE c.created_at >= ? GROUP BY c.mission_id ORDER BY m.created_at DESC LIMIT 50""", (since,))]
+    for row in by_mission:
+        row["source"] = "评测" if row.get("scene") == "eval" else "任务"
+    return {"days": days, "total": total, "by_role": by_role, "by_model": by_model, "by_day": by_day, "by_mission": by_mission}
+
+
+def overview_stats() -> dict:
+    """总览页的统计：任务数量与状态、确认缺陷、照片、模型费用（不含评测）。"""
+    with connect() as con:
+        status = {r["status"]: r["n"] for r in con.execute("SELECT status, COUNT(*) AS n FROM missions WHERE scene != 'eval' GROUP BY status")}
+        defects = {r["type"] or "unknown": r["n"] for r in con.execute(
+            "SELECT f.type, COUNT(*) AS n FROM findings f JOIN missions m ON m.id = f.mission_id WHERE f.status = 'confirmed' AND m.scene != 'eval' GROUP BY f.type")}
+        photos = con.execute("SELECT COUNT(*) FROM photos").fetchone()[0]
+        cost = con.execute("SELECT ROUND(COALESCE(SUM(c.cost_yuan), 0), 4) FROM model_calls c LEFT JOIN missions m ON m.id = c.mission_id "
+                           "WHERE COALESCE(m.scene, '') != 'eval'").fetchone()[0]
+    return {"missions": status, "mission_total": sum(status.values()), "defects": defects, "defect_total": sum(defects.values()),
+            "photos": photos, "cost_yuan": cost}
