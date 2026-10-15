@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS findings (
     evidence TEXT,
     screen_photo INTEGER,
     verify_photo INTEGER,
+    reason TEXT,                        -- 未确认的原因：misaimed 未能对准 / unclear 看不清 / no_budget 电量不够 / model_down 模型不可用
     updated_at TEXT NOT NULL,
     PRIMARY KEY (mission_id, panel_id)
 );
@@ -93,6 +94,8 @@ def connect() -> Iterator[sqlite3.Connection]:
         if str(path) not in _ready:
             with _lock:
                 con.executescript(SCHEMA)
+                if "reason" not in {r[1] for r in con.execute("PRAGMA table_info(findings)")}:
+                    con.execute("ALTER TABLE findings ADD COLUMN reason TEXT")   # 旧数据库补列
                 _ready.add(str(path))
         with con:
             yield con
@@ -199,7 +202,7 @@ def get_photo(pid: int) -> dict | None:
 
 
 def upsert_finding(mid: str, panel_id: str, **fields) -> None:
-    cols = ["status", "type", "confidence", "evidence", "screen_photo", "verify_photo"]
+    cols = ["status", "type", "confidence", "evidence", "screen_photo", "verify_photo", "reason"]
     values = {c: fields.get(c) for c in cols if c in fields}
     with connect() as con:
         exists = con.execute("SELECT 1 FROM findings WHERE mission_id = ? AND panel_id = ?", (mid, panel_id)).fetchone()

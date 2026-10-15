@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Plan } from '../types'
+import PreflightList from './PreflightList.vue'
 
 defineProps<{ plan: Plan; awaiting: boolean; busy: boolean }>()
 const emit = defineEmits<{ decide: [approved: boolean] }>()
@@ -27,6 +28,11 @@ const POLICY: Record<string, string> = {
     <p class="check" :class="plan.violations?.length ? 'bad' : 'ok'">
       {{ plan.violations?.length ? '安全员：' + plan.violations.map((v) => v.message).join('；') : '安全员：围栏、禁飞区、障碍物净空、高度、电量余量均已校验通过' }}
     </p>
+    <details v-if="plan.preflight" class="preflight" :open="plan.preflight.ok === false">
+      <summary :class="plan.preflight.ok === false ? 'bad-text' : ''">飞行前检查：{{ plan.preflight.ok === false ? '不通过' : '通过' }}</summary>
+      <PreflightList :items="plan.preflight.items" />
+      <p v-if="plan.preflight.advice" class="small bad-text">{{ plan.preflight.advice }}</p>
+    </details>
     <div v-if="awaiting" class="actions">
       <button class="primary" :disabled="busy" @click="emit('decide', true)">确认起飞</button>
       <button :disabled="busy" @click="emit('decide', false)">不执行</button>
@@ -43,4 +49,7 @@ dd { margin: 0; }
 .check.ok { background: var(--ok-bg); color: var(--ok); }
 .check.bad { background: var(--bad-bg); color: var(--bad); }
 .actions { display: flex; gap: 8px; margin-top: 12px; }
+.preflight { margin-top: 10px; font-size: 13px; }
+.preflight summary { cursor: pointer; color: var(--muted); margin-bottom: 4px; }
+.bad-text { color: var(--bad); }
 </style>

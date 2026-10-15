@@ -21,7 +21,11 @@ const shown = computed(() => props.findings
   .sort((a, b) => ['confirmed', 'suspect', 'unverified', 'cleared'].indexOf(a.status) - ['confirmed', 'suspect', 'unverified', 'cleared'].indexOf(b.status)
     || (PRIORITY[a.type ?? ''] ?? 3) - (PRIORITY[b.type ?? ''] ?? 3) || a.panel_id.localeCompare(b.panel_id)))
 const pct = (v: unknown) => (typeof v === 'number' ? `${Math.round(v * 100)}%` : '—')
-const tilePhoto = (f: Finding) => f.verify_photo ?? f.screen_photo
+// 近照没对准时，板不在近照里，改用整列照片的裁切
+const tilePhoto = (f: Finding) => (f.reason === 'misaimed' ? f.screen_photo : f.verify_photo ?? f.screen_photo)
+const REASON: Record<string, string> = { misaimed: '未能对准', unclear: '近照仍看不清', no_budget: '电量不够未复核', model_down: '模型不可用' }
+const statusLabel = (f: Finding) => (f.status === 'unverified' && f.reason ? `待确认 · ${REASON[f.reason] ?? f.reason}` : STATUS[f.status])
+const broken = ref(new Set<string>())
 </script>
 
 <template>
@@ -47,10 +51,11 @@ const tilePhoto = (f: Finding) => f.verify_photo ?? f.screen_photo
     </div>
     <div v-if="shown.length" class="cards">
       <article v-for="f in shown" :key="f.panel_id" :class="[f.status, { on: f.panel_id === selected }]" @click="emit('select', f.panel_id)">
-        <img v-if="tilePhoto(f)" :src="panelUrl(tilePhoto(f)!, f.panel_id)" :alt="f.panel_id" loading="lazy" />
+        <img v-if="tilePhoto(f) && !broken.has(f.panel_id)" :src="panelUrl(tilePhoto(f)!, f.panel_id)" :alt="f.panel_id" loading="lazy"
+             @error="broken = new Set([...broken, f.panel_id])" />
         <div v-else class="noimg">无照片</div>
         <div class="body">
-          <div class="row"><b>{{ f.panel_id }}</b><span class="tag" :class="f.status === 'confirmed' ? 'bad' : f.status === 'cleared' ? '' : 'warn'">{{ STATUS[f.status] }}</span></div>
+          <div class="row"><b>{{ f.panel_id }}</b><span class="tag" :class="f.status === 'confirmed' ? 'bad' : f.status === 'cleared' ? '' : 'warn'">{{ statusLabel(f) }}</span></div>
           <div class="row small"><span>{{ f.type ? DEFECT_LABELS[f.type] ?? f.type : '—' }}</span><span class="muted">置信度 {{ f.confidence != null ? f.confidence.toFixed(2) : '—' }}</span></div>
           <p class="evidence">{{ f.evidence }}</p>
           <div class="links">

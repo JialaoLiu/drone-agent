@@ -17,12 +17,17 @@ export interface MissionEvent { seq: number; role: string; kind: string; message
 export interface Finding {
   panel_id: string; status: 'suspect' | 'confirmed' | 'cleared' | 'unverified'; type: string | null
   confidence: number | null; evidence: string | null; screen_photo: number | null; verify_photo: number | null
+  reason?: 'misaimed' | 'unclear' | 'no_budget' | 'model_down' | null
 }
 export interface Photo { id: number; step: number; kind: string; target: string; camera: string; meta: Record<string, unknown> }
 export interface RouteStep { kind: string; target: string; position: number[]; yaw: number; pitch: number }
+export interface PreflightItem { key: string; label: string; ok: boolean | null; detail: string }
+export interface Preflight { ok: boolean | null; items: PreflightItem[]; advice: string; checked_at?: number }
+
 export interface Plan {
   targets: string[]; closeup_policy: string; standoff_m: number; sorties: string[][]; estimated_minutes: number
   estimated_battery: number[]; rationale: string; violations: { code: string; message: string; suggestion: string }[]; route?: RouteStep[]
+  preflight?: Preflight
   routes?: RouteStep[][]
 }
 export interface MissionSummary { id: string; task: string; scene: string; status: string; created_at: string; updated_at: string }

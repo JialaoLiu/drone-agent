@@ -29,6 +29,7 @@ class Frame:
     image: Image.Image
     pose: CameraPose
     sim_time: float
+    drone: tuple[float, float, float] | None = None   # 拍摄瞬间飞机在仿真中的真实位置（仅仿真可得）
 
     def jpeg(self, quality: int = 90) -> bytes:
         buf = io.BytesIO()
@@ -82,7 +83,21 @@ def capture(camera: str = "wide", timeout: float = 5.0) -> Frame:
     if "x500_inspect_0" not in poses or "camera_link" not in poses:
         raise CameraUnavailable("还没有收到飞机位姿")
     image = Image.frombytes("RGB", (w, h), r.content)
-    return Frame(camera=camera, image=image, pose=camera_pose(poses, camera, w, h), sim_time=float(r.headers["X-Sim-Time"]))
+    return Frame(camera=camera, image=image, pose=camera_pose(poses, camera, w, h), sim_time=float(r.headers["X-Sim-Time"]),
+                 drone=tuple(poses["x500_inspect_0"]["position"]))
+
+
+def sim_state(timeout: float = 3.0) -> dict:
+    """相机桥的状态：最新画面的仿真时间、飞机真实位置。用于飞行前检查（仿真速度、位置估计是否漂移）。"""
+    try:
+        r = httpx.get(f"{config.CAMERA_BRIDGE_URL}/health", timeout=timeout)
+        r.raise_for_status()
+    except httpx.HTTPError as error:
+        raise CameraUnavailable(f"相机桥无法连接：{error}") from error
+    data = r.json()
+    times = list(data.get("cameras", {}).values())
+    model = data.get("poses", {}).get("x500_inspect_0")
+    return {"sim_time": max(times) if times else None, "drone": tuple(model["position"]) if model else None}
 
 
 def look_angles(position: tuple[float, float, float], target: tuple[float, float, float]) -> tuple[float, float]:

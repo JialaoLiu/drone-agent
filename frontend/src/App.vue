@@ -2,9 +2,17 @@
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { emergencyReturn } from './api'
+import PreflightList from './components/PreflightList.vue'
 import { useSim } from './composables/sim'
 
-const { sim, ready, reachable } = useSim()
+const { sim, ready, reachable, health } = useSim()
+const showHealth = ref(false)
+const healthLabel = computed(() => {
+  const h = health.value
+  if (!h || !h.items.length) return null
+  if (h.ok === false) return { text: '飞行前检查不通过', cls: 'bad' }
+  return h.items.some((i) => i.ok === null) ? { text: '飞行前检查：有提示', cls: 'warn' } : { text: '飞行前检查通过', cls: 'ok' }
+})
 const route = useRoute()
 const menu = ref(false)
 const notice = ref('')
@@ -54,6 +62,14 @@ async function returnHome() {
           <span class="chip">高度 {{ t.z != null ? t.z.toFixed(1) + ' 米' : '—' }}</span>
           <span class="chip">{{ t.in_air ? '飞行中' : t.armed ? '已解锁' : '地面' }}</span>
           <span class="chip muted">{{ t.flight_mode ?? '—' }}</span>
+          <span v-if="healthLabel" class="health">
+            <button class="chip" :class="healthLabel.cls" @click="showHealth = !showHealth">{{ healthLabel.text }}</button>
+            <div v-if="showHealth && health" class="health-pop card">
+              <PreflightList :items="health.items" />
+              <p v-if="health.advice" class="small bad-text">{{ health.advice }}</p>
+              <p class="small muted">与安全员起飞前执行的是同一套检查，每 15 秒刷新。</p>
+            </div>
+          </span>
         </div>
         <button class="danger" :disabled="!t.in_air" @click="returnHome">一键返航</button>
       </header>
@@ -87,6 +103,13 @@ header h1 { font-size: 18px; margin: 0 12px 0 0; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--code); font-variant-numeric: tabular-nums; }
 .chip.bad { color: var(--bad); }
+button.chip { border: 0; cursor: pointer; font: inherit; font-size: 12px; }
+.chip.ok { background: var(--ok-bg); color: var(--ok); }
+.chip.warn { background: var(--warn-bg); color: var(--warn); }
+.chip.bad { background: var(--bad-bg); }
+.health { position: relative; }
+.health-pop { position: absolute; top: 30px; right: 0; z-index: 20; width: min(460px, 86vw); padding: 12px; }
+.bad-text { color: var(--bad); }
 header .danger { margin-left: auto; }
 .menu { display: none; }
 .notice { margin: 10px 22px 0; padding: 8px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 14px; }
@@ -95,7 +118,7 @@ main { padding: 18px 22px 40px; }
   nav { position: fixed; inset: 0 auto 0 0; z-index: 20; transform: translateX(-100%); transition: transform 0.2s; }
   nav.open { transform: none; box-shadow: 0 0 24px rgba(0, 0, 0, 0.35); }
   .menu { display: block; }
-  .chips .chip:nth-child(n + 3) { display: none; }
+  .chips > .chip:nth-child(n + 3) { display: none; }
   main { padding: 14px 16px 40px; }
 }
 </style>

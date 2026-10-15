@@ -62,6 +62,7 @@ class Flight:
         self._home_amsl: float | None = None
         self._gimbal_id: int | None = None
         self.listeners: list = []      # 遥测回调（用于推送到前端）
+        self.status_log: list[tuple[float, str]] = []   # 带时间的飞控状态消息，供飞行前检查判断“最近”是否有传感器超时
 
     async def __aenter__(self) -> "Flight":
         await self.connect()
@@ -142,6 +143,19 @@ class Flight:
     async def _watch_status(self):
         async for s in self.telemetry.subscribe_status_text():
             self.state.status = (self.state.status + [s.text])[-20:]
+            self.status_log = (self.status_log + [(time.time(), s.text)])[-50:]
+
+    async def health(self, timeout: float = 5.0) -> dict | None:
+        """飞控自检的一次快照（传感器校准、位置估计、可否解锁）；超时返回 None。"""
+        async def first():
+            async for h in self.telemetry.subscribe_health():
+                return {"gyro": h.is_gyrometer_calibration_ok, "accel": h.is_accelerometer_calibration_ok,
+                        "mag": h.is_magnetometer_calibration_ok, "local_position": h.is_local_position_ok,
+                        "global_position": h.is_global_position_ok, "home": h.is_home_position_ok, "armable": h.is_armable}
+        try:
+            return await asyncio.wait_for(first(), timeout)
+        except asyncio.TimeoutError:
+            return None
 
     # ---------- 动作 ----------
 

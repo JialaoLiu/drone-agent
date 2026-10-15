@@ -21,7 +21,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
-from .. import config, inspection, safety, store, survey, vision
+from .. import config, health, inspection, safety, store, survey, vision
 from ..flight import FlightError
 from ..llm import ModelUnavailable, Usage
 from ..sim import camera
@@ -187,23 +187,42 @@ async def safety_check(state: State) -> dict:
             if len(state["plan"]["sorties"]) > 1:
                 v["message"] = f"第 {i + 1} 架次：{v['message']}"
             violations.append(v)
+    plan = {**state["plan"], "violations": violations}
+    out = {"violations": violations, "revisions": state.get("revisions", 0) + (1 if violations else 0), "plan": plan}
     if violations:
         _emit(state, "safety", "violation", "拒绝：" + "；".join(v["message"] for v in violations), {"violations": violations})
     else:
         _emit(state, "safety", "approved", "计划通过安全校验：围栏、禁飞区、障碍物净空、高度、电量余量均满足", {})
-    plan = {**state["plan"], "violations": violations}
+        # 飞行前检查：飞机和仿真本身的状态。不通过时改计划没有用，直接拒绝并说明怎么处理
+        check = await health.preflight(f)
+        plan["preflight"] = check
+        _emit(state, "safety", "preflight", _preflight_text(check), check)
+        if not check["ok"]:
+            out["outcome"] = "rejected"
     store.update_mission(state["mission_id"], plan={**plan, "route": [s for s in state["steps"] if s["kind"] == "overview"]})
-    return {"violations": violations, "revisions": state.get("revisions", 0) + (1 if violations else 0), "plan": plan}
+    return out
+
+
+def _preflight_text(check: dict) -> str:
+    if check["ok"]:
+        notes = [f"{i['label']}{i['detail']}" for i in check["items"] if i["ok"] is None]
+        return "飞行前检查通过" + (f"（提示：{'；'.join(notes)}）" if notes else "")
+    return "飞行前检查" + check["advice"] + " " + "；".join(f"{i['label']}：{i['detail']}" for i in check["items"] if i["ok"] is False)
 
 
 def after_safety(state: State) -> str:
+    if state.get("outcome") == "rejected":
+        return "rejected"
     if not state["violations"]:
         return "request_approval"
     return "planner" if state["revisions"] < MAX_REVISIONS else "rejected"
 
 
 async def rejected(state: State) -> dict:
-    _emit(state, "coordinator", "rejected", f"规划员修改 {MAX_REVISIONS} 次仍未通过安全校验，任务不执行。")
+    if state.get("outcome") == "rejected":
+        _emit(state, "coordinator", "rejected", "飞行前检查未通过，任务不执行。处理后重新下达即可。")
+    else:
+        _emit(state, "coordinator", "rejected", f"规划员修改 {MAX_REVISIONS} 次仍未通过安全校验，任务不执行。")
     return {"outcome": "rejected"}
 
 
@@ -235,6 +254,11 @@ async def takeoff(state: State) -> dict:
     altitude = max(state.get("plan", {}).get("standoff_m", 20) * 0.9, 10.0)
     sortie = state.get("sortie", 0)
     total = len(state["plan"]["sorties"])
+    # 人工确认可能隔了一段时间，起飞前再检查一次（每个架次都查）
+    check = await health.preflight(f)
+    if not check["ok"]:
+        _emit(state, "safety", "preflight", _preflight_text(check), check)
+        return {"error": check["advice"], "outcome": "failed", "queue": [], "current": ""}
     _emit(state, "pilot", "takeoff", (f"第 {sortie + 1}/{total} 架次，" if total > 1 else "")
           + f"起飞，爬升到 {altitude:.0f} 米（当前电量 {f.state.battery:.0f}%）")
     try:
@@ -286,6 +310,10 @@ async def _shoot(state: State, step: survey.Step, index: int) -> tuple[camera.Fr
     await f.goto(*step.position, step.yaw)
     await f.point_gimbal(step.pitch, settle=2.5 if step.kind == "overview" else 1.5)
     frame = await asyncio.to_thread(camera.capture, step.camera)
+    drift = health.frame_drift((f.state.x, f.state.y, f.state.z), frame.drone)
+    if drift["ok"] is False:
+        # 飞控估计的位置已经偏离实际，继续拍只会得到对不准的照片：中止并返航
+        raise FlightError(f"位置估计漂移：{drift['detail']}")
     path = config.PHOTOS_DIR / state["mission_id"] / f"{index:03d}_{step.kind}_{step.target}"
     await asyncio.to_thread(frame.save, path)
     meta = {**frame.meta(), "battery": round(f.state.battery, 1), "drone": [round(f.state.x, 2), round(f.state.y, 2), round(f.state.z, 2)]}
@@ -349,7 +377,7 @@ async def closeups(state: State) -> dict:
     if dropped:
         for k in dropped:
             if k in cands:
-                store.upsert_finding(state["mission_id"], k, status="unverified")
+                store.upsert_finding(state["mission_id"], k, status="unverified", reason="no_budget")
         _emit(state, "coordinator", "trim_closeups",
               f"电量有限，{array['id']} 列只复核 {len(targets)} 块，另有 {len(dropped)} 块未复核（报告中会标出）", {"dropped": dropped})
     if not targets:
@@ -368,7 +396,17 @@ async def closeups(state: State) -> dict:
             return await _flight_failure(state, error)
         tile = vision.rectify(frame, panels[k], (vision.CLOSE_W, vision.CLOSE_H))
         if tile is None:
-            store.upsert_finding(state["mission_id"], k, status="unverified", verify_photo=pid)
+            # 板不在画面里：悬停稳定后重新对准再拍一次
+            _emit(state, "pilot", "retake", f"{k} 不在近照画面内，悬停稳定后重新对准")
+            await asyncio.sleep(3)
+            try:
+                frame, pid = await _shoot(state, step, len(store.photos(state["mission_id"])))
+            except (FlightError, camera.CameraUnavailable) as error:
+                return await _flight_failure(state, error)
+            tile = vision.rectify(frame, panels[k], (vision.CLOSE_W, vision.CLOSE_H))
+        if tile is None:
+            store.upsert_finding(state["mission_id"], k, status="unverified", reason="misaimed",
+                                 evidence="两次近照都没有拍到这块板（未能对准）", verify_photo=pid)
             continue
         pending.append((k, pid, asyncio.create_task(asyncio.to_thread(inspection.adjudicate, tile, cands.get(k)))))
     confirmed, cleared, rechecked = [], [], []
@@ -376,14 +414,14 @@ async def closeups(state: State) -> dict:
         try:
             verdict, usages, again = await task
         except ModelUnavailable:
-            store.upsert_finding(state["mission_id"], k, status="unverified", verify_photo=pid)
+            store.upsert_finding(state["mission_id"], k, status="unverified", reason="model_down", verify_photo=pid)
             continue
         for usage in usages:
             _usage(state, "inspector", usage)
         if again:
             rechecked.append(k)
         if verdict["status"] == "unsure":
-            store.upsert_finding(state["mission_id"], k, status="unverified", evidence=verdict["evidence"], verify_photo=pid)
+            store.upsert_finding(state["mission_id"], k, status="unverified", reason="unclear", evidence=verdict["evidence"], verify_photo=pid)
         elif verdict["status"] == "defect":
             confirmed.append(k)
             store.upsert_finding(state["mission_id"], k, status="confirmed", type=verdict["type"], confidence=verdict["confidence"],

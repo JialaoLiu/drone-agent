@@ -16,6 +16,7 @@ from .. import config, store, vision
 from ..sim.camera import Frame
 
 PRIORITY = {"broken": 0, "missing": 0, "crack": 1, "soiling": 2}
+REASONS = {"misaimed": "近照未能对准", "unclear": "近照仍看不清", "no_budget": "电量不够，未复核", "model_down": "视觉模型不可用"}
 
 
 def collect(state: dict, site: dict, battery_end: float) -> dict:
@@ -35,7 +36,8 @@ def collect(state: dict, site: dict, battery_end: float) -> dict:
         "defects": [{"panel_id": f["panel_id"], "type": f["type"], "label": vision.DEFECT_TYPES.get(f["type"] or "", "缺陷"),
                      "confidence": f["confidence"], "evidence": f["evidence"], "screen_photo": f["screen_photo"],
                      "verify_photo": f["verify_photo"]} for f in defects],
-        "unverified": [{"panel_id": f["panel_id"], "type": f["type"], "evidence": f["evidence"], "screen_photo": f["screen_photo"]}
+        "unverified": [{"panel_id": f["panel_id"], "type": f["type"], "evidence": f["evidence"], "screen_photo": f["screen_photo"],
+                        "reason": REASONS.get(f.get("reason") or "", "初筛疑似，未做近距复核")}
                        for f in unverified],
         "cleared": sum(1 for f in findings if f["status"] == "cleared"),
         "photos": {"overview": sum(1 for p in photos if p["kind"] == "overview"), "closeup": sum(1 for p in photos if p["kind"] == "closeup")},
@@ -54,7 +56,7 @@ def for_reporter(result: dict) -> dict:
         "巡检的列": result["inspected_arrays"], "未巡检的列": result["skipped_arrays"], "检查的板数": result["panels_inspected"],
         "defects": [{"panel_id": d["panel_id"], "缺陷": d["label"], "置信度": round(d["confidence"] or 0, 2),
                      "确认方式": "近距复核确认" if d["verify_photo"] else "整列照片一眼可见（缺失）"} for d in result["defects"]],
-        "unverified": [{"panel_id": u["panel_id"], "疑似": u["evidence"]} for u in result["unverified"]],
+        "unverified": [{"panel_id": u["panel_id"], "疑似": u["evidence"], "未确认原因": u.get("reason")} for u in result["unverified"]],
         "复核后排除的疑似": result["cleared"], "复核策略": result["closeup_policy"],
         "架次": result.get("sorties", 1), "飞行秒数": result["flight_seconds"], "耗电百分比": result["battery_used"], "异常": result["error"],
     }
@@ -100,7 +102,8 @@ def render(mission_id: str, task: str, site: dict, result: dict) -> str:
         rows.append(f"""<section class="defect"><h3>{html.escape(d['panel_id'])} · {html.escape(d['label'])}</h3>
 <p>位置：{x:.1f} 米（东）、{y:.1f} 米（北）；置信度 {d['confidence'] or 0:.2f}；{'已近距复核' if d['verify_photo'] else '整列照片即可确认'}</p>
 <p class="evidence">{html.escape(d['evidence'] or '')}</p><div class="imgs">{''.join(cells)}</div></section>""")
-    unverified = "".join(f"<li>{html.escape(u['panel_id'])}：{html.escape(u['evidence'] or '')}</li>" for u in result["unverified"])
+    unverified = "".join(f"<li>{html.escape(u['panel_id'])}（{html.escape(u.get('reason') or '')}）：{html.escape(u['evidence'] or '')}</li>"
+                         for u in result["unverified"])
     skipped = "、".join(result["skipped_arrays"]) or "无"
     page = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>巡检报告 {mission_id}</title><style>

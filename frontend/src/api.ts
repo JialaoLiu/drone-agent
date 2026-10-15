@@ -1,4 +1,4 @@
-import type { Mission, MissionSummary, SceneInfo, SimStatus, Site, Truth } from './types'
+import type { Mission, MissionSummary, Preflight, SceneInfo, SimStatus, Site, Truth } from './types'
 
 // 后端设置了 DRONE_AGENT_ACCESS_TOKEN 时，所有请求都要带访问令牌；令牌只保存在本机浏览器
 const TOKEN_KEY = 'drone_access_token'
@@ -23,6 +23,7 @@ async function json<T>(url: string, init: RequestInit = {}, retried = false): Pr
 }
 
 export const getSim = () => json<SimStatus>('/sim')
+export const getHealth = () => json<Preflight>('/sim/health')
 export const startSim = (scene: string) => json<SimStatus>('/sim/start', { method: 'POST', body: JSON.stringify({ scene }) })
 export const stopSim = () => json<SimStatus>('/sim/stop', { method: 'POST' })
 export const emergencyReturn = () => json<{ message: string }>('/sim/return', { method: 'POST' })

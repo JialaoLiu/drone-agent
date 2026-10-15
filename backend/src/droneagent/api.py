@@ -19,6 +19,7 @@ import hmac
 import io
 import json
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
@@ -29,8 +30,10 @@ from PIL import ImageDraw
 from pydantic import BaseModel, Field, StringConstraints
 
 from . import config, scoring, simctl, store, vision
+from . import health as preflight_check
 from .agents import mission, runtime, troubleshoot
 from .sim import scene
+from .flight import FlightError
 from .sim.camera import Frame
 
 @asynccontextmanager
@@ -97,6 +100,28 @@ def sim_status() -> dict:
     if status["px4"] and not runtime.telemetry:
         runtime.submit(runtime.flight())          # 仿真就绪后建立连接，开始接收遥测
     return {**status, "telemetry": runtime.telemetry, "active_mission": runtime.active_mission}
+
+
+_health_cache: dict = {}
+
+
+@app.get("/sim/health")
+async def sim_health() -> dict:
+    """飞行前检查（与安全员起飞前执行的是同一套规则）。网页顶部的状态指示用；结果缓存 10 秒。"""
+    if not simctl.status()["px4"]:
+        return {"ok": None, "items": [], "advice": "仿真未启动"}
+    if _health_cache and time.time() - _health_cache["checked_at"] < 10:
+        return _health_cache
+
+    async def check():
+        return await preflight_check.preflight(await runtime.flight())
+    try:
+        result = await asyncio.wait_for(asyncio.wrap_future(runtime.submit(check())), 20)
+    except (asyncio.TimeoutError, FlightError) as error:
+        return {"ok": False, "items": [], "advice": f"无法完成检查：{error or '超时'}", "checked_at": time.time()}
+    _health_cache.clear()
+    _health_cache.update(result)
+    return result
 
 
 class SimStart(BaseModel):

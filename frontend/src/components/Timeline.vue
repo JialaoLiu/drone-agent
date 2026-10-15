@@ -13,8 +13,8 @@ watch(() => props.events.length, async () => {
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 const tone = (e: MissionEvent) =>
-  ['violation', 'error', 'rejected', 'skip_arrays', 'trim_closeups'].includes(e.kind) ? 'bad'
-    : ['awaiting_approval', 'defer_arrays', 'clarify', 'unsupported'].includes(e.kind) ? 'warn' : ''
+  ['violation', 'error', 'rejected', 'skip_arrays', 'trim_closeups'].includes(e.kind) || (e.kind === 'preflight' && e.payload?.ok === false) ? 'bad'
+    : ['awaiting_approval', 'defer_arrays', 'clarify', 'unsupported', 'retake'].includes(e.kind) ? 'warn' : ''
 </script>
 
 <template>

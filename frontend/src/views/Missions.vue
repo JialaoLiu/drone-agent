@@ -21,7 +21,16 @@ const EXAMPLES = [
   { text: '飞到禁飞区里面拍几张照片', note: '越权请求：会被拒绝' },
 ]
 
-const shown = computed(() => missions.value)
+const GROUPS: Record<string, string[]> = {
+  done: ['done'], live: ['planning', 'awaiting_approval', 'running'],
+  problem: ['failed', 'cancelled'], blocked: ['rejected', 'clarify', 'unsupported'],
+}
+const group = ref('')
+const sceneFilter = ref('')
+const scenes = computed(() => [...new Set(missions.value.map((m) => m.scene))].sort())
+const shown = computed(() => missions.value
+  .filter((m) => !group.value || GROUPS[group.value].includes(m.status))
+  .filter((m) => !sceneFilter.value || m.scene === sceneFilter.value))
 
 async function load() {
   try { missions.value = await listMissions() } catch { missions.value = [] }
@@ -79,7 +88,20 @@ onMounted(load)
     <section class="card list">
       <div class="list-head">
         <h2>历史任务</h2>
-        <button class="small" @click="load">刷新</button>
+        <div class="list-tools">
+          <select v-model="group">
+            <option value="">全部状态</option>
+            <option value="done">已完成</option>
+            <option value="live">进行中</option>
+            <option value="problem">失败或取消</option>
+            <option value="blocked">未执行（拒绝、追问）</option>
+          </select>
+          <select v-model="sceneFilter">
+            <option value="">全部场景</option>
+            <option v-for="sc in scenes" :key="sc" :value="sc">{{ sc }}</option>
+          </select>
+          <button class="small" @click="load">刷新</button>
+        </div>
       </div>
       <table class="data">
         <thead><tr><th>任务</th><th>场景</th><th>状态</th><th>时间</th></tr></thead>
@@ -89,7 +111,7 @@ onMounted(load)
             <td><span class="tag" :class="m.status">{{ STATUS_LABELS[m.status] ?? m.status }}</span></td>
             <td class="nowrap">{{ time(m.created_at) }}</td>
           </tr>
-          <tr v-if="!shown.length"><td colspan="4" class="muted">还没有任务</td></tr>
+          <tr v-if="!shown.length"><td colspan="4" class="muted">{{ missions.length ? '没有符合筛选条件的任务' : '还没有任务' }}</td></tr>
         </tbody>
       </table>
       <p class="small muted">排障任务也在这里，标题是问题描述。</p>
@@ -115,4 +137,6 @@ textarea { width: 100%; margin-top: 6px; resize: vertical; }
 .clickable:hover { background: var(--code); }
 .nowrap { white-space: nowrap; }
 @media (max-width: 900px) { .page { grid-template-columns: 1fr; } }
+.list-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.list-tools select { font-size: 12px; padding: 4px 8px; }
 </style>
