@@ -84,10 +84,85 @@ def _clear(a: tuple, b: tuple, zones: list[dict], extra: float = CLEAR) -> bool:
     return all(math.dist(_segment_closest(z["center"], a, b), z["center"]) >= z["radius"] + extra for z in zones)
 
 
-def detour(a: tuple, b: tuple, site: dict) -> list[tuple[float, float, float]]:
+# 绕行方法：grid（栅格 A* 加视线化简，默认）或 visibility（可见性图）。
+# 2026-10-16 在 100 个随机布局上对比（evaluate routes）：两者都 100% 通过安全校验；可见性图总长只短 0.6%，
+# 但平均拐点多 0.56 个（每个拐点都要减速停稳），因此默认仍用栅格 A*。
+ROUTER = "grid"
+POLYGON_SIDES = 12            # 可见性图中把膨胀后的禁飞区圆近似为外切正多边形的边数
+
+
+def detour(a: tuple, b: tuple, site: dict, method: str | None = None) -> list[tuple[float, float, float]]:
     """从 a 飞到 b 时需要插入的绕行点（不含 a、b）。直飞不穿过禁飞区就返回空。
 
-    否则在围栏内做栅格 A* 搜索（禁飞区按半径 + DETOUR_MARGIN 膨胀），再按视线可达把路径化简成尽量少的拐点。
+    method 为 visibility 时用可见性图，找不到路径再退回栅格 A*；两者都找不到时返回空，交给安全员拒绝。
+    """
+    zones = site.get("no_fly_zones", [])
+    if not zones or _clear(a, b, zones):
+        return []
+    if (method or ROUTER) == "visibility":
+        points = detour_visibility(a, b, site)
+        if points is not None:
+            return points
+    return detour_grid(a, b, site)
+
+
+def _segment_in_fence(fence: list, a: tuple, b: tuple) -> bool:
+    n = max(2, int(math.dist(a[:2], b[:2])))     # 每米抽样一次，与安全员的围栏检查一致
+    return all(_inside(fence, a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n) for k in range(n + 1))
+
+
+def detour_visibility(a: tuple, b: tuple, site: dict) -> list[tuple[float, float, float]] | None:
+    """可见性图最短路径。
+
+    每个禁飞区按半径 + DETOUR_MARGIN 膨胀成圆，再用外切正多边形近似（多边形每条边到圆心的距离都不小于膨胀半径，
+    所以沿边飞行仍满足余量）。图的节点是起点、终点和所有多边形顶点；两点之间直飞不进入任何禁飞区的余量范围、
+    且整段在围栏内，就连一条边。在这张图上用 Dijkstra 求最短路径：对多边形障碍物，最短路径一定由这些顶点组成，
+    因此结果是最短的（相对多边形近似而言），并且只要存在路径就一定能找到。找不到时返回 None。
+    """
+    import heapq
+
+    zones, fence = site.get("no_fly_zones", []), site["geofence"]
+    k = POLYGON_SIDES
+    nodes = [(a[0], a[1]), (b[0], b[1])]
+    for z in zones:
+        r = (z["radius"] + DETOUR_MARGIN) / math.cos(math.pi / k)       # 外接圆半径
+        for i in range(k):
+            t = 2 * math.pi * i / k
+            p = (z["center"][0] + r * math.cos(t), z["center"][1] + r * math.sin(t))
+            if _inside(fence, *p) and all(math.dist(p, o["center"]) >= o["radius"] + CLEAR for o in zones):
+                nodes.append(p)
+
+    def visible(i: int, j: int) -> bool:
+        return _clear(nodes[i], nodes[j], zones) and _segment_in_fence(fence, nodes[i], nodes[j])
+
+    dist, prev, done = {0: 0.0}, {0: None}, set()
+    frontier = [(0.0, 0)]
+    while frontier:
+        d, i = heapq.heappop(frontier)
+        if i in done:
+            continue
+        done.add(i)
+        if i == 1:
+            break
+        for j in range(1, len(nodes)):
+            if j in done or not visible(i, j):
+                continue
+            nd = d + math.dist(nodes[i], nodes[j])
+            if nd < dist.get(j, float("inf")):
+                dist[j], prev[j] = nd, i
+                heapq.heappush(frontier, (nd, j))
+    if 1 not in prev:
+        return None
+    path, node = [], prev[1]
+    while node not in (None, 0):
+        path.append(nodes[node])
+        node = prev[node]
+    z = max(a[2], b[2])
+    return [(round(p[0], 2), round(p[1], 2), z) for p in reversed(path)]
+
+
+def detour_grid(a: tuple, b: tuple, site: dict) -> list[tuple[float, float, float]]:
+    """栅格 A*：在围栏内搜索（禁飞区按半径 + DETOUR_MARGIN 膨胀），再按视线可达把路径化简成尽量少的拐点。
     多个禁飞区挨得很近、中间过不去时，搜索会自动绕到外侧。找不到路径时返回空，交给安全员拒绝。
     """
     import heapq
@@ -143,16 +218,16 @@ def detour(a: tuple, b: tuple, site: dict) -> list[tuple[float, float, float]]:
     return points
 
 
-def with_detours(steps: list[Step], site: dict, start: tuple = (0.0, 0.0, 0.0)) -> list[Step]:
+def with_detours(steps: list[Step], site: dict, start: tuple = (0.0, 0.0, 0.0), method: str | None = None) -> list[Step]:
     """在拍摄步骤之间（以及返航段）插入绕行点。"""
     out: list[Step] = []
     cur = (start[0], start[1], steps[0].position[2] if steps else 10.0)
     for s in steps:
-        for w in detour(cur, s.position, site):
+        for w in detour(cur, s.position, site, method):
             out.append(Step("transit", "绕行", w, s.yaw, 0.0, "", "绕开禁飞区"))
         out.append(s)
         cur = s.position
-    for w in detour(cur, (start[0], start[1], cur[2]), site):
+    for w in detour(cur, (start[0], start[1], cur[2]), site, method):
         out.append(Step("transit", "绕行", w, 0.0, 0.0, "", "返航绕开禁飞区"))
     return out
 

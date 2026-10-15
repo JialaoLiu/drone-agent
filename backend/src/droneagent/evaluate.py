@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -275,6 +276,72 @@ def run_layouts(seeds: list[int]) -> dict:
     return {"suite": "layouts", "seeds": seeds, "summary": summary, "rows": rows}
 
 
+# ---------- routes ----------
+
+ROUTERS = {"grid": "栅格 A*", "visibility": "可见性图"}
+
+
+def run_routes(seeds: list[int]) -> dict:
+    """绕行方法对比（不调用模型、不起飞）：每个种子生成随机布局，按“全部复核”展开整条航线（含返航），
+    找出所有直飞会进入禁飞区余量范围的航段，分别用栅格 A* 和可见性图求绕行，比较安全校验、长度、拐点数、耗时。"""
+    import tempfile
+
+    from .agents.mission import _arrays, _panels, EXPECTED_CLOSEUP_SHARE
+    from .sim import scene as scene_mod
+
+    segments, plans = [], {m: {"ok": 0, "total": 0} for m in ROUTERS}
+    with tempfile.TemporaryDirectory() as tmp:
+        for seed in seeds:
+            out = scene_mod.generate(seed, f"route_{seed}", out_dir=Path(tmp), textures=False)
+            site = json.loads((out / "site.json").read_text(encoding="utf-8"))
+            arrays = _arrays(site)
+            base = []
+            for a in survey.order_arrays(list(arrays.values())):
+                ov = survey.overview_step(a, 20.0)
+                panels = _panels(site, a["id"])
+                base += [ov] + [survey.closeup_step(p, ov.position) for p in panels[:math.ceil(len(panels) * EXPECTED_CLOSEUP_SHARE["all"])]]
+            # 整条航线的安全校验（电量不在此比较，按 1000% 电量计）
+            for m in ROUTERS:
+                steps = survey.with_detours(base, site, method=m)
+                codes = {v.code for v in safety.check_plan(site, steps, battery=1000.0, reserve=0.0)} - {"battery", "too_many"}
+                plans[m]["total"] += 1
+                plans[m]["ok"] += not codes
+            # 逐段比较
+            points = [(0.0, 0.0, base[0].position[2])] + [st.position for st in base] + [(0.0, 0.0, base[-1].position[2])]
+            for a, b in zip(points, points[1:]):
+                if survey._clear(a, b, site["no_fly_zones"]):
+                    continue
+                row = {"seed": seed, "straight": round(math.dist(a[:2], b[:2]), 2)}
+                for m in ROUTERS:
+                    t0 = time.perf_counter()
+                    wps = survey.detour(a, b, site, m) if m == "grid" else survey.detour_visibility(a, b, site)
+                    ms = (time.perf_counter() - t0) * 1000
+                    found = bool(wps)
+                    route = [a] + (wps or []) + [b]
+                    bad = [v.code for i, (p, q) in enumerate(zip(route, route[1:])) for v in safety.check_segment(site, p, q, i)
+                           if v.code in ("no_fly_zone", "geofence")]
+                    row[m] = {"found": found, "ok": found and not bad, "length": round(sum(math.dist(p[:2], q[:2]) for p, q in zip(route, route[1:])), 2),
+                              "waypoints": len(wps or []), "ms": round(ms, 2)}
+                segments.append(row)
+            print(f"种子 {seed}：需要绕行的航段 {sum(1 for r in segments if r['seed'] == seed)}", flush=True)
+    summary = {"seeds": len(seeds), "segments": len(segments), "plans": plans}
+    for m in ROUTERS:
+        ok = [r for r in segments if r[m]["ok"]]
+        summary[m] = {"segment_pass_rate": round(len(ok) / max(1, len(segments)), 3),
+                      "plan_pass_rate": round(plans[m]["ok"] / max(1, plans[m]["total"]), 3),
+                      "mean_length": round(sum(r[m]["length"] for r in ok) / max(1, len(ok)), 2),
+                      "mean_extra_pct": round(100 * sum(r[m]["length"] / r["straight"] - 1 for r in ok) / max(1, len(ok)), 1),
+                      "mean_waypoints": round(sum(r[m]["waypoints"] for r in ok) / max(1, len(ok)), 2),
+                      "mean_ms": round(sum(r[m]["ms"] for r in segments) / max(1, len(segments)), 2),
+                      "max_ms": round(max((r[m]["ms"] for r in segments), default=0), 2)}
+    both = [r for r in segments if r["grid"]["ok"] and r["visibility"]["ok"]]
+    summary["both_ok"] = len(both)
+    summary["visibility_shorter"] = sum(1 for r in both if r["visibility"]["length"] < r["grid"]["length"] - 0.01)
+    summary["visibility_longer"] = sum(1 for r in both if r["visibility"]["length"] > r["grid"]["length"] + 0.01)
+    summary["length_saving_pct"] = round(100 * (1 - sum(r["visibility"]["length"] for r in both) / max(1e-9, sum(r["grid"]["length"] for r in both))), 1)
+    return {"suite": "routes", "seeds": seeds, "summary": summary, "rows": segments}
+
+
 # ---------- troubleshoot ----------
 
 async def _troubleshoot(faults: list[str]) -> dict:
@@ -343,6 +410,19 @@ def write_report(report: dict) -> Path:
         bad = [r for r in report["rows"] if not all(r[k]["ok"] for k in ("none", "flagged_and_unsure", "all"))]
         lines += ["", "## 未通过的布局", ""] + ([f"- 种子 {r['seed']}：" + "；".join(f"{STRATEGY_LABELS[k]} {r[k]['violations']}"
                                                                          for k in ("none", "flagged_and_unsure", "all") if not r[k]["ok"]) for r in bad] or ["无"])
+    elif report["suite"] == "routes":
+        s = report["summary"]
+        lines += [f"{s['seeds']} 个随机布局，按“全部复核”展开整条航线（含返航）；需要绕行的航段共 {s['segments']} 段。", "",
+                  "| 方法 | 整条航线通过安全校验 | 航段通过 | 平均绕行长度 | 比直线多 | 平均拐点 | 平均耗时 | 最长耗时 |",
+                  "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
+        lines += [f"| {ROUTERS[m]} | {s[m]['plan_pass_rate']:.0%} | {s[m]['segment_pass_rate']:.0%} | {s[m]['mean_length']} 米 | {s[m]['mean_extra_pct']}% | "
+                  f"{s[m]['mean_waypoints']} | {s[m]['mean_ms']} 毫秒 | {s[m]['max_ms']} 毫秒 |" for m in ROUTERS]
+        lines += ["", f"两种方法都通过的 {s['both_ok']} 段中：可见性图更短 {s['visibility_shorter']} 段、更长 {s['visibility_longer']} 段，"
+                  f"总长度少 {s['length_saving_pct']}%。", "",
+                  "说明：两种方法使用相同的禁飞区余量（半径 + 5 米）；可见性图把膨胀后的圆近似为外切正十二边形，找不到路径时退回栅格 A*（本表单独统计，未计入退回）。"]
+        bad = [r for r in report["rows"] if not (r["grid"]["ok"] and r["visibility"]["ok"])]
+        lines += ["", "## 未通过的航段", ""] + ([f"- 种子 {r['seed']}：" + "；".join(f"{ROUTERS[m]} {'找到但不安全' if r[m]['found'] else '未找到'}"
+                                                                         for m in ROUTERS if not r[m]["ok"]) for r in bad] or ["无"])
     elif report["suite"] == "troubleshoot":
         s = report["summary"]
         lines += [f"排障准确率 {s['accuracy']}（只看参数差异的规则基线 {s['rule_baseline_accuracy']}），平均试飞 {s['avg_flights']} 次", "",
@@ -383,6 +463,8 @@ def main() -> None:
     pl.add_argument("--repeat", type=int, default=1)
     ly = sub.add_parser("layouts", help="随机布局的规划与安全校验（不起飞、不调用模型）")
     ly.add_argument("--seeds", default="1-50", help="例如 1-50")
+    rt = sub.add_parser("routes", help="绕行方法对比：栅格 A* 与可见性图（不起飞、不调用模型）")
+    rt.add_argument("--seeds", default="1-100", help="例如 1-100")
     ts = sub.add_parser("troubleshoot", help="排障：注入已知故障，检验诊断员能否找到原因（需要仿真）")
     ts.add_argument("--faults", default="all")
     args = parser.parse_args()
@@ -397,6 +479,9 @@ def main() -> None:
     elif args.cmd == "layouts":
         lo, _, hi = args.seeds.partition("-")
         report = run_layouts(list(range(int(lo), int(hi or lo) + 1)))
+    elif args.cmd == "routes":
+        lo, _, hi = args.seeds.partition("-")
+        report = run_routes(list(range(int(lo), int(hi or lo) + 1)))
     elif args.cmd == "vision":
         report = run_vision(args.scenes.split(","), args.repeat, args.provider)
     else:

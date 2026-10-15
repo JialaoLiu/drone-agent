@@ -1,0 +1,467 @@
+{
+ "suite": "routes",
+ "seeds": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19,
+  20,
+  21,
+  22,
+  23,
+  24,
+  25,
+  26,
+  27,
+  28,
+  29,
+  30,
+  31,
+  32,
+  33,
+  34,
+  35,
+  36,
+  37,
+  38,
+  39,
+  40,
+  41,
+  42,
+  43,
+  44,
+  45,
+  46,
+  47,
+  48,
+  49,
+  50,
+  51,
+  52,
+  53,
+  54,
+  55,
+  56,
+  57,
+  58,
+  59,
+  60,
+  61,
+  62,
+  63,
+  64,
+  65,
+  66,
+  67,
+  68,
+  69,
+  70,
+  71,
+  72,
+  73,
+  74,
+  75,
+  76,
+  77,
+  78,
+  79,
+  80,
+  81,
+  82,
+  83,
+  84,
+  85,
+  86,
+  87,
+  88,
+  89,
+  90,
+  91,
+  92,
+  93,
+  94,
+  95,
+  96,
+  97,
+  98,
+  99,
+  100
+ ],
+ "summary": {
+  "seeds": 100,
+  "segments": 18,
+  "plans": {
+   "grid": {
+    "ok": 100,
+    "total": 100
+   },
+   "visibility": {
+    "ok": 100,
+    "total": 100
+   }
+  },
+  "grid": {
+   "segment_pass_rate": 1.0,
+   "plan_pass_rate": 1.0,
+   "mean_length": 60.27,
+   "mean_extra_pct": 4.5,
+   "mean_waypoints": 1.0,
+   "mean_ms": 1.09,
+   "max_ms": 2.15
+  },
+  "visibility": {
+   "segment_pass_rate": 1.0,
+   "plan_pass_rate": 1.0,
+   "mean_length": 59.89,
+   "mean_extra_pct": 3.9,
+   "mean_waypoints": 1.56,
+   "mean_ms": 0.67,
+   "max_ms": 1.52
+  },
+  "both_ok": 18,
+  "visibility_shorter": 15,
+  "visibility_longer": 3,
+  "length_saving_pct": 0.6
+ },
+ "rows": [
+  {
+   "seed": 1,
+   "straight": 45.47,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 46.69,
+    "waypoints": 1,
+    "ms": 0.5
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 46.62,
+    "waypoints": 1,
+    "ms": 0.15
+   }
+  },
+  {
+   "seed": 7,
+   "straight": 53.96,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 56.93,
+    "waypoints": 1,
+    "ms": 0.99
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 56.27,
+    "waypoints": 2,
+    "ms": 0.99
+   }
+  },
+  {
+   "seed": 10,
+   "straight": 34.82,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 35.18,
+    "waypoints": 1,
+    "ms": 0.34
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 35.16,
+    "waypoints": 1,
+    "ms": 0.4
+   }
+  },
+  {
+   "seed": 10,
+   "straight": 50.12,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 50.26,
+    "waypoints": 1,
+    "ms": 0.79
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 50.19,
+    "waypoints": 1,
+    "ms": 0.8
+   }
+  },
+  {
+   "seed": 19,
+   "straight": 72.04,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 74.77,
+    "waypoints": 1,
+    "ms": 1.46
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 74.72,
+    "waypoints": 1,
+    "ms": 0.25
+   }
+  },
+  {
+   "seed": 21,
+   "straight": 69.47,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 74.89,
+    "waypoints": 1,
+    "ms": 2.15
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 74.96,
+    "waypoints": 2,
+    "ms": 1.52
+   }
+  },
+  {
+   "seed": 22,
+   "straight": 62.44,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 65.84,
+    "waypoints": 1,
+    "ms": 1.53
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 65.67,
+    "waypoints": 2,
+    "ms": 1.35
+   }
+  },
+  {
+   "seed": 34,
+   "straight": 39.79,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 42.43,
+    "waypoints": 1,
+    "ms": 0.55
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 42.45,
+    "waypoints": 1,
+    "ms": 0.14
+   }
+  },
+  {
+   "seed": 37,
+   "straight": 46.92,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 51.96,
+    "waypoints": 1,
+    "ms": 0.34
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 51.04,
+    "waypoints": 1,
+    "ms": 0.3
+   }
+  },
+  {
+   "seed": 38,
+   "straight": 45.97,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 48.23,
+    "waypoints": 1,
+    "ms": 0.83
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 47.61,
+    "waypoints": 2,
+    "ms": 1.12
+   }
+  },
+  {
+   "seed": 41,
+   "straight": 66.1,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 68.28,
+    "waypoints": 1,
+    "ms": 0.49
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 67.98,
+    "waypoints": 2,
+    "ms": 0.28
+   }
+  },
+  {
+   "seed": 42,
+   "straight": 74.21,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 74.96,
+    "waypoints": 1,
+    "ms": 2.13
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 74.82,
+    "waypoints": 2,
+    "ms": 1.44
+   }
+  },
+  {
+   "seed": 42,
+   "straight": 74.74,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 78.02,
+    "waypoints": 1,
+    "ms": 2.05
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 76.9,
+    "waypoints": 2,
+    "ms": 1.45
+   }
+  },
+  {
+   "seed": 56,
+   "straight": 49.03,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 49.15,
+    "waypoints": 1,
+    "ms": 0.57
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 49.19,
+    "waypoints": 1,
+    "ms": 0.16
+   }
+  },
+  {
+   "seed": 60,
+   "straight": 53.0,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 59.4,
+    "waypoints": 1,
+    "ms": 0.89
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 58.58,
+    "waypoints": 2,
+    "ms": 0.27
+   }
+  },
+  {
+   "seed": 66,
+   "straight": 62.19,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 66.24,
+    "waypoints": 1,
+    "ms": 0.99
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 65.53,
+    "waypoints": 2,
+    "ms": 0.27
+   }
+  },
+  {
+   "seed": 70,
+   "straight": 58.43,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 60.05,
+    "waypoints": 1,
+    "ms": 0.92
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 59.19,
+    "waypoints": 1,
+    "ms": 0.22
+   }
+  },
+  {
+   "seed": 84,
+   "straight": 79.79,
+   "grid": {
+    "found": true,
+    "ok": true,
+    "length": 81.59,
+    "waypoints": 1,
+    "ms": 2.11
+   },
+   "visibility": {
+    "found": true,
+    "ok": true,
+    "length": 81.21,
+    "waypoints": 2,
+    "ms": 0.95
+   }
+  }
+ ]
+}

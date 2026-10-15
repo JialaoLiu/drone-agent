@@ -50,3 +50,19 @@ def test_route_time_grows_with_closeups(site):
     base = survey.route_seconds([ov])
     more = survey.route_seconds([ov] + [survey.closeup_step(p, ov.position) for p in panels])
     assert more - base == pytest.approx(len(panels) * survey.SHOT_SECONDS["closeup"], rel=0.05)
+
+
+def test_visibility_detour_avoids_zone_and_stays_in_fence():
+    site = {"geofence": [[-60, -60], [60, -60], [60, 60], [-60, 60]],
+            "no_fly_zones": [{"id": "Z1", "label": "测试", "center": [0, 0], "radius": 8}], "obstacles": []}
+    a, b = (-40, 0, 20), (40, 0, 20)
+    for method in ("grid", "visibility"):
+        wps = survey.detour(a, b, site, method)
+        route = [a] + wps + [b]
+        assert wps and all(survey._clear(p, q, site["no_fly_zones"]) for p, q in zip(route, route[1:]))
+        assert all(survey._inside(site["geofence"], p[0], p[1]) for p in wps)
+    # 可见性图的路径不长于半个外接多边形周长加两段切线的粗略上界
+    vis = [a] + survey.detour_visibility(a, b, site) + [b]
+    assert sum(math.dist(p[:2], q[:2]) for p, q in zip(vis, vis[1:])) < 95
+    # 直飞不受影响时不插点
+    assert survey.detour((-40, 40, 20), (40, 40, 20), site, "visibility") == []
