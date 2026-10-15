@@ -86,7 +86,20 @@ flowchart LR
 | solar_46，A、C 两列（2026-10-16 复测） | 36 块板、5 个缺陷 | 1 | 5/5、0、100% | 3.5 分钟 | ¥0.10 |
 | solar_63，全部 5 列，全部近距复核（2026-10-16） | 86 块板、10 个缺陷 | 2（中途换电池） | 10/10、0、100% | 8.6 分钟 | ¥0.27 |
 
-**视觉评测场景**：三个早期固定布局场景（种子 1–3），每个场景 80 块板，含 10 块缺陷（裂纹、污损、玻璃破碎、缺失；约一半是轻微缺陷，“缺失”都是严重的），以及 10 块带阴影或反光干扰的正常板。标准答案由场景生成器记录。
+**巡检：随机布局上的复核策略对比**（2026-10-16；随机场景 solar_46、solar_63、solar_71，共 264 块板、31 个缺陷；录制全部照片后离线回放，1 轮）
+
+| 策略 | 检出率 | 精确率 | 类型正确 | 轻微缺陷检出 | 干扰误报 | 近照 / 场景 | 模型费用 / 场景 | 估计飞行 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 只看整列照片初筛 | 90.3% | 84.8% | 82.1% | 53.3% | 5 | 0 | ¥0.091 | 3.7 分钟 |
+| 复核疑似缺陷 | 87.1% | 100% | 100% | 45.0% | 0 | 9.3 | ¥0.108 | 4.2 分钟 |
+| 复核疑似与看不清 | 87.1% | 100% | 100% | 45.0% | 0 | 9.3 | ¥0.108 | 4.2 分钟 |
+| 全部近距复核 | 96.8% | 100% | 96.7% | 91.7% | 0 | 86.3 | ¥0.190 | 8.0 分钟 |
+
+- 结论与固定布局一致：针对性复核消除误报，全部复核才能找全轻微缺陷；
+- 只初筛的检出率比固定布局高（90% 对 77%），可能因为随机布局的阵列更小（每列 6–42 块），整列照片里每块板的像素更多；这是推测，未单独验证；
+- 复核把 1 个真缺陷判为正常（solar_46 A-R3-C01，初筛已发现），所以“复核疑似”的检出率略低于只初筛；只跑了 1 轮，波动范围未知。
+
+**视觉评测场景（早期）**：三个早期固定布局场景（种子 1–3），每个场景 80 块板，含 10 块缺陷（裂纹、污损、玻璃破碎、缺失；约一半是轻微缺陷，“缺失”都是严重的），以及 10 块带阴影或反光干扰的正常板。标准答案由场景生成器记录。
 
 **巡检：复核策略对比**（录制每个场景的全部照片后离线回放，与实时任务共用同一套判断规则；3 个场景 × 2 轮，共 60 个缺陷）
 
@@ -151,7 +164,7 @@ PYTHONPATH=src uv run python -m droneagent.evaluate layouts --seeds 1-100       
 PYTHONPATH=src uv run python -m droneagent.evaluate routes --seeds 1-100         # 绕行方法对比：栅格 A* 与可见性图
 PYTHONPATH=src uv run python -m droneagent.evaluate planning --repeat 2          # 任务理解与规划（不起飞）
 PYTHONPATH=src uv run python -m droneagent.evaluate record --scene solar_2       # 录制场景（需仿真，先停止后端）
-PYTHONPATH=src uv run python -m droneagent.evaluate vision --scenes solar_1,solar_2,solar_3 --repeat 2
+PYTHONPATH=src uv run python -m droneagent.evaluate vision --scenes solar_46,solar_63,solar_71 --repeat 1
 PYTHONPATH=src uv run python -m droneagent.evaluate troubleshoot                 # 排障（需仿真，先停止后端）
 uv run python -m pytest                                                          # 离线测试
 ```
