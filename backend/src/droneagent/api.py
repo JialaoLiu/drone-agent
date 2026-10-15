@@ -118,7 +118,7 @@ async def sim_health() -> dict:
     try:
         result = await asyncio.wait_for(asyncio.wrap_future(runtime.submit(check())), 20)
     except (asyncio.TimeoutError, FlightError) as error:
-        return {"ok": False, "items": [], "advice": f"无法完成检查：{error or '超时'}", "checked_at": time.time()}
+        return {"ok": False, "items": [], "advice": f"无法完成检查：{str(error) or '超时'}", "checked_at": time.time()}
     _health_cache.clear()
     _health_cache.update(result)
     return result

@@ -63,6 +63,7 @@ class Flight:
         self._gimbal_id: int | None = None
         self.listeners: list = []      # 遥测回调（用于推送到前端）
         self.status_log: list[tuple[float, str]] = []   # 带时间的飞控状态消息，供飞行前检查判断“最近”是否有传感器超时
+        self._health: tuple[float, dict] | None = None    # 最近一次飞控自检（时间、结果）
 
     async def __aenter__(self) -> "Flight":
         await self.connect()
@@ -94,7 +95,7 @@ class Flight:
         self.param = ParamAsync(system)
         self.failure = FailureAsync(system)
         self._tasks = [asyncio.create_task(c) for c in (self._watch_position(), self._watch_battery(), self._watch_flags(),
-                                                         self._watch_attitude(), self._watch_status())]
+                                                         self._watch_attitude(), self._watch_status(), self._watch_health())]
         for name, value in DEFAULT_PARAMS.items():
             try:
                 await self.param.set_param_float(name, value)
@@ -145,17 +146,22 @@ class Flight:
             self.state.status = (self.state.status + [s.text])[-20:]
             self.status_log = (self.status_log + [(time.time(), s.text)])[-50:]
 
+    async def _watch_health(self):
+        # 常驻订阅：每次检查时临时新建订阅，在仿真重启后会一直收不到数据（实测），所以持续缓存最新结果
+        async for h in self.telemetry.subscribe_health():
+            self._health = (time.time(), {"gyro": h.is_gyrometer_calibration_ok, "accel": h.is_accelerometer_calibration_ok,
+                                          "mag": h.is_magnetometer_calibration_ok, "local_position": h.is_local_position_ok,
+                                          "global_position": h.is_global_position_ok, "home": h.is_home_position_ok,
+                                          "armable": h.is_armable})
+
     async def health(self, timeout: float = 5.0) -> dict | None:
-        """飞控自检的一次快照（传感器校准、位置估计、可否解锁）；超时返回 None。"""
-        async def first():
-            async for h in self.telemetry.subscribe_health():
-                return {"gyro": h.is_gyrometer_calibration_ok, "accel": h.is_accelerometer_calibration_ok,
-                        "mag": h.is_magnetometer_calibration_ok, "local_position": h.is_local_position_ok,
-                        "global_position": h.is_global_position_ok, "home": h.is_home_position_ok, "armable": h.is_armable}
-        try:
-            return await asyncio.wait_for(first(), timeout)
-        except asyncio.TimeoutError:
-            return None
+        """飞控自检的最新快照（传感器校准、位置估计、可否解锁）；超过 timeout 秒没有新结果返回 None。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self._health and time.time() - self._health[0] < timeout:
+                return self._health[1]
+            await asyncio.sleep(0.2)
+        return None
 
     # ---------- 动作 ----------
 
