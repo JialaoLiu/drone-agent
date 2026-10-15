@@ -203,6 +203,7 @@ scripts/start.sh stop
 | 命令 | 内容 | 是否需要仿真 | 是否调用模型 |
 | --- | --- | --- | --- |
 | `PYTHONPATH=src uv run python -m droneagent.evaluate layouts --seeds 1-100` | 随机布局：每个种子生成场景，按三种复核策略规划航线并做安全校验 | 否 | 否 |
+| `PYTHONPATH=src uv run python -m droneagent.evaluate routes --seeds 1-100` | 绕行方法对比：栅格 A* 与可见性图的通过率、长度、拐点、耗时 | 否 | 否 |
 | `PYTHONPATH=src uv run python -m droneagent.evaluate planning --repeat 2` | 任务理解与规划：20 道题（含追问、拒绝、注入指令） | 否 | 是 |
 | `PYTHONPATH=src uv run python -m droneagent.evaluate record --scene solar_2` | 录制场景的全部照片，供离线回放 | 是（先停止后端） | 否 |
 | `PYTHONPATH=src uv run python -m droneagent.evaluate vision --scenes solar_1,solar_2,solar_3 --repeat 2` | 巡检：离线回放比较四种复核策略 | 否 | 是 |
