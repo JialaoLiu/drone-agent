@@ -49,6 +49,7 @@ LLM_API_KEY = env("LLM_API_KEY")
 LLM_BASE_URL = env("LLM_BASE_URL", "https://api.deepseek.com")
 LLM_MODEL = env("LLM_MODEL", "deepseek-chat")
 VISION_PROVIDER = env("VISION_PROVIDER", "deepseek")          # deepseek | openai
+TRIAGE_ENABLED = env("TRIAGE_ENABLED", "0") == "1"             # 初筛前用本地分类器过滤明显正常的板（需先运行 evaluate triage 训练）
 VISION_MODEL = env("VISION_MODEL", "deepseek-v4-flash-vision-exp")
 OPENAI_API_KEY = env("OPENAI_API_KEY")
 OPENAI_BASE_URL = env("OPENAI_BASE_URL", "https://api.openai.com/v1")

@@ -2,9 +2,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { getEval, listEvals } from '../api'
 
-const evals = ref<{ name: string; suite: string; summary: any; scenes?: string[]; repeat?: number; model?: string }[]>([])
+const evals = ref<{ name: string; suite: string; summary: any; scenes?: string[]; repeat?: number; model?: string; summary_rows?: any[] | null }[]>([])
 const detail = ref<Record<string, any> | null>(null)
-const SUITES: Record<string, string> = { vision: '巡检（复核策略对比）', planning: '任务理解与规划', troubleshoot: '飞行排障', layouts: '随机布局泛化', routes: '绕行方法对比' }
+const SUITES: Record<string, string> = { vision: '巡检（复核策略对比）', planning: '任务理解与规划', troubleshoot: '飞行排障', layouts: '随机布局泛化', routes: '绕行方法对比', triage: '本地初筛分类器' }
 const ROUTERS: Record<string, string> = { grid: '栅格 A*', visibility: '可见性图' }
 const STRATEGY: Record<string, string> = { none: '只初筛', flagged: '复核疑似缺陷', flagged_and_unsure: '复核疑似与看不清', all: '全部近距复核' }
 const latest = computed(() => Object.keys(SUITES).map((k) => evals.value.find((e) => e.suite === k)).filter(Boolean) as typeof evals.value)
@@ -35,6 +35,14 @@ onMounted(async () => { evals.value = await listEvals() })
         <tbody><tr v-for="(label, k) in ROUTERS" :key="k"><td>{{ label }}</td><td class="num">{{ pct(e.summary[k].plan_pass_rate) }}</td><td class="num">{{ e.summary[k].mean_extra_pct }}%</td>
           <td class="num">{{ e.summary[k].mean_waypoints }}</td><td class="num">{{ e.summary[k].mean_ms }} ms</td></tr></tbody>
       </table>
+      <template v-if="e.suite === 'triage'">
+        <p>没见过的测试场景 AUC <b>{{ e.summary.auc }}</b>（{{ e.summary.test_tiles }} 块板、{{ e.summary.test_defects }} 个缺陷）</p>
+        <table class="data">
+          <thead><tr><th class="num">目标保留</th><th class="num">实际保留缺陷</th><th class="num">送视觉模型</th></tr></thead>
+          <tbody><tr v-for="r in e.summary_rows ?? []" :key="r.target_recall"><td class="num">{{ pct(r.target_recall) }}</td><td class="num">{{ pct(r.defects_kept) }}</td><td class="num">{{ pct(r.tiles_sent) }}</td></tr></tbody>
+        </table>
+        <p class="muted small">默认不启用（TRIAGE_ENABLED=1 开启）：实际调用视觉模型时省约 19%，但被模型自身的判断波动盖住。</p>
+      </template>
       <p v-if="e.suite === 'routes'" class="muted small">需要绕行的航段 {{ e.summary.segments }} 段；{{ e.summary.length_saving_pct == null ? "总长对比不适用" : `可见性图总长少 ${e.summary.length_saving_pct}%` }}，默认仍用栅格 A*（拐点更少）。</p>
       <button class="small" @click="open(e.name)">查看明细</button>
     </section>

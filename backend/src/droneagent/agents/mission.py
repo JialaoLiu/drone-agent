@@ -73,6 +73,16 @@ def _usage(state: State, role: str, usage: Usage) -> None:
     store.record_call(state["mission_id"], role, usage.as_dict())
 
 
+_triage_cache: dict = {}
+
+
+def _triage_model() -> dict | None:
+    if "model" not in _triage_cache:
+        from .. import triage
+        _triage_cache["model"] = triage.load()
+    return _triage_cache["model"]
+
+
 def _cancelled(state: State) -> bool:
     return store.mission_status(state["mission_id"]) == "cancelled"
 
@@ -342,7 +352,8 @@ async def overview(state: State) -> dict:
 
     # 巡检员初筛：裁切、校正、拼图，多张拼图并行判断
     try:
-        result = await asyncio.to_thread(inspection.screen_frame, frame, _panels(site, array["id"]), None, _parallel)
+        triage_model = _triage_model() if config.TRIAGE_ENABLED else None
+        result = await asyncio.to_thread(inspection.screen_frame, frame, _panels(site, array["id"]), None, _parallel, triage_model)
     except ModelUnavailable as error:
         _emit(state, "inspector", "error", f"视觉模型不可用：{error}，本列只保留照片，未做判断")
         return {"overview_photo": pid, "candidates": [], "screen_failed": True}
@@ -356,6 +367,8 @@ async def overview(state: State) -> dict:
             store.upsert_finding(state["mission_id"], c["id"], status="suspect", type=c["type"], confidence=c["confidence"],
                                  evidence=c["evidence"], screen_photo=pid)
     flagged = [c for c in candidates if c["status"] == "defect"]
+    if result.triaged:
+        _emit(state, "inspector", "triage", f"本地分类器判为明显正常 {len(result.triaged)} 块，未交给视觉模型", {"panels": result.triaged})
     _emit(state, "inspector", "screen",
           f"{array['id']} 列初筛 {result.tiles} 块板：疑似缺陷 {len(flagged)} 块"
           + (f"（{'、'.join(c['id'] for c in flagged)}）" if flagged else "")

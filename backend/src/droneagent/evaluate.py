@@ -63,6 +63,7 @@ async def _record(scene: str, standoff: float) -> Path:
     if bad:
         raise RuntimeError("录制航线未通过安全校验：" + "；".join(v.message for v in bad[:5]))
     async with Flight(Origin(**site["origin"])) as f:
+        await f.wait_ready()           # 仿真刚启动，先等飞控定位与自检就绪，再做飞行前检查
         check = await health.preflight(f)
         if not check["ok"]:
             raise RuntimeError("飞行前检查未通过：" + check["advice"])
@@ -366,6 +367,87 @@ def run_routes(seeds: list[int]) -> dict:
     return {"suite": "routes", "seeds": seeds, "summary": summary, "rows": segments}
 
 
+# ---------- triage ----------
+
+TRIAGE_TRAIN = ["solar_1", "solar_2", "solar_3", "solar_101", "solar_102", "solar_103", "solar_104"]
+TRIAGE_TEST = ["solar_46", "solar_63", "solar_71", "solar_105", "solar_106"]
+TRIAGE_TARGETS = [0.98, 0.95, 0.90]
+
+
+def run_triage(train_scenes: list[str], test_scenes: list[str], replay: bool = False) -> dict:
+    """本地初筛分类器：按场景划分训练 / 测试（测试场景完全没见过）。阈值只用训练场景的留一场景交叉验证结果选取，
+    再在测试场景上报告实际保留的缺陷比例与少调用的初筛比例。replay 为真时，对测试场景真的调用视觉模型，
+    比较“全部初筛”与“分类器过滤后初筛”的结果和费用。"""
+    import numpy as np
+    from sklearn.metrics import average_precision_score, roc_auc_score
+
+    from . import triage
+
+    xtr, ytr, mtr = triage.dataset(train_scenes)
+    xte, yte, mte = triage.dataset(test_scenes)
+    # 训练集上的留一场景交叉验证：每个场景的概率都来自没见过它的模型，用来选阈值
+    oof = np.zeros(len(ytr))
+    for sc in train_scenes:
+        idx = np.array([m.scene == sc for m in mtr])
+        if idx.any() and (~idx).any():
+            oof[idx] = triage.train(xtr[~idx], ytr[~idx]).predict_proba(xtr[idx])[:, 1]
+    model = triage.train(xtr, ytr)
+    p = model.predict_proba(xte)[:, 1]
+    rows = []
+    for target in TRIAGE_TARGETS:
+        th = triage.threshold_for_recall(ytr, oof, target)
+        keep = p >= th
+        lost = [m for m, k, y in zip(mte, keep, yte) if y and not k]
+        rows.append({"target_recall": target, "threshold": round(th, 4),
+                     "defects_kept": round(float(keep[yte == 1].mean()), 3),
+                     "tiles_sent": round(float(keep.mean()), 3),
+                     "distractors_sent": round(float(np.mean([k for k, m in zip(keep, mte) if m.distractor])) if any(m.distractor for m in mte) else 0, 3),
+                     "lost": [{"scene": m.scene, "panel": m.panel_id, "type": m.defect, "severity": m.severity} for m in lost]})
+    summary = {"train_tiles": int(len(ytr)), "train_defects": int(ytr.sum()), "test_tiles": int(len(yte)), "test_defects": int(yte.sum()),
+               "auc": round(float(roc_auc_score(yte, p)), 3), "average_precision": round(float(average_precision_score(yte, p)), 3),
+               "cv_auc": round(float(roc_auc_score(ytr, oof)), 3)}
+    report = {"suite": "triage", "train_scenes": train_scenes, "test_scenes": test_scenes, "summary": summary, "rows": rows}
+    triage.save(model, rows[0]["threshold"], {"train_scenes": train_scenes, "target_recall": TRIAGE_TARGETS[0], **summary})
+    if replay:
+        report["replay"] = _triage_replay(test_scenes, model, rows[0]["threshold"])
+    return report
+
+
+def _triage_replay(scenes: list[str], model, threshold: float) -> dict:
+    """真的调用视觉模型：同一批整列照片，全部初筛 vs 过滤后初筛。"""
+    from . import triage
+
+    out = {"threshold": threshold, "scenes": []}
+    for scene in scenes:
+        site = _captured_site(scene)
+        truth = {p["id"]: p["defect"]["type"] for p in site["panels"] if p.get("defect")}
+        row = {"scene": scene}
+        for mode in ("all", "filtered"):
+            found, cost, sent, total = set(), 0.0, 0, 0
+            for a in site["arrays"]:
+                panels = [p for p in site["panels"] if p["array"] == a["id"]]
+                frame = Frame.load(CAPTURES / scene / f"overview_{a['id']}")
+                if mode == "filtered":
+                    ids, x = triage.photo_features(frame, panels)
+                    keep = {pid for pid, pr in zip(ids, model.predict_proba(x)[:, 1]) if pr >= threshold} if len(ids) else set()
+                    keep |= {p["id"] for p in panels} - set(ids)          # 看不清的板仍交给初筛
+                    panels = [p for p in panels if p["id"] in keep]
+                total += sum(1 for p in site["panels"] if p["array"] == a["id"])
+                sent += len(panels)
+                if not panels:
+                    continue
+                res = inspection.screen_frame(frame, panels)
+                cost += sum(u.cost_yuan or 0 for u in res.usages)
+                found |= {c["id"] for c in res.candidates if c["status"] == "defect"}
+            hits = found & set(truth)
+            row[mode] = {"flagged": len(found), "defects_flagged": len(hits), "defects": len(truth),
+                         "recall": round(len(hits) / max(1, len(truth)), 3), "precision": round(len(hits) / max(1, len(found)), 3),
+                         "tiles_sent": sent, "tiles": total, "cost_yuan": round(cost, 4)}
+        out["scenes"].append(row)
+        print(f"{scene}：全部初筛 {row['all']}；过滤后 {row['filtered']}", flush=True)
+    return out
+
+
 # ---------- troubleshoot ----------
 
 async def _troubleshoot(faults: list[str]) -> dict:
@@ -447,6 +529,23 @@ def write_report(report: dict) -> Path:
         bad = [r for r in report["rows"] if not (r["grid"]["ok"] and r["visibility"]["ok"])]
         lines += ["", "## 未通过的航段", ""] + ([f"- 种子 {r['seed']}：" + "；".join(f"{ROUTERS[m]} {'找到但不安全' if r[m]['found'] else '未找到'}"
                                                                          for m in ROUTERS if not r[m]["ok"]) for r in bad] or ["无"])
+    elif report["suite"] == "triage":
+        s = report["summary"]
+        lines += [f"训练场景 {'、'.join(report['train_scenes'])}（{s['train_tiles']} 块板、{s['train_defects']} 个缺陷）；"
+                  f"测试场景 {'、'.join(report['test_scenes'])}（{s['test_tiles']} 块板、{s['test_defects']} 个缺陷，训练时完全没见过）。", "",
+                  f"测试场景 AUC {s['auc']}，平均精确率 {s['average_precision']}；训练集留一场景交叉验证 AUC {s['cv_auc']}。", "",
+                  "| 阈值按训练集保留缺陷 | 阈值 | 测试集实际保留缺陷 | 交给视觉模型的板 | 干扰板被送去复核 | 漏掉的缺陷 |",
+                  "| ---: | ---: | ---: | ---: | ---: | --- |"]
+        lines += [f"| {r['target_recall']:.0%} | {r['threshold']} | {r['defects_kept']:.1%} | {r['tiles_sent']:.1%} | {r['distractors_sent']:.1%} | "
+                  + ("、".join(f"{x['panel']}（{x['type']}，{x['severity']}）" for x in r["lost"]) or "无") + " |" for r in report["rows"]]
+        if report.get("replay"):
+            lines += ["", f"## 实际调用视觉模型对比（阈值 {report['replay']['threshold']}）", "",
+                      "| 场景 | 全部初筛：标出缺陷 / 实际缺陷 | 精确率 | 费用 | 过滤后：标出缺陷 / 实际缺陷 | 精确率 | 送检板数 | 费用 |",
+                      "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
+            for r in report["replay"]["scenes"]:
+                a, f = r["all"], r["filtered"]
+                lines.append(f"| {r['scene']} | {a['defects_flagged']} / {a['defects']} | {a['precision']} | ¥{a['cost_yuan']} | "
+                             f"{f['defects_flagged']} / {f['defects']} | {f['precision']} | {f['tiles_sent']} / {f['tiles']} | ¥{f['cost_yuan']} |")
     elif report["suite"] == "troubleshoot":
         s = report["summary"]
         lines += [f"排障准确率 {s['accuracy']}（只看参数差异的规则基线 {s['rule_baseline_accuracy']}），平均试飞 {s['avg_flights']} 次", "",
@@ -487,6 +586,10 @@ def main() -> None:
     pl.add_argument("--repeat", type=int, default=1)
     ly = sub.add_parser("layouts", help="随机布局的规划与安全校验（不起飞、不调用模型）")
     ly.add_argument("--seeds", default="1-50", help="例如 1-50")
+    tg = sub.add_parser("triage", help="本地初筛分类器：训练、选阈值、在没见过的场景上评估（--replay 真的调用视觉模型对比）")
+    tg.add_argument("--train", default=",".join(TRIAGE_TRAIN))
+    tg.add_argument("--test", default=",".join(TRIAGE_TEST))
+    tg.add_argument("--replay", action="store_true")
     rt = sub.add_parser("routes", help="绕行方法对比：栅格 A* 与可见性图（不起飞、不调用模型）")
     rt.add_argument("--seeds", default="1-100", help="例如 1-100")
     ts = sub.add_parser("troubleshoot", help="排障：注入已知故障，检验诊断员能否找到原因（需要仿真）")
@@ -503,6 +606,8 @@ def main() -> None:
     elif args.cmd == "layouts":
         lo, _, hi = args.seeds.partition("-")
         report = run_layouts(list(range(int(lo), int(hi or lo) + 1)))
+    elif args.cmd == "triage":
+        report = run_triage(args.train.split(","), args.test.split(","), args.replay)
     elif args.cmd == "routes":
         lo, _, hi = args.seeds.partition("-")
         report = run_routes(list(range(int(lo), int(hi or lo) + 1)))

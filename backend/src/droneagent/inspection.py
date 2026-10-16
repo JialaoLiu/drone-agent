@@ -19,14 +19,26 @@ CONFLICT_CONFIDENCE = 0.6           # 初筛置信度达到这个值、复核却
 @dataclass
 class Screening:
     candidates: list[dict]                 # 疑似缺陷与看不清的板
-    tiles: int                             # 实际判断的板数
+    tiles: int                             # 实际判断的板数（含本地分类器判为明显正常的板）
     usages: list[Usage] = field(default_factory=list)
+    triaged: list[str] = field(default_factory=list)   # 本地分类器判为明显正常、没有交给视觉模型的板
 
 
-def screen_frame(frame: Frame, panels: list[dict], provider: str | None = None, parallel=None) -> Screening:
-    """对一张整列照片做初筛。parallel(fn, args_list) 可传入并行执行器。"""
+def screen_frame(frame: Frame, panels: list[dict], provider: str | None = None, parallel=None, triage_model: dict | None = None) -> Screening:
+    """对一张整列照片做初筛。parallel(fn, args_list) 可传入并行执行器。
+    triage_model（triage.load() 的结果）给出时，先用本地分类器过滤明显正常的板，只把其余的交给视觉模型。"""
+    triaged: list[str] = []
+    if triage_model:
+        from . import triage
+        ids, x = triage.photo_features(frame, panels)
+        if len(ids):
+            probs = triage_model["model"].predict_proba(x)[:, 1]
+            triaged = [pid for pid, pr in zip(ids, probs) if pr < triage_model["threshold"]]
+    skip = set(triaged)
     tiles, unseen = [], []
     for p in panels:
+        if p["id"] in skip:
+            continue
         t = vision.rectify(frame, p)
         if t:
             tiles.append(t)
@@ -40,7 +52,7 @@ def screen_frame(frame: Frame, panels: list[dict], provider: str | None = None, 
         candidates += found
     candidates += [{"id": pid, "status": "unsure", "type": None, "confidence": 0.0, "evidence": "整列照片中看不到或太小",
                     "unseen": True} for pid in unseen]
-    return Screening(candidates, len(tiles), usages)
+    return Screening(candidates, len(tiles) + len(triaged), usages, triaged)
 
 
 def select_targets(policy: str, candidates: list[dict], array_panels: list[dict]) -> tuple[list[str], list[str]]:

@@ -122,3 +122,37 @@ def test_store_mission_lifecycle():
     f = store.findings(mid)[0]
     assert f["status"] == "confirmed" and f["type"] == "crack" and f["confidence"] == 0.9
     assert [e["kind"] for e in store.events(mid)] == ["plan"]
+
+
+def test_triage_threshold_and_features():
+    import numpy as np
+    from PIL import Image
+    from droneagent import triage
+    y = np.array([0, 0, 1, 1, 1, 1])
+    p = np.array([0.1, 0.5, 0.2, 0.6, 0.7, 0.9])
+    th = triage.threshold_for_recall(y, p, 1.0)
+    assert (p[y == 1] >= th).all() and th <= 0.2
+    th75 = triage.threshold_for_recall(y, p, 0.75)
+    assert (p[y == 1] >= th75).mean() >= 0.75 and th75 > th
+    plain = Image.new("RGB", (150, 255), (30, 40, 90))
+    cracked = plain.copy()
+    for i in range(255):
+        cracked.putpixel((40 + i // 6, i), (250, 250, 250))
+    a, b = triage.features(plain), triage.features(cracked)
+    assert a.shape == b.shape and not np.allclose(a, b)
+
+
+def test_screen_frame_skips_triaged_panels(site, monkeypatch):
+    from droneagent import triage
+    panels = [p for p in site["panels"] if p["array"] == "A"][:4]
+    monkeypatch.setattr(vision, "rectify", lambda frame, p, size=None: vision.Tile(p["id"], None, 50))
+    monkeypatch.setattr(triage, "photo_features", lambda frame, ps: ([p["id"] for p in ps], [[0]] * len(ps)))
+    sent = []
+    monkeypatch.setattr(vision, "screen", lambda tiles, provider=None: (sent.extend(t.panel_id for t in tiles) or [], Usage("m", 1, 1, 0, 1, 0.0)))
+
+    class Model:
+        def predict_proba(self, x):
+            import numpy as np
+            return np.array([[0.9, 0.1], [0.2, 0.8], [0.95, 0.05], [0.4, 0.6]])
+    res = inspection.screen_frame(None, panels, triage_model={"model": Model(), "threshold": 0.3})
+    assert res.triaged == [panels[0]["id"], panels[2]["id"]] and sent == [panels[1]["id"], panels[3]["id"]] and res.tiles == 4

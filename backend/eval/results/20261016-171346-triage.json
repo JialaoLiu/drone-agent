@@ -1,0 +1,181 @@
+{
+ "suite": "triage",
+ "train_scenes": [
+  "solar_1",
+  "solar_2",
+  "solar_3",
+  "solar_101",
+  "solar_102",
+  "solar_103",
+  "solar_104"
+ ],
+ "test_scenes": [
+  "solar_46",
+  "solar_63",
+  "solar_71",
+  "solar_105",
+  "solar_106"
+ ],
+ "summary": {
+  "train_tiles": 604,
+  "train_defects": 74,
+  "test_tiles": 356,
+  "test_defects": 42,
+  "auc": 0.923,
+  "average_precision": 0.769,
+  "cv_auc": 0.85
+ },
+ "rows": [
+  {
+   "target_recall": 0.98,
+   "threshold": 0.0006,
+   "defects_kept": 1.0,
+   "tiles_sent": 0.831,
+   "distractors_sent": 0.913,
+   "lost": []
+  },
+  {
+   "target_recall": 0.95,
+   "threshold": 0.0015,
+   "defects_kept": 1.0,
+   "tiles_sent": 0.722,
+   "distractors_sent": 0.848,
+   "lost": []
+  },
+  {
+   "target_recall": 0.9,
+   "threshold": 0.0023,
+   "defects_kept": 0.976,
+   "tiles_sent": 0.666,
+   "distractors_sent": 0.804,
+   "lost": [
+    {
+     "scene": "solar_46",
+     "panel": "A-R3-C01",
+     "type": "soiling",
+     "severity": "minor"
+    }
+   ]
+  }
+ ],
+ "replay": {
+  "threshold": 0.0006,
+  "scenes": [
+   {
+    "scene": "solar_46",
+    "all": {
+     "flagged": 14,
+     "defects_flagged": 11,
+     "defects": 11,
+     "recall": 1.0,
+     "precision": 0.786,
+     "tiles_sent": 92,
+     "tiles": 92,
+     "cost_yuan": 0.2746
+    },
+    "filtered": {
+     "flagged": 15,
+     "defects_flagged": 11,
+     "defects": 11,
+     "recall": 1.0,
+     "precision": 0.733,
+     "tiles_sent": 79,
+     "tiles": 92,
+     "cost_yuan": 0.1577
+    }
+   },
+   {
+    "scene": "solar_63",
+    "all": {
+     "flagged": 11,
+     "defects_flagged": 9,
+     "defects": 10,
+     "recall": 0.9,
+     "precision": 0.818,
+     "tiles_sent": 86,
+     "tiles": 86,
+     "cost_yuan": 0.1486
+    },
+    "filtered": {
+     "flagged": 13,
+     "defects_flagged": 9,
+     "defects": 10,
+     "recall": 0.9,
+     "precision": 0.692,
+     "tiles_sent": 82,
+     "tiles": 86,
+     "cost_yuan": 0.2069
+    }
+   },
+   {
+    "scene": "solar_71",
+    "all": {
+     "flagged": 13,
+     "defects_flagged": 9,
+     "defects": 10,
+     "recall": 0.9,
+     "precision": 0.692,
+     "tiles_sent": 86,
+     "tiles": 86,
+     "cost_yuan": 0.1117
+    },
+    "filtered": {
+     "flagged": 12,
+     "defects_flagged": 9,
+     "defects": 10,
+     "recall": 0.9,
+     "precision": 0.75,
+     "tiles_sent": 71,
+     "tiles": 86,
+     "cost_yuan": 0.125
+    }
+   },
+   {
+    "scene": "solar_105",
+    "all": {
+     "flagged": 5,
+     "defects_flagged": 5,
+     "defects": 6,
+     "recall": 0.833,
+     "precision": 1.0,
+     "tiles_sent": 53,
+     "tiles": 53,
+     "cost_yuan": 0.1339
+    },
+    "filtered": {
+     "flagged": 6,
+     "defects_flagged": 4,
+     "defects": 6,
+     "recall": 0.667,
+     "precision": 0.667,
+     "tiles_sent": 46,
+     "tiles": 53,
+     "cost_yuan": 0.0807
+    }
+   },
+   {
+    "scene": "solar_106",
+    "all": {
+     "flagged": 4,
+     "defects_flagged": 4,
+     "defects": 5,
+     "recall": 0.8,
+     "precision": 1.0,
+     "tiles_sent": 39,
+     "tiles": 39,
+     "cost_yuan": 0.0659
+    },
+    "filtered": {
+     "flagged": 4,
+     "defects_flagged": 4,
+     "defects": 5,
+     "recall": 0.8,
+     "precision": 1.0,
+     "tiles_sent": 22,
+     "tiles": 39,
+     "cost_yuan": 0.0248
+    }
+   }
+  ]
+ }
+}

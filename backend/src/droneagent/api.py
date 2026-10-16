@@ -417,7 +417,8 @@ def list_evals() -> list[dict]:
         except (OSError, ValueError):
             continue
         out.append({"name": path.stem, "suite": data.get("suite", "gold"), "summary": data.get("summary"),
-                    "scenes": data.get("scenes"), "repeat": data.get("repeat"), "model": data.get("model")})
+                    "scenes": data.get("scenes"), "repeat": data.get("repeat"), "model": data.get("model"),
+                    "summary_rows": data.get("rows") if data.get("suite") == "triage" else None})
     return out
 
 
