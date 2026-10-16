@@ -448,6 +448,68 @@ def _triage_replay(scenes: list[str], model, threshold: float) -> dict:
     return out
 
 
+# ---------- real ----------
+
+REAL_DIR = config.RELATED_DIR / "datasets" / "pv-panel-defect"
+# 公开数据集的类别 → 本系统的判断：期望结论，以及算作“类型正确”的缺陷类型
+REAL_CLASSES = {
+    "Clean": ("ok", set()),
+    "Dusty": ("defect", {"soiling"}),
+    "Bird-drop": ("defect", {"soiling"}),
+    "Physical-Damage": ("defect", {"crack", "broken"}),
+    "Electrical-damage": ("defect", set()),      # 本系统没有对应类型（烧痕、热斑），只看是否判为缺陷
+    "Snow-Covered": ("defect", set()),           # 超出本系统范围，单独统计
+}
+
+
+def run_real(splits: list[str], limit: int = 0) -> dict:
+    """真实图像评测：用公开数据集的现场照片检验仿真中调出来的复核判断能迁移多少。
+    与实时任务相同的系统说明与裁决（无法识别判为不确定；不确定时再看一次）。"""
+    from PIL import Image
+
+    items = []
+    for split in splits:
+        for cls in REAL_CLASSES:
+            files = sorted(p for p in (REAL_DIR / split / cls).glob("*") if p.suffix.lower() in (".jpg", ".jpeg", ".png"))
+            items += [(split, cls, f) for f in (files[:limit] if limit else files)]
+
+    def judge(item):
+        split, cls, path = item
+        img = Image.open(path)
+        verdict, usage = vision.verify_photo(img)
+        usages = [usage]
+        if verdict["status"] == "unsure":
+            verdict, usage = vision.verify_photo(img)
+            usages.append(usage)
+        return {"split": split, "class": cls, "file": path.name, **verdict, "cost": sum(u.cost_yuan or 0 for u in usages)}
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        rows = []
+        for i, r in enumerate(pool.map(judge, items), 1):
+            rows.append(r)
+            if i % 50 == 0:
+                print(f"已判断 {i}/{len(items)}", flush=True)
+    per_class = {}
+    for cls, (expect, types) in REAL_CLASSES.items():
+        rs = [r for r in rows if r["class"] == cls]
+        if not rs:
+            continue
+        ok = [r for r in rs if r["status"] == expect]
+        per_class[cls] = {"n": len(rs), "expected": expect, "correct_status": round(len(ok) / len(rs), 3),
+                          "unsure": round(sum(r["status"] == "unsure" for r in rs) / len(rs), 3),
+                          "type_correct": round(sum(r["type"] in types for r in ok) / len(ok), 3) if types and ok else None,
+                          "types": {t: sum(r["type"] == t for r in rs) for t in vision.DEFECT_TYPES}}
+    core = [r for r in rows if r["class"] in ("Clean", "Dusty", "Bird-drop", "Physical-Damage")]
+    tp = sum(r["status"] == "defect" for r in core if r["class"] != "Clean")
+    fp = sum(r["status"] == "defect" for r in core if r["class"] == "Clean")
+    pos = sum(r["class"] != "Clean" for r in core)
+    summary = {"images": len(rows), "splits": splits, "per_class": per_class,
+               "core_recall": round(tp / max(1, pos), 3), "core_precision": round(tp / max(1, tp + fp), 3),
+               "clean_false_alarm": round(fp / max(1, sum(r["class"] == "Clean" for r in core)), 3),
+               "cost_yuan": round(sum(r["cost"] for r in rows), 3)}
+    return {"suite": "real", "summary": summary, "rows": rows}
+
+
 # ---------- troubleshoot ----------
 
 async def _troubleshoot(faults: list[str]) -> dict:
@@ -546,6 +608,18 @@ def write_report(report: dict) -> Path:
                 a, f = r["all"], r["filtered"]
                 lines.append(f"| {r['scene']} | {a['defects_flagged']} / {a['defects']} | {a['precision']} | ¥{a['cost_yuan']} | "
                              f"{f['defects_flagged']} / {f['defects']} | {f['precision']} | {f['tiles_sent']} / {f['tiles']} | ¥{f['cost_yuan']} |")
+    elif report["suite"] == "real":
+        s = report["summary"]
+        labels = {"Clean": "干净", "Dusty": "灰尘", "Bird-drop": "鸟粪", "Physical-Damage": "物理损坏", "Electrical-damage": "电气损坏", "Snow-Covered": "积雪"}
+        lines += [f"公开数据集 alicjalena/pv-panel-defect-dataset（CC BY-NC-SA 4.0），{'、'.join(s['splits'])}，共 {s['images']} 张现场照片；"
+                  f"费用 ¥{s['cost_yuan']}。判断说明与实时任务相同（为仿真画面编写，未针对真实照片调整）。", "",
+                  f"核心四类（干净、灰尘、鸟粪、物理损坏）：缺陷检出 {s['core_recall']:.1%}，精确率 {s['core_precision']:.1%}，干净板误报 {s['clean_false_alarm']:.1%}。", "",
+                  "| 类别 | 张数 | 期望 | 结论正确 | 不确定 | 类型正确（对应类型） | 判出的类型分布 |", "| --- | ---: | --- | ---: | ---: | ---: | --- |"]
+        for cls, v in s["per_class"].items():
+            dist = "、".join(f"{vision.DEFECT_TYPES[t]} {n}" for t, n in v["types"].items() if n) or "无"
+            tc = "—" if v["type_correct"] is None else f"{v['type_correct']:.1%}"
+            lines.append(f"| {labels[cls]} | {v['n']} | {'正常' if v['expected'] == 'ok' else '缺陷'} | {v['correct_status']:.1%} | {v['unsure']:.1%} | {tc} | {dist} |")
+        lines += ["", "说明：电气损坏（烧痕、热斑）和积雪不在本系统的缺陷类型里，只统计是否判为缺陷；物理损坏判为裂纹或玻璃破碎都算类型正确，灰尘和鸟粪对应污损。"]
     elif report["suite"] == "troubleshoot":
         s = report["summary"]
         lines += [f"排障准确率 {s['accuracy']}（只看参数差异的规则基线 {s['rule_baseline_accuracy']}），平均试飞 {s['avg_flights']} 次", "",
@@ -590,6 +664,9 @@ def main() -> None:
     tg.add_argument("--train", default=",".join(TRIAGE_TRAIN))
     tg.add_argument("--test", default=",".join(TRIAGE_TEST))
     tg.add_argument("--replay", action="store_true")
+    rl = sub.add_parser("real", help="真实图像评测：公开光伏缺陷数据集的现场照片（调用视觉模型）")
+    rl.add_argument("--splits", default="test")
+    rl.add_argument("--limit", type=int, default=0, help="每个类别最多取多少张，0 为全部")
     rt = sub.add_parser("routes", help="绕行方法对比：栅格 A* 与可见性图（不起飞、不调用模型）")
     rt.add_argument("--seeds", default="1-100", help="例如 1-100")
     ts = sub.add_parser("troubleshoot", help="排障：注入已知故障，检验诊断员能否找到原因（需要仿真）")
@@ -608,6 +685,8 @@ def main() -> None:
         report = run_layouts(list(range(int(lo), int(hi or lo) + 1)))
     elif args.cmd == "triage":
         report = run_triage(args.train.split(","), args.test.split(","), args.replay)
+    elif args.cmd == "real":
+        report = run_real(args.splits.split(","), args.limit)
     elif args.cmd == "routes":
         lo, _, hi = args.seeds.partition("-")
         report = run_routes(list(range(int(lo), int(hi or lo) + 1)))

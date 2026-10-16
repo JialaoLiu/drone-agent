@@ -124,6 +124,23 @@ def verify(tile: Tile, provider: str | None = None) -> tuple[dict, Usage]:
             "confidence": _confidence(data), "evidence": str(data.get("evidence") or "")[:200], "raw": data}, usage
 
 
+def verify_photo(image: Image.Image, provider: str | None = None) -> tuple[dict, Usage]:
+    """真实现场照片的复核（真实图像评测用）：系统说明、输出格式、结论规范化都与 verify 相同，
+    只是保留照片原始比例（最长边 768 像素），并说明这是没有经过校正的现场照片。"""
+    img = image.convert("RGB")
+    img.thumbnail((768, 768))
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", quality=90)
+    user = ("这是一张光伏板的现场照片（没有经过裁切校正，可能有多块板、拍摄角度不正）。判断画面中的光伏板是否有缺陷。"
+            '只输出 JSON：{"status":"ok|defect","type":"crack|soiling|broken|missing|null","confidence":0到1之间的数,'
+            '"evidence":"一句话说明看到了什么、在哪个位置"}')
+    data, usage = chat_json(GUIDE, user, [buf.getvalue()], model=_model(provider), provider=_provider(provider))
+    status = _status(data)
+    kind = str(data.get("type") or "").strip().lower()
+    return {"status": status, "type": kind if status == "defect" and kind in DEFECT_TYPES else None,
+            "confidence": _confidence(data), "evidence": str(data.get("evidence") or "")[:200]}, usage
+
+
 def _status(data: dict) -> str:
     """规范化复核结论。无法识别的输出返回 unsure，绝不默认为正常（那样会把真缺陷悄悄排除）。"""
     raw = str(data.get("status") or "").strip().lower()
