@@ -195,16 +195,19 @@ async def _confirm(state: RescueState, item: dict, index: int) -> tuple[dict | N
             return {"x": round(x, 2), "y": round(y, 2), "in_water": verdict["in_water"] == "yes", "photo": pid,
                     "clothing_unverified": in_water and verdict["match"] not in CONFIRM_MATCH and not attrs,
                     "evidence": verdict["evidence"], "confidence": verdict["confidence"], "found_at": time.time()}, verdict
-        if verdict["person"] != "unsure" or attempt:
+        # 初筛明明是人、变焦里却没看到人（或看不清）：多半已经走开了（从发现到对准要十来秒，变焦画面只有约 4 米宽）。
+        # 飞到候选位置正上方，用广角重新找一次附近的人（工程日志 43）
+        if verdict["person"] == "yes" or attempt or item.get("person") != "yes":
             return None, verdict
-        # 画面里看不清人：可能已经走开。飞到候选位置正上方，用广角重新找一次附近的人
-        _emit(state, "pilot", "retake", f"{item['id']} 附近看不清人，可能已经走开，飞到上方重新寻找")
+        _emit(state, "pilot", "retake", f"{item['id']} 的变焦画面里没有看到人，可能已经走开，飞到上方重新寻找")
         await f.goto(item["x"], item["y"], state["plan"]["altitude_m"], f.state.yaw)
         wide, _ = await _shoot(state, survey.Step("search", item["id"] + "R", (item["x"], item["y"], state["plan"]["altitude_m"]), 0, -90, "wide", "补搜"), index + 1)
-        near = [c for c in await asyncio.to_thread(detect.candidates, wide) if math.hypot(c["x"] - item["x"], c["y"] - item["y"]) < 10]
+        near = [c for c in await asyncio.to_thread(detect.candidates, wide)
+                if math.hypot(c["x"] - item["x"], c["y"] - item["y"]) < 10 and not _own_shadow(site, wide, c)]
         if not near:
             return None, verdict
-        item = {**item, "x": near[0]["x"], "y": near[0]["y"]}
+        best = min(near, key=lambda c: math.hypot(c["x"] - item["x"], c["y"] - item["y"]))     # 离上次位置最近的那个
+        item = {**item, "x": best["x"], "y": best["y"]}
         await f.point_gimbal(-90, settle=1.0)
     return None, verdict
 
@@ -244,7 +247,7 @@ async def search(state: RescueState) -> dict:
             # 同一个人在相邻照片里会重复出现：3 米内已有记录的不再重复确认
             if any(math.hypot(it["x"] - d["x"], it["y"] - d["y"]) < 3 and d["kind"] in ("bystander", "rejected") for d in detections):
                 continue
-            det = {"id": f"P{len(detections) + 1}", "x": it["x"], "y": it["y"], "kind": _classify(it), "photo": pid, "top": it.get("top"),
+            det = {"id": f"P{len(detections) + 1}", "x": it["x"], "y": it["y"], "kind": _classify(it), "photo": pid, "person": it["person"], "top": it.get("top"),
                    "bottom": it.get("bottom"), "child": it.get("child"), "in_water": it.get("in_water") == "yes", "evidence": it["evidence"],
                    "confidence": it["confidence"], "step": step.target}
             detections.append(det)
