@@ -21,7 +21,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
-from .. import config, health, inspection, safety, store, survey, vision
+from .. import config, context, health, inspection, safety, store, survey, vision
 from ..flight import FlightError, Preempted
 from ..llm import ModelUnavailable, Usage
 from ..sim import camera
@@ -71,6 +71,8 @@ def _emit(state: State, role: str, kind: str, message: str, payload: dict | None
 
 def _usage(state: State, role: str, usage: Usage) -> None:
     store.record_call(state["mission_id"], role, usage.as_dict())
+    if (warn := context.over_budget(role, usage.prompt_tokens)):     # 发现新的上下文膨胀点
+        _emit(state, "system", "context_budget", warn)
 
 
 _triage_cache: dict = {}

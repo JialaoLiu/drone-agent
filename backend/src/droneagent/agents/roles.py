@@ -112,7 +112,11 @@ def check_advice(advice: str, valid: set[str]) -> bool:
 
 def report_summary(result: dict) -> tuple[dict, Usage]:
     data, usage = chat_json(REPORTER, json.dumps(result, ensure_ascii=False))
-    valid = {f["panel_id"] for f in result.get("defects", [])} | {f["panel_id"] for f in result.get("unverified", [])}   # 只接受数据里有的编号
+    def ids(items) -> set[str]:          # 清单可能被压缩成“前若干条 + 汇总”（context.compact_items）
+        if isinstance(items, dict):
+            items = next((v for v in items.values() if isinstance(v, list)), [])
+        return {f["panel_id"] for f in items or []}
+    valid = ids(result.get("defects")) | ids(result.get("unverified"))   # 只接受报告员看得到的编号
     advice = str(data.get("advice") or "")[:400]
     ok = check_advice(advice, valid)
     return {"advice": advice if ok else "", "advice_rejected": bool(advice) and not ok, "rejected_text": "" if ok else advice,

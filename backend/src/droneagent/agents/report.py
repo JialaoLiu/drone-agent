@@ -12,7 +12,7 @@ from pathlib import Path
 
 from PIL import ImageDraw
 
-from .. import config, store, vision
+from .. import config, context, store, vision
 from ..sim.camera import Frame
 
 PRIORITY = {"broken": 0, "missing": 0, "crack": 1, "soiling": 2}
@@ -88,11 +88,14 @@ def default_advice(result: dict, priorities: list[str]) -> str:
 
 def for_reporter(result: dict) -> dict:
     """交给报告员的数据：字段含义直白，避免模型把照片编号之类的字段误读。"""
+    # 缺陷多时只保留前若干条（已按优先级排序），其余按类型和列汇总：报告员只写建议，不需要逐条细节
+    defects = [{"panel_id": d["panel_id"], "缺陷": d["label"], "置信度": round(d["confidence"] or 0, 2),
+                "确认方式": "近距复核确认" if d["verify_photo"] else "整列照片一眼可见（缺失）"} for d in result["defects"]]
+    unverified = [{"panel_id": u["panel_id"], "疑似": u["evidence"], "未确认原因": u.get("reason")} for u in result["unverified"]]
     return {
         "巡检的列": result["inspected_arrays"], "未巡检的列": result["skipped_arrays"], "检查的板数": result["panels_inspected"],
-        "defects": [{"panel_id": d["panel_id"], "缺陷": d["label"], "置信度": round(d["confidence"] or 0, 2),
-                     "确认方式": "近距复核确认" if d["verify_photo"] else "整列照片一眼可见（缺失）"} for d in result["defects"]],
-        "unverified": [{"panel_id": u["panel_id"], "疑似": u["evidence"], "未确认原因": u.get("reason")} for u in result["unverified"]],
+        "defects": context.compact_items(defects, "缺陷"),
+        "unverified": context.compact_items(unverified, "未确认原因"),
         "复核后排除的疑似": result["cleared"], "复核策略": result["closeup_policy"],
         "架次": result.get("sorties", 1), "飞行秒数": result["flight_seconds"], "耗电百分比": result["battery_used"], "异常": result["error"],
         "只拍照未判断的列": result.get("unjudged_arrays", []),

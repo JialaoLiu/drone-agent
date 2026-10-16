@@ -16,7 +16,7 @@ import asyncio
 import json
 import time
 
-from .. import config, health, logs, safety, simctl, store
+from .. import config, context, health, logs, safety, simctl, store
 from ..flight import Flight, FlightError, Preempted
 from ..sim.scene import load_site
 from ..llm import ModelUnavailable, chat_json
@@ -235,7 +235,7 @@ async def run(mid: str, symptom: str, fault: str | None = None) -> dict:
     experiments, flights, decision, usage_total = [], 1, None, []
     for _ in range(MAX_EXPERIMENTS + 1):
         evidence = {"symptom": symptom, "baseline_metrics": _metric_table(baseline), "baseline_observations": baseline["observations"],
-                    "param_diff": diff, "experiments": experiments, "messages": baseline["messages"][-8:]}
+                    "param_diff": diff, "experiments": context.compact_experiments(experiments), "messages": baseline["messages"][-8:]}
         try:
             decision, usage = await asyncio.to_thread(chat_json, DIAGNOSE, json.dumps(evidence, ensure_ascii=False))
         except ModelUnavailable as error:
@@ -243,6 +243,8 @@ async def run(mid: str, symptom: str, fault: str | None = None) -> dict:
             await reset_to_reference(f)       # 飞机已在地面（试飞结束会降落），故障参数不能留到下一个任务（深度审查 H09）
             return {"status": "failed", "error": str(error)}
         store.record_call(mid, "diagnostician", usage.as_dict())
+        if (warn := context.over_budget("diagnostician", usage.prompt_tokens)):
+            _emit(mid, "context_budget", warn, {})
         usage_total.append(usage.as_dict())
         if decision.get("action") != "experiment" or len(experiments) >= MAX_EXPERIMENTS:
             break
@@ -256,11 +258,11 @@ async def run(mid: str, symptom: str, fault: str | None = None) -> dict:
         flights += 1
         changes = {k: {"before": baseline["metrics"][k]["value"], "after": m["value"], "status_after": m["status"]}
                    for k, m in result["metrics"].items() if k in baseline["metrics"] and k != "battery_used"}
-        experiments.append({"restored": restore, "metrics_after": changes, "observations_after": result["observations"]})
         improved = [f"{result['metrics'][k]['label']} {v['before']}→{v['after']}" for k, v in changes.items()
                     if baseline["metrics"][k]["status"] != "ok" and v["status_after"] == "ok"]
         if baseline["observations"] and not result["observations"]:
             improved.append("基线中的动作超时不再出现")
+        experiments.append({"restored": restore, "metrics_after": changes, "observations_after": result["observations"], "improved": improved})
         _emit(mid, "experiment_result", f"实验完成：{('恢复正常的指标：' + '、'.join(improved)) if improved else '异常指标没有恢复'}",
               {"restored": restore, "changes": changes})
         # 恢复后的参数保留在仿真中；若该实验没有改善，下一次实验前把参数改回故障值，保持变量单一
