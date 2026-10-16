@@ -66,3 +66,18 @@ def test_visibility_detour_avoids_zone_and_stays_in_fence():
     assert sum(math.dist(p[:2], q[:2]) for p, q in zip(vis, vis[1:])) < 95
     # 直飞不受影响时不插点
     assert survey.detour((-40, 40, 20), (40, 40, 20), site, "visibility") == []
+
+
+def test_routes_summary_without_detours():
+    from droneagent import evaluate
+    seed = next(s for s in range(1, 40) if not evaluate.run_routes([s])["rows"])
+    assert evaluate.run_routes([seed])["summary"]["length_saving_pct"] is None
+
+
+def test_visibility_edges_keep_segment_clearance():
+    site = {"geofence": [[-60, -60], [60, -60], [60, 60], [-60, 60]],
+            "no_fly_zones": [{"id": "Z1", "label": "测试", "center": [0, 0], "radius": 8}], "obstacles": []}
+    a, b = (-40, 0, 20), (40, 0, 20)
+    route = [a] + survey.detour_visibility(a, b, site) + [b]
+    gap = min(math.dist(survey._segment_closest((0, 0), p, q), (0, 0)) - 8 for p, q in zip(route, route[1:]))
+    assert gap >= survey.CLEAR - 1e-6

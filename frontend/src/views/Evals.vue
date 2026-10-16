@@ -35,7 +35,7 @@ onMounted(async () => { evals.value = await listEvals() })
         <tbody><tr v-for="(label, k) in ROUTERS" :key="k"><td>{{ label }}</td><td class="num">{{ pct(e.summary[k].plan_pass_rate) }}</td><td class="num">{{ e.summary[k].mean_extra_pct }}%</td>
           <td class="num">{{ e.summary[k].mean_waypoints }}</td><td class="num">{{ e.summary[k].mean_ms }} ms</td></tr></tbody>
       </table>
-      <p v-if="e.suite === 'routes'" class="muted small">需要绕行的航段 {{ e.summary.segments }} 段；可见性图总长少 {{ e.summary.length_saving_pct }}%，默认仍用栅格 A*（拐点更少）。</p>
+      <p v-if="e.suite === 'routes'" class="muted small">需要绕行的航段 {{ e.summary.segments }} 段；{{ e.summary.length_saving_pct == null ? "总长对比不适用" : `可见性图总长少 ${e.summary.length_saving_pct}%` }}，默认仍用栅格 A*（拐点更少）。</p>
       <button class="small" @click="open(e.name)">查看明细</button>
     </section>
   </div>

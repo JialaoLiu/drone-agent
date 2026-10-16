@@ -338,7 +338,9 @@ def run_routes(seeds: list[int]) -> dict:
     summary["both_ok"] = len(both)
     summary["visibility_shorter"] = sum(1 for r in both if r["visibility"]["length"] < r["grid"]["length"] - 0.01)
     summary["visibility_longer"] = sum(1 for r in both if r["visibility"]["length"] > r["grid"]["length"] + 0.01)
-    summary["length_saving_pct"] = round(100 * (1 - sum(r["visibility"]["length"] for r in both) / max(1e-9, sum(r["grid"]["length"] for r in both))), 1)
+    # 没有可比较的航段时不给百分比（否则会算出“缩短 100%”）
+    summary["length_saving_pct"] = (round(100 * (1 - sum(r["visibility"]["length"] for r in both) / sum(r["grid"]["length"] for r in both)), 1)
+                                    if both else None)
     return {"suite": "routes", "seeds": seeds, "summary": summary, "rows": segments}
 
 
@@ -418,8 +420,8 @@ def write_report(report: dict) -> Path:
         lines += [f"| {ROUTERS[m]} | {s[m]['plan_pass_rate']:.0%} | {s[m]['segment_pass_rate']:.0%} | {s[m]['mean_length']} 米 | {s[m]['mean_extra_pct']}% | "
                   f"{s[m]['mean_waypoints']} | {s[m]['mean_ms']} 毫秒 | {s[m]['max_ms']} 毫秒 |" for m in ROUTERS]
         lines += ["", f"两种方法都通过的 {s['both_ok']} 段中：可见性图更短 {s['visibility_shorter']} 段、更长 {s['visibility_longer']} 段，"
-                  f"总长度少 {s['length_saving_pct']}%。", "",
-                  "说明：两种方法使用相同的禁飞区余量（半径 + 5 米）；可见性图把膨胀后的圆近似为外切正十二边形，找不到路径时退回栅格 A*（本表单独统计，未计入退回）。"]
+                  + (f"总长度少 {s['length_saving_pct']}%。" if s["length_saving_pct"] is not None else "总长度对比：不适用（没有需要绕行的航段）。"), "",
+                  "说明：两种方法的约束相同：栅格点 / 多边形顶点离禁飞区边界至少 5 米，航段直飞判定离边界至少 3.5 米（安全员下限 3 米）。可见性图把膨胀后的圆近似为外切正十二边形，找不到路径时退回栅格 A*（本表单独统计，未计入退回）。"]
         bad = [r for r in report["rows"] if not (r["grid"]["ok"] and r["visibility"]["ok"])]
         lines += ["", "## 未通过的航段", ""] + ([f"- 种子 {r['seed']}：" + "；".join(f"{ROUTERS[m]} {'找到但不安全' if r[m]['found'] else '未找到'}"
                                                                          for m in ROUTERS if not r[m]["ok"]) for r in bad] or ["无"])
