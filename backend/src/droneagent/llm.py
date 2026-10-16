@@ -37,6 +37,9 @@ class Usage:
 
 
 # 本进程内的累计用量（评测用来按 Token 比较不同方案，不受高峰 / 闲时单价影响）
+# 每次实际调用模型后通知的回调（评测脚本用它把调用写进用量表，与接口账单对得上，DR-060）
+USAGE_SINK = None
+
 STATS = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "cache_hit_tokens": 0, "reasoning_tokens": 0, "cached_answers": 0}
 _stats_lock = threading.Lock()
 
@@ -121,8 +124,14 @@ def chat_json(system: str, user: str, images: list[bytes] | None = None, model: 
             if cache:
                 cache.parent.mkdir(parents=True, exist_ok=True)
                 cache.write_text(json.dumps({"parsed": parsed, "model": served}, ensure_ascii=False), encoding="utf-8")
-            return parsed, Usage(served, prompt, usage.get("completion_tokens", 0), hit,
-                                 round((time.monotonic() - started) * 1000), cost, len(images or []))
+            result = Usage(served, prompt, usage.get("completion_tokens", 0), hit,
+                           round((time.monotonic() - started) * 1000), cost, len(images or []))
+            if USAGE_SINK is not None:
+                try:
+                    USAGE_SINK(result)
+                except Exception:     # noqa: BLE001  记账失败不能影响调用本身
+                    pass
+            return parsed, result
         except (httpx.TimeoutException, json.JSONDecodeError, ValueError) as error:
             last = error
         except (httpx.HTTPError, KeyError) as error:

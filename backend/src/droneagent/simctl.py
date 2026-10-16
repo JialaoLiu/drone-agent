@@ -16,12 +16,15 @@ SCRIPT = config.PROJECT_DIR / "scripts" / "sim.sh"
 
 
 def scenes() -> list[dict]:
+    """场景列表，新生成的在前（网页按此排序、分页）。"""
     out = []
-    for d in sorted(config.WORLDS_DIR.glob("*/site.json")):
+    for d in config.WORLDS_DIR.glob("*/site.json"):
         site = json.loads(d.read_text(encoding="utf-8"))
         out.append({"name": site["name"], "seed": site["seed"], "panels": len(site["panels"]), "arrays": len(site["arrays"]),
-                    "location": (site.get("location") or {}).get("name"), "ground": (site.get("ground") or {}).get("source", "procedural")})
-    return out
+                    "scenario": site.get("scenario", "solar"),
+                    "location": (site.get("location") or {}).get("name"), "ground": (site.get("ground") or {}).get("source", "procedural"),
+                    "created_at": d.stat().st_mtime})
+    return sorted(out, key=lambda x: -x["created_at"])
 
 
 def current_scene() -> str | None:
@@ -62,8 +65,10 @@ def missing_textures(name: str) -> list[str]:
     return [p for p in re.findall(r"<albedo_map>([^<]+)</albedo_map>", sdf.read_text(encoding="utf-8")) if not Path(p).exists()]
 
 
-def start(name: str, wait: float = 120.0) -> dict:
-    """启动指定场景（先停止正在运行的仿真）。场景不存在时按名称中的种子生成。"""
+def start(name: str, wait: float = 120.0, on_stage=None, cancelled=None) -> dict:
+    """启动指定场景（先停止正在运行的仿真）。场景不存在时按名称中的种子生成。
+    on_stage(文字)：报告当前阶段，供网页显示进度；cancelled()：返回真时放弃等待（用户中途停止）。"""
+    stage = on_stage or (lambda _text: None)
     if not (config.WORLDS_DIR / name / "site.json").exists():
         m = re.fullmatch(r"solar_(\d+)", name)
         if not m:
@@ -73,16 +78,23 @@ def start(name: str, wait: float = 120.0) -> dict:
     if missing:
         # 贴图缺失时 Gazebo 不报错，光伏板会渲染成一片灰色，视觉判断全部失真（DR-054），所以启动前拦下
         raise RuntimeError(f"场景 {name} 引用的 {len(missing)} 个贴图文件不存在（例如 {missing[0]}），请重新生成该场景")
+    stage("停止旧的仿真进程")
     stop()
     log = config.DATA_DIR / "logs" / "px4.log"
     log.unlink(missing_ok=True)
+    stage("启动飞控（PX4）与仿真器（Gazebo）")
     r = subprocess.run([str(SCRIPT), name], capture_output=True, timeout=120)
     if r.returncode != 0:
         output = (r.stderr or r.stdout).decode("utf-8", errors="replace").strip()
         raise RuntimeError(output or f"启动脚本返回 {r.returncode}")
     deadline = time.time() + wait
+    stage("等待飞控启动完成")
     while time.time() < deadline:
-        if px4_ready() and bridge_ready():
+        if cancelled and cancelled():
+            raise RuntimeError("启动已取消")
+        px4, cam = px4_ready(), bridge_ready()
+        if px4 and cam:
             return status()
+        stage("飞控已启动，等待相机" if px4 else "等待飞控启动完成")
         time.sleep(2)
     raise TimeoutError("仿真在规定时间内没有就绪，请查看日志 " + str(config.DATA_DIR / "logs"))

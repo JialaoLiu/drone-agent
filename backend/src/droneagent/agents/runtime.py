@@ -30,9 +30,47 @@ def loop() -> asyncio.AbstractEventLoop:
     return _loop
 
 
-def submit(coro):
-    """在任务循环中执行协程，返回 concurrent.futures.Future。"""
-    return asyncio.run_coroutine_threadsafe(coro, loop())
+_jobs: dict = {}                 # 任务编号 -> 后台执行的 Future（取消卡住的任务时用）
+
+
+def submit(coro, mission_id: str | None = None):
+    """在任务循环中执行协程，返回 concurrent.futures.Future。给出 mission_id 时登记，便于取消。"""
+    future = asyncio.run_coroutine_threadsafe(coro, loop())
+    if mission_id:
+        _jobs[mission_id] = future
+        future.add_done_callback(lambda _f, m=mission_id: _jobs.pop(m, None) if _jobs.get(m) is _f else None)
+    return future
+
+
+def job_running(mission_id: str) -> bool:
+    f = _jobs.get(mission_id)
+    return f is not None and not f.done()
+
+
+def force_stop(mission_id: str) -> bool:
+    """强制结束一个卡住的后台任务（只在飞机不在空中时使用），并释放占用。返回是否确实结束了什么。"""
+    f = _jobs.get(mission_id)
+    stopped = bool(f and not f.done() and f.cancel())
+    end_run(mission_id)
+    release(mission_id)
+    return stopped
+
+
+LIVE_STATUSES = ("planning", "awaiting_approval", "running")
+
+
+def reconcile(status_of) -> str | None:
+    """自愈：被占用的任务在数据库里已经结束，且后台没有它的执行实例时，释放占用（DR-058）。
+    status_of：任务编号 -> 数据库中的状态。返回被释放的任务编号。"""
+    mid = active_mission
+    if not mid:
+        return None
+    with _mission_lock:
+        running = mid in _running
+    if status_of(mid) not in LIVE_STATUSES and not running and not job_running(mid):
+        release(mid)
+        return mid
+    return None
 
 
 _origin_cache: dict = {"at": 0.0, "scene": None, "origin": ORIGIN}

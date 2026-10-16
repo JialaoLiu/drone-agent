@@ -15,6 +15,7 @@ GET  /usage                       模型用量
 from __future__ import annotations
 
 import asyncio
+import threading
 import hmac
 import io
 import json
@@ -29,9 +30,10 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from PIL import ImageDraw
 from pydantic import BaseModel, Field, StringConstraints
 
-from . import config, scoring, simctl, store, vision
+from . import config, scoring, settings, simctl, store, vision
 from . import health as preflight_check
 from .agents import mission, runtime, troubleshoot
+from .agents import queue as task_queue
 from .sim import scene
 from .flight import FlightError
 from .sim.camera import Frame
@@ -62,6 +64,7 @@ async def require_token(request: Request, call_next):
 def recover() -> None:
     """服务重启时，飞行中的任务无法接续（飞控连接已断开），标记为失败；等待确认的任务保留。"""
     config.ensure_dirs()
+    settings.load()
     for mid in store.active_missions():
         if store.mission_status(mid) in ("running", "planning"):
             store.update_mission(mid, status="failed")
@@ -121,10 +124,13 @@ def places(q: Annotated[str, Query(min_length=1, max_length=60)], city: str = "�
 
 @app.get("/sim")
 def sim_status() -> dict:
+    runtime.reconcile(store.mission_status)       # 已结束的任务仍占用飞机时自动释放（DR-058）
+    task_queue.dispatch_next()                    # 空闲时启动排队的任务
     status = simctl.status()
     if status["px4"] and not runtime.telemetry:
         runtime.submit(runtime.flight())          # 仿真就绪后建立连接，开始接收遥测
-    return {**status, "telemetry": runtime.telemetry, "active_mission": runtime.active_mission}
+    return {**status, "telemetry": runtime.telemetry if status["scene"] else {}, "active_mission": runtime.active_mission,
+            "job": {k: v for k, v in _sim_job.items() if k != "gen"}}
 
 
 _health_cache: dict = {}
@@ -133,8 +139,10 @@ _health_cache: dict = {}
 @app.get("/sim/health")
 async def sim_health() -> dict:
     """飞行前检查（与安全员起飞前执行的是同一套规则）。网页顶部的状态指示用；结果缓存 10 秒。"""
+    if _sim_job["state"] == "starting":
+        return {"ok": None, "items": [], "advice": "仿真启动中", "checked_at": time.time()}
     if not simctl.status()["px4"]:
-        return {"ok": None, "items": [], "advice": "仿真未启动"}
+        return {"ok": None, "items": [], "advice": "仿真未启动", "checked_at": time.time()}
     if _health_cache and time.time() - _health_cache["checked_at"] < 10:
         return _health_cache
 
@@ -153,17 +161,44 @@ class SimStart(BaseModel):
     scene: str
 
 
+# 仿真启动在后台线程进行，请求立刻返回；网页从 /sim 的 job 字段读取阶段与结果（DR-059）
+_sim_job: dict = {"state": "idle", "scene": None, "stage": "", "error": "", "started_at": 0.0, "gen": 0}
+_sim_job_lock = threading.Lock()
+
+
+def _run_sim_start(scene_name: str, gen: int) -> None:
+    def stage(text: str) -> None:
+        with _sim_job_lock:
+            if _sim_job["gen"] == gen:
+                _sim_job["stage"] = text
+    try:
+        simctl.start(scene_name, on_stage=stage, cancelled=lambda: _sim_job["gen"] != gen)
+        runtime.telemetry.clear()
+        _health_cache.clear()
+        runtime.submit(runtime.flight())
+        with _sim_job_lock:
+            if _sim_job["gen"] == gen:
+                _sim_job.update(state="idle", stage="", error="")
+    except Exception as error:     # noqa: BLE001  启动失败要让网页看到原因
+        with _sim_job_lock:
+            if _sim_job["gen"] == gen:
+                _sim_job.update(state="error", error=str(error) or type(error).__name__, stage="")
+
+
 @app.post("/sim/start")
-async def sim_start(body: SimStart) -> dict:
+def sim_start(body: SimStart) -> dict:
     if runtime.active_mission:
         raise HTTPException(409, "有任务正在执行，不能切换场景")
-    try:
-        status = await asyncio.to_thread(simctl.start, body.scene)
-    except (ValueError, RuntimeError, TimeoutError) as error:
-        raise HTTPException(500, str(error)) from error
-    runtime.telemetry.clear()
-    runtime.submit(runtime.flight())
-    return status
+    if not (config.WORLDS_DIR / body.scene / "site.json").exists():
+        raise HTTPException(404, "场景不存在")
+    with _sim_job_lock:
+        if _sim_job["state"] == "starting":
+            raise HTTPException(409, f"场景 {_sim_job['scene']} 正在启动，请等待或先停止")
+        _sim_job.update(state="starting", scene=body.scene, stage="准备启动", error="", started_at=time.time(), gen=_sim_job["gen"] + 1)
+        gen = _sim_job["gen"]
+    _health_cache.clear()
+    threading.Thread(target=_run_sim_start, args=(body.scene, gen), daemon=True, name="sim-start").start()
+    return {**simctl.status(), "job": dict(_sim_job)}
 
 
 @app.post("/sim/return")
@@ -179,9 +214,12 @@ def sim_return() -> dict:
 async def sim_stop() -> dict:
     if runtime.active_mission:
         raise HTTPException(409, "有任务正在执行，不能停止仿真")
+    with _sim_job_lock:
+        _sim_job.update(state="idle", stage="", error="", gen=_sim_job["gen"] + 1)    # 启动中途停止：放弃那次启动
     await asyncio.to_thread(simctl.stop)
     runtime.telemetry.clear()
-    return simctl.status()
+    _health_cache.clear()
+    return {**simctl.status(), "job": dict(_sim_job)}
 
 
 def _site(name: str) -> dict:
@@ -239,12 +277,14 @@ def create_mission(body: NewMission) -> dict:
         raise HTTPException(409, "仿真没有运行，请先启动一个场景")
     if status["scene"] != name or not status["px4"]:
         raise HTTPException(409, f"当前仿真场景是 {status['scene']}，与任务场景 {name} 不一致或尚未就绪")
-    if runtime.active_mission:
-        raise HTTPException(409, "另一个任务正在执行")
     mid = store.create_mission(body.task, name)
     store.event(mid, "system", "created", f"收到任务：{body.task}")
+    if task_queue.busy():
+        # 一架飞机同一时间只执行一个任务：执行中再下达的任务排队，按顺序执行（上下文彼此独立）
+        ahead = task_queue.enqueue(mid, body.auto_approve)
+        return {"id": mid, "queued": True, "ahead": ahead}
     mission.start(mid, body.task, name, body.auto_approve)
-    return {"id": mid}
+    return {"id": mid, "queued": False}
 
 
 @app.get("/missions")
@@ -278,10 +318,22 @@ def approve(mid: str, body: Decision) -> dict:
     return {"status": store.mission_status(mid)}
 
 
+CANCEL_GRACE = 15.0      # 取消后给任务自行停下的时间（秒）
+
+
 @app.post("/missions/{mid}/cancel")
 def cancel(mid: str) -> dict:
     store.update_mission(mid, status="cancelled", only_from=("planning", "awaiting_approval", "running"))
     store.event(mid, "system", "cancel", "用户取消任务；飞行中会立即返航")
+
+    def watchdog():
+        # 任务卡在某个等待里（例如连接飞控）时不会检查取消标志：超过宽限时间、飞机又在地面，就强制结束（DR-058）
+        if runtime.job_running(mid) and not runtime.telemetry.get("in_air"):
+            if runtime.force_stop(mid):
+                store.event(mid, "system", "force_stop", f"取消后 {CANCEL_GRACE:.0f} 秒任务仍未停止，已强制结束并释放飞机")
+        elif not runtime.job_running(mid):
+            runtime.reconcile(store.mission_status)
+    threading.Timer(CANCEL_GRACE, watchdog).start()
     return {"status": store.mission_status(mid)}
 
 
@@ -337,6 +389,25 @@ class Troubleshoot(BaseModel):
     fault: str | None = None          # 仅演示与评测：先在仿真中注入一个已知故障
 
 
+class SettingsBody(BaseModel):
+    vision_thinking: str | None = None
+    segment_screen: bool | None = None
+    recheck_thinking: bool | None = None
+
+
+@app.get("/settings")
+def get_settings() -> dict:
+    return settings.current()
+
+
+@app.put("/settings")
+def put_settings(body: SettingsBody) -> dict:
+    try:
+        return settings.update({k: v for k, v in body.model_dump().items() if v is not None})
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
 @app.get("/troubleshoot/faults")
 def troubleshoot_faults() -> list[dict]:
     return [{"id": k, "label": v["label"], "symptom": v["symptom"]} for k, v in troubleshoot.FAULTS.items()]
@@ -347,14 +418,14 @@ def start_troubleshoot(body: Troubleshoot) -> dict:
     status = simctl.status()
     if not status["px4"]:
         raise HTTPException(409, "仿真没有运行，请先启动一个场景")
-    if runtime.active_mission:
-        raise HTTPException(409, "另一个任务正在执行")
+    if task_queue.busy():
+        raise HTTPException(409, "飞机正在执行其他任务；诊断需要实际试飞，请等任务结束后再开始")
     if body.fault and body.fault not in troubleshoot.FAULTS:
         raise HTTPException(422, "未知的故障场景")
     mid = store.create_mission(body.symptom, status["scene"])
     store.update_mission(mid, brief={"type": "troubleshoot", "fault": body.fault})
     store.event(mid, "system", "created", f"收到排障请求：{body.symptom}")
-    runtime.submit(troubleshoot.job(mid, body.symptom, body.fault))
+    runtime.submit(troubleshoot.job(mid, body.symptom, body.fault), mid)
     return {"id": mid}
 
 

@@ -149,8 +149,9 @@ def get_mission(mid: str) -> dict | None:
 def list_missions(limit: int = 50) -> list[dict]:
     with connect() as con:
         # 评测脚本创建的记录（scene = 'eval'）不出现在网页的历史列表里
-        rows = con.execute("SELECT id, task, scene, status, created_at, updated_at FROM missions WHERE scene != 'eval' "
-                           "ORDER BY created_at DESC LIMIT ?", (limit,))
+        rows = con.execute("SELECT id, task, scene, status, created_at, updated_at, "
+                           "CASE WHEN json_extract(brief, '$.type') = 'troubleshoot' THEN 'troubleshoot' ELSE 'mission' END AS kind "
+                           "FROM missions WHERE scene != 'eval' ORDER BY created_at DESC LIMIT ?", (limit,))
         return [dict(r) for r in rows]
 
 

@@ -1285,6 +1285,13 @@ def main() -> None:
     if getattr(args, "cache", False):
         os.environ["LLM_CACHE"] = "1"
     llm.reset_stats()
+    if args.cmd in ("vision", "real", "planning", "triage", "recheck", "screen", "cascade", "zoom", "segments", "reporter"):   # 排障评测本身按任务记账
+        # 评测的模型调用也记进用量表（场景记为 eval），用量页的合计才能和接口账单对上（DR-060）
+        from dataclasses import asdict
+        from . import store
+        eval_mid = store.create_mission(f"评测：{args.cmd}", "eval")
+        store.update_mission(eval_mid, status="done")
+        llm.USAGE_SINK = lambda u: store.record_call(eval_mid, "eval", asdict(u))
     period = pricing.period(datetime.now().astimezone())
     if period == "peak" and args.cmd in ("vision", "real", "planning", "troubleshoot", "triage", "recheck", "screen", "cascade", "zoom", "segments"):
         print("提示：现在是北京时间高峰时段，模型单价是闲时的 2 倍；批量评测建议放在闲时运行。", flush=True)

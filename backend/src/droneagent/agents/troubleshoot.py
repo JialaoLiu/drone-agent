@@ -182,41 +182,55 @@ async def apply(f: Flight, params: dict) -> None:
 
 
 async def job(mid: str, symptom: str, fault: str | None) -> None:
-    """后台执行排障并把结果写入任务记录；同一时间只允许一个飞行任务。"""
+    """后台执行排障并把结果写入任务记录；同一时间只允许一个飞行任务。
+    占用飞机之后的每一步（包括连接飞控）都在 try 里：任何失败都要写入最终状态并释放占用（DR-058）。"""
     if not runtime.try_claim(mid):
         _emit(mid, "busy", "另一个任务正在飞行，请稍后再试")
         store.update_mission(mid, status="failed")
         return
+    runtime.begin_run(mid)
     store.update_mission(mid, status="running")
-    f = await runtime.flight()
-    # 取消与返航接管：试飞中的每条指令都会检查（深度审查 H02）
-    f.begin_control(lambda: "排障已取消" if store.mission_status(mid) == "cancelled" else None)
+    f = None
     try:
+        _emit(mid, "step", "连接飞控……")
+        f = await runtime.flight()
+        # 取消与返航接管：试飞中的每条指令都会检查（深度审查 H02）
+        f.begin_control(lambda: "排障已取消" if store.mission_status(mid) == "cancelled" else None)
         result = await run(mid, symptom, fault)
         store.update_mission(mid, status=result["status"], result=result, only_from=("running",))
+    except asyncio.CancelledError:
+        _emit(mid, "error", "排障已强制结束（取消后任务没有自行停止）")
+        store.update_mission(mid, status="cancelled", only_from=("running", "cancelled"))
+        raise
     except Exception as error:   # 任何错误都要落库并让飞机回到地面
         cancelled = isinstance(error, Preempted)
-        _emit(mid, "error", f"排障{'已停止' if cancelled else '中断'}：{error}" if cancelled else f"排障中断：{type(error).__name__}：{error}")
+        _emit(mid, "error", f"排障已停止：{error}" if cancelled else f"排障中断：{type(error).__name__}：{error}")
         store.update_mission(mid, status="cancelled" if cancelled else "failed", only_from=("running", "cancelled"))
     finally:
         # 无论成功、失败、取消还是模型不可用的早退，都先让飞机落地，再恢复良好配置（深度审查 H09）
-        f.end_control()
         try:
-            if f.state.in_air:
-                if not f.preempted:
-                    await f.failsafe_return()
-                await f._wait(lambda: not f.state.in_air, 240, "返航超时")
-            await reset_to_reference(f)
-            _emit(mid, "reset", "仿真中的参数已恢复为良好配置")
+            if f is not None:
+                f.end_control()
+                if f.state.in_air:
+                    if not f.preempted:
+                        await f.failsafe_return()
+                    await f._wait(lambda: not f.state.in_air, 240, "返航超时")
+                await reset_to_reference(f)
+                _emit(mid, "reset", "仿真中的参数已恢复为良好配置")
         except Exception as error:
             _emit(mid, "error", f"恢复参数或返航失败：{error}；请重启仿真后再使用")
-        runtime.release(mid)
+        finally:
+            runtime.end_run(mid)
+            runtime.release(mid)
+            from . import queue
+            await asyncio.to_thread(queue.dispatch_next)
 
 
 async def run(mid: str, symptom: str, fault: str | None = None) -> dict:
     """执行一次排障。fault 不为空时先注入故障（仅评测与演示）。"""
     f = await runtime.flight()
     ref = reference()
+    _emit(mid, "step", "检查试飞空间是否安全（围栏、禁飞区、障碍物）……")
     route = test_route(_current_site())     # 先确认试飞空间安全，再注入故障
     if fault:
         spec = FAULTS[fault]

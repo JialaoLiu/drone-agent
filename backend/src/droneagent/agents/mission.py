@@ -677,6 +677,10 @@ async def _run(mission_id: str, payload) -> None:
         runtime.end_run(mission_id)
         if runtime.current_flight() is not None:
             runtime.current_flight().end_control()
+        if store.mission_status(mission_id) not in runtime.LIVE_STATUSES:
+            runtime.release(mission_id)     # 任务已结束（含取消、异常）：确保释放占用
+            from . import queue
+            await asyncio.to_thread(queue.dispatch_next)
 
 
 async def _run_once(mission_id: str, payload) -> None:
@@ -687,8 +691,12 @@ async def _run_once(mission_id: str, payload) -> None:
     except Exception as error:   # 任何未预期的错误都要落库，前端才能看到；飞机在空中时立即返航
         store.event(mission_id, "system", "error", f"任务异常终止：{type(error).__name__}：{error}")
         store.update_mission(mission_id, status="failed")
-        await emergency_return(mission_id)
-        runtime.release(mission_id)
+        try:
+            await emergency_return(mission_id)
+        except Exception as e:      # 飞控连不上时也要释放占用，否则之后所有任务和仿真操作都会被拦（DR-058）
+            store.event(mission_id, "system", "error", f"紧急返航未能执行：{e}")
+        finally:
+            runtime.release(mission_id)
         return
     if "__interrupt__" in result:
         return   # 等待人工确认
@@ -714,11 +722,11 @@ async def emergency_return(mission_id: str | None = None) -> str:
 
 
 def start(mission_id: str, task: str, scene: str, auto_approve: bool = False):
-    return runtime.submit(_run(mission_id, {"mission_id": mission_id, "task": task, "scene": scene, "auto_approve": auto_approve}))
+    return runtime.submit(_run(mission_id, {"mission_id": mission_id, "task": task, "scene": scene, "auto_approve": auto_approve}), mission_id)
 
 
 def resume(mission_id: str, approved: bool):
-    return runtime.submit(_run(mission_id, Command(resume={"approved": approved})))
+    return runtime.submit(_run(mission_id, Command(resume={"approved": approved})), mission_id)
 
 
 def photo_dir(mission_id: str) -> Path:
