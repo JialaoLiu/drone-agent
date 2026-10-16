@@ -152,6 +152,16 @@ async def takeoff(state: RescueState) -> dict:
     return {**out, "airborne": True}
 
 
+def _own_shadow(site: dict, frame, c: dict, radius: float = 2.5) -> bool:
+    """候选是否就是无人机自己的影子：影子位置由太阳方向和飞机高度算出（真实系统按日期时间计算太阳方位）。"""
+    sun = site.get("sun")
+    if not sun or sun[2] >= -0.05:
+        return False
+    x, y, z = frame.pose.position
+    sx, sy = x - z * sun[0] / sun[2], y - z * sun[1] / sun[2]
+    return math.hypot(c["x"] - sx, c["y"] - sy) < radius
+
+
 def _classify(item: dict) -> str:
     if item["person"] == "no":
         return "object"
@@ -176,11 +186,14 @@ async def _confirm(state: RescueState, item: dict, index: int) -> tuple[dict | N
         _usage(state, "searcher", usage)
         verdict["photo"] = pid
         in_water = verdict["person"] == "yes" and verdict["in_water"] == "yes"
-        if verdict["person"] == "yes" and (verdict["match"] in CONFIRM_MATCH or in_water):
+        # 模型报告看到的属性，程序比对：衣着对上、年龄不矛盾即确认（模型常因“看不出年龄”只给部分相符，工程日志 43）
+        attrs = verdict["person"] == "yes" and roles.attributes_match(state["brief"], verdict)
+        verdict["attributes_match"] = attrs
+        if verdict["person"] == "yes" and (verdict["match"] in CONFIRM_MATCH or attrs or in_water):
             pos = await asyncio.to_thread(detect.locate_in_zoom, frame)
             x, y = pos if pos else (item["x"], item["y"])
             return {"x": round(x, 2), "y": round(y, 2), "in_water": verdict["in_water"] == "yes", "photo": pid,
-                    "clothing_unverified": in_water and verdict["match"] not in CONFIRM_MATCH,
+                    "clothing_unverified": in_water and verdict["match"] not in CONFIRM_MATCH and not attrs,
                     "evidence": verdict["evidence"], "confidence": verdict["confidence"], "found_at": time.time()}, verdict
         if verdict["person"] != "unsure" or attempt:
             return None, verdict
@@ -217,7 +230,7 @@ async def search(state: RescueState) -> dict:
         except (FlightError, camera.CameraUnavailable) as error:
             return {**(await _flight_failure(state, error)), "detections": detections, "searched": searched}
         searched += 1
-        cands = await asyncio.to_thread(detect.candidates, frame)
+        cands = [c for c in await asyncio.to_thread(detect.candidates, frame) if not _own_shadow(site, frame, c)]
         try:
             items, usage = await asyncio.to_thread(detect.screen, frame, cands, desc)
         except ModelUnavailable as error:

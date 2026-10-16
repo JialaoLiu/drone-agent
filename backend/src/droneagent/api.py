@@ -279,7 +279,7 @@ def get_site(name: str) -> dict:
     for p in site["panels"]:
         p.pop("defect", None)
         p.pop("distractor", None)
-    for key in ("people", "decoys", "brief"):       # 救援场景：人员的真实位置与目标特征属于标准答案
+    for key in ("people", "decoys", "brief"):       # 救援场景：人员的真实位置与目标特征属于标准答案（太阳方向保留）
         site.pop(key, None)
     return site
 

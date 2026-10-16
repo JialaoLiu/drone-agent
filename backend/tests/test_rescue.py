@@ -62,3 +62,23 @@ def test_scoring_found_and_misidentified():
     assert ok["found"] and ok["location_error_m"] < 2
     bad = scoring.score(site, {"found": {"x": 30.5, "y": 30.0, "elapsed_s": 100}, "detections": []}, meta)
     assert not bad["found"] and bad["misidentified"] and bad["confused_with"] == "person_b1"
+
+
+def test_attributes_match_rules():
+    from droneagent.rescue.roles import attributes_match, color_key
+    t = {"top": "橙", "bottom": "灰", "age": "child"}
+    assert color_key("橘色") == "橙" and color_key("深蓝") == "蓝" and color_key("看不清") is None
+    assert attributes_match(t, {"top": "橙", "bottom": "灰", "child": "unsure"})          # 看不出年龄不算矛盾
+    assert attributes_match(t, {"top": "橙色", "bottom": None, "child": "unsure"})        # 裤子看不到时只比上衣
+    assert not attributes_match(t, {"top": "橙", "bottom": "黑", "child": "unsure"})
+    assert not attributes_match(t, {"top": "橙", "bottom": "灰", "child": "no"})          # 明确是成年人
+    assert not attributes_match(t, {"top": "红", "bottom": "灰", "child": "yes"})
+
+
+def test_own_shadow_filter():
+    from types import SimpleNamespace
+    from droneagent.agents.rescue import _own_shadow
+    site = {"sun": [0.3, 0.0, -0.95]}
+    frame = SimpleNamespace(pose=SimpleNamespace(position=(10.0, 0.0, 15.0)))
+    shadow_x = 10.0 - 15.0 * 0.3 / -0.95
+    assert _own_shadow(site, frame, {"x": shadow_x, "y": 0.2}) and not _own_shadow(site, frame, {"x": 10.0, "y": 8.0})

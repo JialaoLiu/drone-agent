@@ -325,6 +325,7 @@ def generate(seed: int, name: str | None = None, location: dict | None = None, o
             "people": people, "decoys": decoys, "brief": brief}
     azimuth, elevation = rng.uniform(0, 2 * math.pi), rng.uniform(math.radians(40), math.radians(70))
     sun = (math.cos(elevation) * math.sin(azimuth), math.cos(elevation) * math.cos(azimuth), -math.sin(elevation))
+    site["sun"] = [round(v, 4) for v in sun]          # 太阳方向（指向地面），用于排除无人机自己的影子
     (out / f"{name}.sdf").write_text(_world_sdf(name, site, lay, str(ground), extent, sun), encoding="utf-8")
     crowd = [{"model": p["model"], "path": p["path"], "speed": p["speed"], "z": p.get("z", 0.0)} for p in people if p["speed"] > 0]
     (out / "crowd.json").write_text(json.dumps(crowd, ensure_ascii=False), encoding="utf-8")
