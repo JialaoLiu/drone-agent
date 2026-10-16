@@ -38,13 +38,14 @@
 - **前端的乱序与重连修复**：只做了类型检查和代码复查，没有自动化测试。
 - **今天的模型费用**：实时任务约 ¥0.4，分类器回放约 ¥1.3，规划与排障评测约 ¥0.05，合计约 ¥1.8。
 
-## 需要你做的
+## 需要你做的（已更新）
 
-| 事项 | 做法 |
+| 事项 | 状态 |
 | --- | --- |
-| Mapbox Token | 在 Mapbox 账户的 Access tokens 页面复制默认公开 Token（`pk.` 开头、80 个字符以上），替换 `backend/.env` 里的 `MAPBOX_TOKEN`；之后重新生成真实场地即可看到卫星地面 |
-| 真实图像数据集 | 浏览器登录 Kaggle，下载 `alicjalena/pv-panel-defect-dataset`（约 500 MB，CC BY-NC-SA 4.0），把 zip 放到 `drone-agent-related/datasets/` |
-| 外置硬盘上的旧副本 | `/Volumes/DevData/px4` 和 `/Volumes/DevData/drone-agent` 已不再使用；是否删除由你决定（我没有删） |
+| Mapbox Token | 不再需要（已改为百度卫星底图） |
+| 真实图像数据集 | 已完成（你下载后我已解压并评测） |
+| 外置硬盘上的旧副本 | 已移到废纸篓，需要你清空废纸篓才释放空间 |
+| 人工验收 | 按 [../acceptance-checklist.md](../acceptance-checklist.md) 走一遍，把问题记在最后的记录表里 |
 
 ## 第二阶段（2026-10-16 晚）
 
