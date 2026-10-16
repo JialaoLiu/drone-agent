@@ -11,7 +11,6 @@ from . import config, vision
 from .llm import Usage
 from .sim.camera import Frame
 
-SHEET = 10                          # 初筛时一张拼图放几块板
 CONFIRM_WITHOUT_CLOSEUP = 0.9       # “缺失”一眼可见，置信度够高就不再复核
 CONFLICT_CONFIDENCE = 0.6           # 初筛置信度达到这个值、复核却判正常时，再看一次
 
@@ -24,7 +23,8 @@ class Screening:
     triaged: list[str] = field(default_factory=list)   # 本地分类器判为明显正常、没有交给视觉模型的板
 
 
-def screen_frame(frame: Frame, panels: list[dict], provider: str | None = None, parallel=None, triage_model: dict | None = None) -> Screening:
+def screen_frame(frame: Frame, panels: list[dict], provider: str | None = None, parallel=None, triage_model: dict | None = None,
+                 sheet: int | None = None, evidence: bool | None = None) -> Screening:
     """对一张整列照片做初筛。parallel(fn, args_list) 可传入并行执行器。
     triage_model（triage.load() 的结果）给出时，先用本地分类器过滤明显正常的板，只把其余的交给视觉模型。"""
     triaged: list[str] = []
@@ -44,15 +44,35 @@ def screen_frame(frame: Frame, panels: list[dict], provider: str | None = None, 
             tiles.append(t)
         else:
             unseen.append(p["id"])
-    sheets = [tiles[i:i + SHEET] for i in range(0, len(tiles), SHEET)]
-    results = parallel(lambda s: vision.screen(s, provider), sheets) if parallel else [vision.screen(s, provider) for s in sheets]
+    res = screen_tiles(tiles, unseen, provider, parallel, sheet, evidence)
+    return Screening(res.candidates, len(tiles) + len(triaged), res.usages, triaged)
+
+
+def screen_tiles(tiles: list[vision.Tile], unseen: list[str], provider: str | None = None, parallel=None,
+                 sheet: int | None = None, evidence: bool | None = None) -> Screening:
+    """对已经裁好的板块图做初筛（拼图、并行判断）；unseen 里的板记为“看不清”。"""
+    size = sheet or config.SCREEN_SHEET
+    sheets = [tiles[i:i + size] for i in range(0, len(tiles), size)]
+    run = lambda s: vision.screen(s, provider, evidence)   # noqa: E731
+    results = parallel(run, sheets) if parallel else [run(s) for s in sheets]
     candidates, usages = [], []
     for found, usage in results:
         usages.append(usage)
         candidates += found
     candidates += [{"id": pid, "status": "unsure", "type": None, "confidence": 0.0, "evidence": "整列照片中看不到或太小",
                     "unseen": True} for pid in unseen]
-    return Screening(candidates, len(tiles) + len(triaged), usages, triaged)
+    return Screening(candidates, len(tiles), usages)
+
+
+def best_tiles(frames: list[tuple[Frame, int]], panels: list[dict]) -> dict[str, tuple[vision.Tile, int]]:
+    """每块板从几张照片里取像素最大的一张裁出的板块图。frames：(照片, 照片编号)。拍不全的板不在结果里。"""
+    out: dict[str, tuple[vision.Tile, int]] = {}
+    for frame, pid in frames:
+        for p in panels:
+            t = vision.rectify(frame, p)
+            if t and (p["id"] not in out or t.pixel_width > out[p["id"]][0].pixel_width):
+                out[p["id"]] = (t, pid)
+    return out
 
 
 def select_targets(policy: str, candidates: list[dict], array_panels: list[dict]) -> tuple[list[str], list[str]]:

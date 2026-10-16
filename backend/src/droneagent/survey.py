@@ -14,7 +14,7 @@ from .sim.scene import PANEL_HEIGHT, TILT
 CRUISE_SPEED = 5.0          # m/s，与 flight.CRUISE_SPEED 一致
 # 每个拍摄点的停留时间（秒），按实测标定：整列拍摄含云台稳定与等待初筛结果（视觉模型约 20–50 秒，取 30），
 # 近距复核含转向、云台稳定、取图，复核结果在飞往下一块时并行返回。
-SHOT_SECONDS = {"overview": 30.0, "closeup": 3.0, "transit": 0.0}   # 近距复核实测约 2.3 秒 / 块；绕行点不停留
+SHOT_SECONDS = {"overview": 30.0, "segment": 3.0, "closeup": 3.0, "transit": 0.0}   # 近距复核实测约 2.3 秒 / 块；绕行点不停留
 DETOUR_MARGIN = 5.0         # 绕行时离禁飞区边界的距离（大于安全员要求的 3 米）
 CLIMB_SPEED = 1.0           # 起飞爬升实测约 1 m/s
 DESCENT_SPEED = 0.7         # PX4 降落速度 MPC_LAND_SPEED 默认 0.7 m/s
@@ -56,6 +56,54 @@ def closeup_step(panel: dict, viewpoint: tuple[float, float, float], reason: str
     """从 viewpoint（通常是该列的整列拍摄点）用变焦相机对准某块板。"""
     yaw, pitch = look_angles(viewpoint, tuple(panel["center"]))
     return Step("closeup", panel["id"], viewpoint, yaw, pitch, "zoom", reason)
+
+
+ZOOM_IMAGE = (1280, 720)
+SEGMENT_MARGIN = 0.10       # 预测“拍得全”时把画面四边各收窄 10%，容忍对准误差（5 个场景 1025 次预测零错误；6% 时错 51 次）
+
+
+def zoom_pose(viewpoint: tuple[float, float, float], target: tuple[float, float, float]):
+    """变焦相机从 viewpoint 对准 target 时的理想位姿（云台无横滚）。用于规划阶段预测一张照片能拍全哪些板。"""
+    from .geo import CameraPose
+    from .sim.camera import HFOV
+    f = [target[i] - viewpoint[i] for i in range(3)]
+    n = math.sqrt(sum(c * c for c in f))
+    f = [c / n for c in f]
+    left = [-f[1], f[0], 0.0]                                   # 世界竖直方向 × 前方
+    ln = math.sqrt(left[0] ** 2 + left[1] ** 2) or 1.0
+    left = [c / ln for c in left]
+    up = [f[1] * left[2] - f[2] * left[1], f[2] * left[0] - f[0] * left[2], f[0] * left[1] - f[1] * left[0]]
+    rotation = [[f[i], left[i], up[i]] for i in range(3)]       # 列向量：相机 x 前、y 左、z 上
+    return CameraPose(position=tuple(viewpoint), rotation=rotation, hfov=HFOV["zoom"], width=ZOOM_IMAGE[0], height=ZOOM_IMAGE[1])
+
+
+def visible_panels(pose, panels: list[dict], margin: float = SEGMENT_MARGIN) -> set[str]:
+    """四个角都落在（收窄后的）画面内的板。"""
+    w, h = pose.width, pose.height
+    out = set()
+    for p in panels:
+        pts = [pose.project(tuple(c)) for c in p["corners"]]
+        if all(q is not None and margin * w <= q[0] <= (1 - margin) * w and margin * h <= q[1] <= (1 - margin) * h for q in pts):
+            out.add(p["id"])
+    return out
+
+
+def segment_steps(panels: list[dict], viewpoint: tuple[float, float, float]) -> list[Step]:
+    """变焦分段拍整列：在整列拍摄点用变焦相机，贪心选最少的对准点，使每块板都完整出现在至少一张照片里。
+    广角整列照片里每块板约 52 像素，看不清细小裂纹；变焦照片里约 200 像素（segments 评测：初筛覆盖 84.5% → 100%）。
+    任何对准点都拍不全的板不在返回的覆盖里，由广角整列照片兜底。"""
+    cover = {p["id"]: visible_panels(zoom_pose(viewpoint, tuple(p["center"])), panels) for p in panels}
+    todo, steps = {p["id"] for p in panels}, []
+    by_id = {p["id"]: p for p in panels}
+    while todo:
+        aim = max(cover, key=lambda k: (len(todo & cover[k]), k))
+        gain = todo & cover[aim]
+        if not gain:
+            break
+        yaw, pitch = look_angles(viewpoint, tuple(by_id[aim]["center"]))
+        steps.append(Step("segment", aim, viewpoint, yaw, pitch, "zoom", "分段整列"))
+        todo -= gain
+    return steps
 
 
 def _segment_closest(c: tuple, a: tuple, b: tuple) -> tuple[float, float]:

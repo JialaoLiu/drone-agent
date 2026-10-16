@@ -53,6 +53,10 @@ VISION_PROVIDER = env("VISION_PROVIDER", "deepseek")          # deepseek | opena
 VISION_THINKING_MODE = env("VISION_THINKING", "off")         # 2026-10-16 对比实验：关闭后费用省 75%–86%，复核后的检出率、精确率不变
 VISION_THINKING = VISION_THINKING_MODE != "off"                 # 初筛是否开启推理
 VISION_THINKING_VERIFY = VISION_THINKING_MODE == "on"           # 复核是否开启推理
+# 初筛用变焦分段照片（每块板约 200 像素）还是只用广角整列照片（约 52 像素）。segments 评测：初筛覆盖 84.5% → 100%
+SEGMENT_SCREEN = env("SEGMENT_SCREEN", "1") == "1"
+SCREEN_SHEET = int(env("SCREEN_SHEET", "10"))                    # 初筛每张拼图的板数
+SCREEN_EVIDENCE = env("SCREEN_EVIDENCE", "1") == "1"             # 初筛是否逐块写证据
 # “再看一次”时是否开启推理。2026-10-16 recheck 评测第一版显示开推理多纠正 2 块，但那 3 块都是一眼可见的缺失，
 # 实时任务里直接确认、不做近照复核；按实时流程重算，三种做法结论完全相同，所以默认关闭（工程日志 37）
 VISION_THINKING_RECHECK = env("VISION_THINKING_RECHECK", "off") != "off"

@@ -184,14 +184,14 @@ def _tiles(ids):
     ([{"id": "A-R1-C01", "status": "maybe", "type": None, "confidence": 0.2}], "unsure"),
 ])
 def test_screen_normalizes_status(monkeypatch, panels, expected):
-    monkeypatch.setattr(vision, "contact_sheet", lambda t: b"")
+    monkeypatch.setattr(vision, "contact_sheet", lambda t, **k: b"")
     monkeypatch.setattr(vision, "chat_json", lambda *a, **k: ({"panels": panels}, USAGE))
     out, _ = vision.screen(_tiles(["A-R1-C01", "A-R1-C02"]))
     assert [c["status"] for c in out] == [expected]
 
 
 def test_screen_bad_structure_marks_sheet_unsure(monkeypatch):
-    monkeypatch.setattr(vision, "contact_sheet", lambda t: b"")
+    monkeypatch.setattr(vision, "contact_sheet", lambda t, **k: b"")
     monkeypatch.setattr(vision, "chat_json", lambda *a, **k: ({"result": "全部正常"}, USAGE))
     out, _ = vision.screen(_tiles(["A-R1-C01", "A-R1-C02"]))
     assert {c["id"] for c in out} == {"A-R1-C01", "A-R1-C02"} and all(c["status"] == "unsure" for c in out)

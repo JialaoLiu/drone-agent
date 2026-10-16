@@ -154,7 +154,7 @@ def test_screen_frame_skips_triaged_panels(site, monkeypatch):
     monkeypatch.setattr(vision, "rectify", lambda frame, p, size=None: vision.Tile(p["id"], None, 50))
     monkeypatch.setattr(triage, "photo_features", lambda frame, ps: ([p["id"] for p in ps], [[0]] * len(ps)))
     sent = []
-    monkeypatch.setattr(vision, "screen", lambda tiles, provider=None: (sent.extend(t.panel_id for t in tiles) or [], Usage("m", 1, 1, 0, 1, 0.0)))
+    monkeypatch.setattr(vision, "screen", lambda tiles, provider=None, evidence=None: (sent.extend(t.panel_id for t in tiles) or [], Usage("m", 1, 1, 0, 1, 0.0)))
 
     class Model:
         def predict_proba(self, x):

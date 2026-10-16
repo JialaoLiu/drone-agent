@@ -11,9 +11,22 @@ def codes(violations):
     return {v.code for v in violations}
 
 
-def test_valid_overview_plan_passes(site):
+def test_valid_overview_plan_passes(site, monkeypatch):
+    from droneagent import config
+    monkeypatch.setattr(config, "SEGMENT_SCREEN", False)
     plan = {"targets": [a["id"] for a in site["arrays"]], "closeup_policy": "flagged", "standoff_m": 20}
     assert safety.check_plan(site, build_steps(site, plan)) == []
+
+
+def test_segment_plan_split_into_passing_sorties(site, monkeypatch):
+    from droneagent import config
+    monkeypatch.setattr(config, "SEGMENT_SCREEN", True)
+    plan = {"targets": [a["id"] for a in site["arrays"]], "closeup_policy": "flagged", "standoff_m": 20, "max_sorties": 3}
+    steps = build_steps(site, plan, with_estimated_closeups=False)
+    assert any(s.kind == "segment" for s in steps)
+    for targets in split_sorties(site, plan, 100.0, 25.0):         # 分段拍摄更耗电，按电量分架次后每个架次都要通过
+        assert safety.check_plan(site, build_steps(site, plan, targets=targets), battery=100.0, reserve=25.0) == []
+    assert not any(s.kind == "segment" for s in build_steps(site, {**plan, "closeup_policy": "all"}, with_estimated_closeups=False))
 
 
 def test_altitude_and_geofence(site):

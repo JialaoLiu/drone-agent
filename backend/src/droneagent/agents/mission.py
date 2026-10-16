@@ -108,6 +108,11 @@ def _panels(site: dict, array_id: str) -> list[dict]:
     return [p for p in site["panels"] if p["array"] == array_id]
 
 
+def use_segments(plan: dict) -> bool:
+    """是否做变焦分段拍摄：全部复核时每块板都会拍近照，分段拍是重复；本地分类器的特征只适用于广角照片。"""
+    return config.SEGMENT_SCREEN and not config.TRIAGE_ENABLED and plan.get("closeup_policy") != "all"
+
+
 def build_steps(site: dict, plan: dict, with_estimated_closeups: bool = True, targets: list[str] | None = None) -> list[survey.Step]:
     """按规划参数展开拍摄步骤。用于安全校验时，按策略估计近距复核的数量一并计入。"""
     arrays = _arrays(site)
@@ -115,6 +120,8 @@ def build_steps(site: dict, plan: dict, with_estimated_closeups: bool = True, ta
     for a in survey.order_arrays([arrays[t] for t in (targets or plan["targets"])]):
         ov = survey.overview_step(a, plan["standoff_m"])
         steps.append(ov)
+        if use_segments(plan):
+            steps += survey.segment_steps(_panels(site, a["id"]), ov.position)
         if with_estimated_closeups:
             panels = _panels(site, a["id"])
             n = math.ceil(len(panels) * EXPECTED_CLOSEUP_SHARE[plan["closeup_policy"]])
@@ -352,10 +359,29 @@ async def overview(state: State) -> dict:
         return await _flight_failure(state, error)
     _emit(state, "pilot", "photo", f"{array['id']} 列整列照片已拍摄（广角）", {"photo": pid, "kind": "overview", "target": array["id"]})
 
+    # 变焦分段拍整列：广角照片里每块板只有约 52 像素，细小裂纹看不出来；分段照片里约 200 像素
+    panels = _panels(site, array["id"])
+    source: dict[str, int] = {}
+    segments = None
+    if use_segments(state["plan"]):
+        try:
+            segments = await _segments(state, array, panels, step.position)
+        except (FlightError, camera.CameraUnavailable) as error:
+            return await _flight_failure(state, error)
+
     # 巡检员初筛：裁切、校正、拼图，多张拼图并行判断
     try:
-        triage_model = _triage_model() if config.TRIAGE_ENABLED else None
-        result = await asyncio.to_thread(inspection.screen_frame, frame, _panels(site, array["id"]), None, _parallel, triage_model)
+        if segments is not None:
+            tiles = {k: v for k, v in segments.items()}
+            for p in panels:                     # 分段照片都没拍全的板，退回用广角整列照片
+                if p["id"] not in tiles and (t := vision.rectify(frame, p)):
+                    tiles[p["id"]] = (t, pid)
+            source = {k: v[1] for k, v in tiles.items()}
+            unseen = [p["id"] for p in panels if p["id"] not in tiles]
+            result = await asyncio.to_thread(inspection.screen_tiles, [tiles[p["id"]][0] for p in panels if p["id"] in tiles], unseen, None, _parallel)
+        else:
+            triage_model = _triage_model() if config.TRIAGE_ENABLED else None
+            result = await asyncio.to_thread(inspection.screen_frame, frame, panels, None, _parallel, triage_model)
     except ModelUnavailable as error:
         _emit(state, "inspector", "error", f"视觉模型不可用：{error}，本列只保留照片，未做判断")
         return {"overview_photo": pid, "candidates": [], "screen_failed": True}
@@ -363,11 +389,11 @@ async def overview(state: State) -> dict:
         _usage(state, "inspector", usage)
     candidates = []
     for c in result.candidates:
-        c["screen_photo"] = pid
+        c["screen_photo"] = source.get(c["id"], pid)
         candidates.append(c)
         if not c.get("unseen"):
             store.upsert_finding(state["mission_id"], c["id"], status="suspect", type=c["type"], confidence=c["confidence"],
-                                 evidence=c["evidence"], screen_photo=pid)
+                                 evidence=c["evidence"], screen_photo=c["screen_photo"])
     flagged = [c for c in candidates if c["status"] == "defect"]
     if result.triaged:
         _emit(state, "inspector", "triage", f"本地分类器判为明显正常 {len(result.triaged)} 块，未交给视觉模型", {"panels": result.triaged})
@@ -376,6 +402,39 @@ async def overview(state: State) -> dict:
           + (f"（{'、'.join(c['id'] for c in flagged)}）" if flagged else "")
           + f"，看不清 {len(candidates) - len(flagged)} 块", {"candidates": candidates, "photo": pid})
     return {"overview_photo": pid, "candidates": candidates, "screen_failed": False}
+
+
+async def _segments(state: State, array: dict, panels: list[dict], viewpoint: tuple) -> dict | None:
+    """在整列拍摄点用变焦相机分段拍摄。电量不够时不拍（返回 None，初筛只用广角照片）。
+    拍完核对每块板是否真的拍全，没拍全的对准它补拍一次。返回 板编号 -> (板块图, 照片编号)。"""
+    site = _site(state)
+    f = await runtime.flight()
+    steps = survey.segment_steps(panels, viewpoint)
+    rest = [survey.overview_step(_arrays(site)[t], state["plan"]["standoff_m"]) for t in state["queue"]]
+    budget = f.state.battery - state["brief"]["reserve_pct"] - safety.battery_needed(rest, start=viewpoint)
+    per_shot = survey.SHOT_SECONDS["segment"] / safety.DRAIN_SECONDS * 100 * safety.SAFETY_FACTOR
+    if len(steps) * per_shot > budget / 2:          # 至少留一半给近距复核
+        _emit(state, "coordinator", "skip_segments", f"电量有限，{array['id']} 列不做变焦分段拍摄，初筛只用广角整列照片")
+        return None
+    _emit(state, "pilot", "segments", f"{array['id']} 列变焦分段拍摄 {len(steps)} 张（每张覆盖若干块板）", {"aims": [s.target for s in steps]})
+    by_id = {p["id"]: p for p in panels}
+    frames = []
+    for step in steps:
+        if _cancelled(state):
+            break
+        frames.append(await _shoot(state, step, len(store.photos(state["mission_id"]))))
+    tiles = await asyncio.to_thread(inspection.best_tiles, frames, panels)
+    retakes = 0
+    for p in panels:
+        if p["id"] in tiles or _cancelled(state) or retakes >= len(steps):
+            continue
+        yaw, pitch = camera.look_angles(viewpoint, tuple(by_id[p["id"]]["center"]))
+        frame, photo = await _shoot(state, survey.Step("segment", p["id"], viewpoint, yaw, pitch, "zoom", "补拍"), len(store.photos(state["mission_id"])))
+        retakes += 1
+        tiles.update({k: v for k, v in (await asyncio.to_thread(inspection.best_tiles, [(frame, photo)], panels)).items() if k not in tiles})
+    if retakes:
+        _emit(state, "pilot", "retake", f"{array['id']} 列分段照片补拍 {retakes} 张")
+    return tiles
 
 
 async def closeups(state: State) -> dict:

@@ -147,7 +147,7 @@ def render(mission_id: str, task: str, site: dict, result: dict) -> str:
         cells = []
         ov = _frame(d["screen_photo"])
         if ov:
-            cells.append(f'<img src="{_marked_overview(ov, panels[d["panel_id"]])}" alt="整列照片中的位置">')
+            cells.append(f'<img src="{_marked_overview(ov, panels[d["panel_id"]])}" alt="初筛照片中的位置">')
         cl = _frame(d["verify_photo"])
         if cl:
             tile = vision.rectify(cl, panels[d["panel_id"]], (vision.CLOSE_W, vision.CLOSE_H))

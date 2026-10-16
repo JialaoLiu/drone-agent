@@ -66,31 +66,35 @@ def rectify(frame: Frame, panel: dict, size: tuple[int, int] = (TILE_W, TILE_H))
     return Tile(panel["id"], img, width)
 
 
-def contact_sheet(tiles: list[Tile], cols: int = 5) -> bytes:
-    """拼图：每块板上方印编号。"""
+def contact_sheet(tiles: list[Tile], cols: int = 5, tile_w: int | None = None) -> bytes:
+    """拼图：每块板上方印编号。tile_w：拼图中每块板的宽度（像素），默认 TILE_W。"""
+    tw = tile_w or TILE_W
+    th = round(tw * TILE_H / TILE_W)
     rows = (len(tiles) + cols - 1) // cols
     label_h, pad = 30, 8
-    sheet = Image.new("RGB", (cols * (TILE_W + pad) + pad, rows * (TILE_H + label_h + pad) + pad), (255, 255, 255))
+    sheet = Image.new("RGB", (cols * (tw + pad) + pad, rows * (th + label_h + pad) + pad), (255, 255, 255))
     d = ImageDraw.Draw(sheet)
     font = _font(22)
     for i, t in enumerate(tiles):
-        x = pad + (i % cols) * (TILE_W + pad)
-        y = pad + (i // cols) * (TILE_H + label_h + pad)
+        x = pad + (i % cols) * (tw + pad)
+        y = pad + (i // cols) * (th + label_h + pad)
         d.text((x + 2, y + 2), t.panel_id, fill=(200, 0, 0), font=font)
-        sheet.paste(t.image.resize((TILE_W, TILE_H)), (x, y + label_h))
+        sheet.paste(t.image.resize((tw, th)), (x, y + label_h))
     buf = io.BytesIO()
     sheet.save(buf, "JPEG", quality=92)
     return buf.getvalue()
 
 
-def screen(tiles: list[Tile], provider: str | None = None) -> tuple[list[dict], Usage]:
-    """初筛：一张拼图里的多块板，返回疑似缺陷与看不清的板。"""
+def screen(tiles: list[Tile], provider: str | None = None, evidence: bool | None = None, tile_w: int | None = None) -> tuple[list[dict], Usage]:
+    """初筛：一张拼图里的多块板，返回疑似缺陷与看不清的板。evidence 为假时不要求逐块写证据（输出更短，证据由近照复核给出）。"""
     ids = [t.panel_id for t in tiles]
+    evidence = config.SCREEN_EVIDENCE if evidence is None else evidence
+    fields = '"confidence":0到1之间的数,"evidence":"一句话说明看到了什么"' if evidence else '"confidence":0到1之间的数'
     user = (f"拼图中共 {len(ids)} 块板，编号：{', '.join(ids)}。逐块检查，"
             "只列出有缺陷（defect）或看不清无法判断（unsure）的板，正常的不要列出。"
             '只输出 JSON：{"panels":[{"id":"编号","status":"defect|unsure","type":"crack|soiling|broken|missing|null",'
-            '"confidence":0到1之间的数,"evidence":"一句话说明看到了什么"}]}')
-    data, usage = chat_json(GUIDE, user, [contact_sheet(tiles)], model=_model(provider), provider=_provider(provider),
+            + fields + '}]}')
+    data, usage = chat_json(GUIDE, user, [contact_sheet(tiles, tile_w=tile_w)], model=_model(provider), provider=_provider(provider),
                             thinking=config.VISION_THINKING, max_tokens=1500)
     panels = data.get("panels") if isinstance(data, dict) else None
     if not isinstance(panels, list):
