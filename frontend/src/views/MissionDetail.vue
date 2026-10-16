@@ -28,6 +28,21 @@ const error = ref('')
 let socket: WebSocket | undefined
 let lastSeq = 0
 let timer: number | undefined
+let reconnectTimer: number | undefined
+let generation = 0          // 每次切换任务加一；旧任务的异步结果与事件一律丢弃（深度审查 H10）
+let unmounted = false
+
+function closeSocket() {
+  window.clearTimeout(reconnectTimer)
+  if (socket) {
+    socket.onclose = null       // 主动关闭不触发重连（深度审查 M02）
+    socket.onmessage = null
+    socket.close()
+    socket = undefined
+  }
+}
+
+const routeId = () => String(route.params.id ?? '')
 
 const live = computed(() => !!mission.value && ['planning', 'awaiting_approval', 'running'].includes(mission.value.status))
 const isTroubleshoot = computed(() => (mission.value?.brief as { type?: string } | null)?.type === 'troubleshoot')
@@ -35,27 +50,38 @@ const result = computed(() => (mission.value?.result ?? null) as Record<string, 
 const mapTelemetry = computed(() => (live.value ? telemetry.value : sim.value.scene === mission.value?.scene ? sim.value.telemetry : {}))
 
 async function load(id: string) {
-  socket?.close()
+  const gen = ++generation
+  closeSocket()
+  window.clearTimeout(timer)
+  mission.value = null          // 先清空旧任务，加载完成前操作按钮不可用
   events.value = []
   lastSeq = 0
   score.value = null
   error.value = ''
+  let loaded: Mission
   try {
-    mission.value = await getMission(id)
+    loaded = await getMission(id)
   } catch (e) {
-    error.value = (e as Error).message
+    if (gen === generation) error.value = (e as Error).message
     return
   }
-  if (site.value?.name !== mission.value.scene && mission.value.scene !== 'eval') {
-    try { site.value = await getSite(mission.value.scene) } catch { site.value = null }
+  if (gen !== generation) return
+  mission.value = loaded
+  if (site.value?.name !== loaded.scene && loaded.scene !== 'eval') {
+    let s: Site | null = null
+    try { s = await getSite(loaded.scene) } catch { s = null }
+    if (gen !== generation) return
+    site.value = s
   }
-  connect(id)
-  await loadScore()
+  connect(id, gen)
+  await loadScore(gen)
 }
 
-function connect(id: string) {
+function connect(id: string, gen: number) {
+  if (unmounted || gen !== generation) return
   socket = new WebSocket(eventsUrl(id, lastSeq))
   socket.onmessage = (m) => {
+    if (gen !== generation) return
     const data = JSON.parse(m.data)
     if (data.type === 'event') {
       lastSeq = data.seq
@@ -69,38 +95,60 @@ function connect(id: string) {
     }
   }
   socket.onclose = () => {
-    if (mission.value?.id === id && live.value) setTimeout(() => connect(id), 1500)
+    if (!unmounted && gen === generation && mission.value?.id === id && live.value) {
+      reconnectTimer = window.setTimeout(() => connect(id, gen), 1500)
+    }
   }
 }
 
 function refresh() {
+  const gen = generation
   window.clearTimeout(timer)
   timer = window.setTimeout(async () => {
-    if (!mission.value) return
-    mission.value = await getMission(mission.value.id)
-    if (!live.value) await loadScore()
+    const id = routeId()
+    if (!id || gen !== generation) return
+    const m = await getMission(id)
+    if (gen !== generation) return
+    mission.value = m
+    if (!live.value) await loadScore(gen)
   }, 400)
 }
 
-async function loadScore() {
+async function loadScore(gen = generation) {
   if (!mission.value?.result || isTroubleshoot.value) return
-  try { score.value = await getScore(mission.value.id) } catch { score.value = null }
+  const id = mission.value.id
+  let s: Record<string, any> | null = null
+  try { s = await getScore(id) } catch { s = null }
+  if (gen === generation) score.value = s
 }
 
 watch(showTruth, async (on) => { truth.value = on && site.value ? await getTruth(site.value.name) : null })
 watch(() => route.params.id, (id) => { if (id) load(String(id)) }, { immediate: true })
-onBeforeUnmount(() => socket?.close())
+onBeforeUnmount(() => {
+  unmounted = true
+  generation++
+  closeSocket()
+  window.clearTimeout(timer)
+})
+
+// 操作对象以地址栏中的任务编号为准，并核对页面上显示的任务是同一个
+function currentId(): string | null {
+  const id = routeId()
+  return mission.value && mission.value.id === id ? id : null
+}
 
 async function decide(approved: boolean) {
-  if (!mission.value) return
+  const id = currentId()
+  if (!id) return
   busy.value = true
-  try { await approveMission(mission.value.id, approved) } catch (e) { error.value = (e as Error).message } finally { busy.value = false }
+  try { await approveMission(id, approved) } catch (e) { error.value = (e as Error).message } finally { busy.value = false }
   refresh()
 }
 
 async function cancel() {
-  if (!mission.value || !window.confirm('取消任务？飞行中会立即返航。')) return
-  await cancelMission(mission.value.id)
+  const id = currentId()
+  if (!id || !window.confirm('取消任务？飞行中会立即返航。')) return
+  await cancelMission(id)
   refresh()
 }
 </script>

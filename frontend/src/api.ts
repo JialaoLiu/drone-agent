@@ -7,10 +7,17 @@ export function accessToken(): string {
   try { return localStorage.getItem(TOKEN_KEY) ?? '' } catch { return '' }
 }
 
+// 图片、裁切图、HTML 报告由浏览器直接加载，不能附加请求头；令牌同时写入同源 cookie，后端对这些请求读取 cookie
+function syncTokenCookie(token: string) {
+  document.cookie = `drone_access_token=${encodeURIComponent(token)}; path=/; SameSite=Strict`
+}
+if (accessToken()) syncTokenCookie(accessToken())
+
 function askForToken(): boolean {
   const token = window.prompt('后端要求访问令牌，请输入：')?.trim()
   if (!token) return false
   try { localStorage.setItem(TOKEN_KEY, token) } catch { /* 隐私模式下不可写 */ }
+  syncTokenCookie(token)
   return true
 }
 

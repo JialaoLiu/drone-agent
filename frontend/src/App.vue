@@ -9,8 +9,10 @@ const { sim, ready, reachable, health } = useSim()
 const showHealth = ref(false)
 const healthLabel = computed(() => {
   const h = health.value
-  if (!h || !h.items.length) return null
-  if (h.ok === false) return { text: '飞行前检查不通过', cls: 'bad' }
+  if (!h) return null
+  // 失败优先显示：检查超时时没有逐项结果，但失败结论和处理建议必须看得到（深度审查 M03）
+  if (h.ok === false) return { text: h.items.length ? '飞行前检查不通过' : '飞行前检查无法完成', cls: 'bad' }
+  if (!h.items.length) return null
   return h.items.some((i) => i.ok === null) ? { text: '飞行前检查：有提示', cls: 'warn' } : { text: '飞行前检查通过', cls: 'ok' }
 })
 const route = useRoute()
@@ -65,13 +67,14 @@ async function returnHome() {
           <span v-if="healthLabel" class="health">
             <button class="chip" :class="healthLabel.cls" @click="showHealth = !showHealth">{{ healthLabel.text }}</button>
             <div v-if="showHealth && health" class="health-pop card">
-              <PreflightList :items="health.items" />
+              <PreflightList v-if="health.items.length" :items="health.items" />
               <p v-if="health.advice" class="small bad-text">{{ health.advice }}</p>
               <p class="small muted">与安全员起飞前执行的是同一套检查，每 15 秒刷新。</p>
             </div>
           </span>
         </div>
-        <button class="danger" :disabled="!t.in_air" @click="returnHome">一键返航</button>
+        <!-- 不按 in_air 禁用：遥测可能延迟，紧急操作必须随时可按；飞机在地面时后端会说明 -->
+        <button class="danger" @click="returnHome">一键返航</button>
       </header>
       <p v-if="notice" class="notice">{{ notice }}</p>
       <main>
