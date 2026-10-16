@@ -5,7 +5,8 @@
   传感器超时：最近 60 秒内飞控是否报过传感器超时或故障（真机同样适用）；
   仿真速度：仿真时间与真实时间之比，过低时飞控的传感器会超时、高度估计会漂移（仅仿真）；
   位置估计：飞控估计的位置与仿真中的真实位置之差（仅仿真；真机上对应 RTK 或视觉定位的交叉校验）；
-  电脑负载：只提示，不拦截。
+  电脑负载：只提示，不拦截；
+  天气：风速、阵风、降水、雷暴、能见度（weather.py；仿真中默认只提示）。
 任何一项“不通过”都拒绝起飞，并给出原因和处理建议。
 """
 from __future__ import annotations
@@ -16,7 +17,9 @@ import os
 import re
 import time
 
+from . import simctl, weather
 from .sim import camera
+from .sim.scene import load_site
 
 SENSOR_FAULT = re.compile(r"timeout|(accel|gyro|baro|mag|sensor|imu|ekf|estimator|height|gps)\S*.*\b(fail|lost|stale|inconsistent)", re.I)
 IGNORED = re.compile(r"no connection to the gcs", re.I)   # 地面站尚未连上时的提示，与传感器无关
@@ -75,7 +78,15 @@ def load_item() -> dict:
                  f"1 分钟平均负载 {load:.1f}（{cores} 核）" + ("，建议关闭其他占用资源的程序" if busy else ""))
 
 
-async def preflight(f, sample_seconds: float = 2.0) -> dict:
+def _current_site() -> dict | None:
+    scene = simctl.status().get("scene")
+    try:
+        return load_site(scene) if scene else None
+    except (FileNotFoundError, OSError):
+        return None
+
+
+async def preflight(f, sample_seconds: float = 2.0, site: dict | None = None) -> dict:
     """飞行前检查。f 为 flight.Flight。返回 {"ok": bool, "items": [...], "advice": str}。"""
     items = []
     h = await f.health()
@@ -101,6 +112,7 @@ async def preflight(f, sample_seconds: float = 2.0) -> dict:
     except camera.CameraUnavailable as error:
         items.append(_item("real_time", "仿真速度", None, f"跳过：{error}"))
     items.append(load_item())
+    items.append(await asyncio.to_thread(weather.item, site or _current_site()))
     ok = all(i["ok"] is not False for i in items)
     failed = [i["label"] for i in items if i["ok"] is False]
     advice = "" if ok else ("不通过：" + "、".join(failed) + "。请关闭占用资源的程序，在场景库重启当前场景后再试。")

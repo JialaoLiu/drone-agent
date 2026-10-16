@@ -67,3 +67,16 @@ def test_findings_reason_column_migrates():
     con.close()
     store.upsert_finding("m1", "A-R1-C01", status="unverified", reason="misaimed")
     assert store.findings("m1")[0]["reason"] == "misaimed"
+
+
+def test_weather_rules(monkeypatch):
+    from droneagent import weather
+    assert weather.assess({"wind_speed_10m": 3, "wind_gusts_10m": 5, "precipitation": 0, "weather_code": 1, "visibility": 20000})[0] is True
+    assert weather.assess({"wind_speed_10m": 8, "wind_gusts_10m": 5, "precipitation": 0, "weather_code": 1, "visibility": 20000})[0] is None
+    for bad in ({"wind_speed_10m": 11}, {"wind_gusts_10m": 13}, {"precipitation": 1.0}, {"weather_code": 95}, {"visibility": 800}):
+        assert weather.assess(bad)[0] is False
+    site = {"origin": {"lat": -34.9, "lon": 138.6}}
+    monkeypatch.setattr(weather, "fetch", lambda lat, lon, timeout=5.0: {"wind_speed_10m": 15, "wind_gusts_10m": 20})
+    assert weather.item(site)["ok"] is None                    # 仿真中只提示
+    monkeypatch.setenv("WEATHER_ENFORCE", "1")
+    assert weather.item(site)["ok"] is False                   # 真机部署时拦截
