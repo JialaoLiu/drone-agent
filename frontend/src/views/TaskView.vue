@@ -110,7 +110,7 @@ function select(pid: string) {
           </div>
         </div>
         <div class="col">
-          <PlanCard v-if="mission.plan?.sorties" :plan="mission.plan" :awaiting="mission.status === 'awaiting_approval'" :busy="busy" @decide="decide" />
+          <PlanCard v-if="mission.plan?.sorties" :plan="mission.plan" :awaiting="mission.status === 'awaiting_approval'" :busy="busy" :scenario="scenario" @decide="decide" />
           <TruthComparison v-if="scenario.usesPanels && score && score.defects != null" :score="score" :truth="truth" :scenario="scenario" @select="select" />
           <RescueResult v-if="!scenario.usesPanels && result" :result="result" :scenario="scenario" @photo="openPhoto = $event" />
           <div class="card"><h2>团队协作记录</h2><Timeline :events="events" /></div>

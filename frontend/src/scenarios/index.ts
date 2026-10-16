@@ -21,6 +21,11 @@ export interface Scenario {
   verdict: (score: Record<string, any> | null, result: Record<string, any> | null, unverified: number) => Verdict | null
   usesPanels: boolean        // 结果是否按“板”逐块展示（光伏）；救援按发现的人和位置展示
   summary: (site: { arrays?: unknown[]; panels?: unknown[]; landmarks?: unknown[] } | null, counts?: { arrays: number; panels: number }) => string
+  planRows: (plan: Record<string, any>) => { label: string; value: string }[]   // 计划卡片显示的条目
+}
+
+const POLICY: Record<string, string> = {
+  none: '只拍整列照片，不做近距复核', flagged: '只复核初筛判为缺陷的板', flagged_and_unsure: '复核疑似缺陷和看不清的板', all: '每一块板都近距复核',
 }
 
 const pct = (v: unknown) => (typeof v === 'number' ? `${Math.round(v * 100)}%` : '—')
@@ -58,6 +63,12 @@ const solar: Scenario = {
   },
   metricsHelp: solarHelp,
   usesPanels: true,
+  planRows: (p) => [
+    { label: '巡检的列', value: (p.targets ?? []).join('、') }, { label: '复核策略', value: POLICY[p.closeup_policy] ?? p.closeup_policy },
+    { label: '拍摄距离', value: `${p.standoff_m} 米` },
+    ...(p.sorties ?? []).map((s: string[], i: number) => ({ label: i ? '' : '架次', value: `第 ${i + 1} 架次：${s.join('、')} 列，耗电约 ${p.estimated_battery?.[i]?.toFixed(0)}%` })),
+    { label: '预计时间', value: `${p.estimated_minutes} 分钟` },
+  ],
   summary: (site, c) => `${c?.arrays ?? site?.arrays?.length ?? 0} 列 · ${c?.panels ?? site?.panels?.length ?? 0} 块板`,
   verdict: (s, _result, unverified) => {
     if (s && s.defects != null) {
@@ -108,6 +119,11 @@ const rescue: Scenario = {
   },
   metricsHelp: { recall: '找到：确认位置距目标真实位置 5 米以内。', precision: '错认：把路人或地上的衣物确认为目标。' },
   usesPanels: false,
+  planRows: (p) => [
+    { label: '搜索中心', value: p.last_seen_label ?? '' }, { label: '搜索方式', value: p.pattern === 'parallel' ? '平行扫描' : '扩展方形（从中心向外）' },
+    { label: '搜索半径', value: `${p.radius_m} 米` }, { label: '飞行高度', value: `${p.altitude_m} 米` },
+    { label: '拍摄点', value: `${p.photos} 个` }, { label: '预计', value: `${p.estimated_minutes} 分钟，耗电约 ${p.estimated_battery?.[0]?.toFixed(0)}%` },
+  ],
   summary: (site) => (site?.landmarks ? `${site.landmarks.length} 个地标 · 有走动的人和路人` : '湖面、步道、走动的人和路人'),
   verdict: (s, result) => {
     if (!result) return null

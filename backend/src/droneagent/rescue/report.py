@@ -22,12 +22,17 @@ def collect(state: dict, site: dict, battery_end: float) -> dict:
     lm = plan.get("last_seen_label", "")
     if found:
         dist = ((found["x"] - plan["center"][0]) ** 2 + (found["y"] - plan["center"][1]) ** 2) ** 0.5
-        facts = (f"已找到目标，位于东 {found['x']:.1f} 米、北 {found['y']:.1f} 米（相对起飞点），距最后出现的{lm}约 {dist:.0f} 米，"
+        who = "在水中发现人员（衣着在水下无法确认，按落水者处置）" if found.get("clothing_unverified") else "已找到目标"
+        facts = (f"{who}，位于东 {found['x']:.1f} 米、北 {found['y']:.1f} 米（相对起飞点），距最后出现的{lm}约 {dist:.0f} 米，"
                  f"起飞后 {found['elapsed_s'] // 60} 分 {found['elapsed_s'] % 60} 秒确认") + ("；目标在水中" if found["in_water"] else "") + "。"
         advice = ("目标在水中，请立即派救生人员携带救生圈前往，无人机可返回悬停指示位置。" if found["in_water"]
                   else "请地面人员按坐标前往接回，途中注意目标可能继续走动。")
+    elif searched == 0:
+        reason = state.get("error") or ("任务被取消" if state.get("outcome") == "cancelled" else "没有起飞")
+        facts = f"本次没有开始搜索：{reason}。"
+        advice = "处理上面的原因后重新下达任务。"
     else:
-        facts = f"本次没有找到目标：搜索了计划 {planned} 个拍摄点中的 {searched} 个" + ("（因电量或异常提前结束）" if searched < planned else "") + "。"
+        facts = f"本次没有找到目标：搜索了计划 {planned} 个拍摄点中的 {searched} 个" + ("（因电量、取消或异常提前结束）" if searched < planned else "") + "。"
         advice = "建议扩大搜索半径或改为平行扫描再飞一次，并组织地面人员在水边与出入口重点排查。"
     facts += f"发现路人 {counts['bystander']} 人，确认后排除 {counts['rejected']} 人，非人物体 {counts['object']} 处，看不清 {counts['unsure']} 处。"
     return {"scenario": "rescue", "found": found, "detections": dets, "counts": counts, "searched": searched, "planned": planned,

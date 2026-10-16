@@ -157,6 +157,8 @@ def _classify(item: dict) -> str:
         return "object"
     if item["person"] == "unsure":
         return "unsure"
+    if item.get("in_water") == "yes":
+        return "candidate"          # 水里有人本身就是紧急情况，衣服在水下看不清颜色，不能按衣着排除（工程日志 43）
     return "candidate" if item["match"] in SCREEN_FOLLOW else "bystander"
 
 
@@ -173,10 +175,12 @@ async def _confirm(state: RescueState, item: dict, index: int) -> tuple[dict | N
         verdict, usage = await asyncio.to_thread(detect.verify, frame, desc)
         _usage(state, "searcher", usage)
         verdict["photo"] = pid
-        if verdict["person"] == "yes" and verdict["match"] in CONFIRM_MATCH:
+        in_water = verdict["person"] == "yes" and verdict["in_water"] == "yes"
+        if verdict["person"] == "yes" and (verdict["match"] in CONFIRM_MATCH or in_water):
             pos = await asyncio.to_thread(detect.locate_in_zoom, frame)
             x, y = pos if pos else (item["x"], item["y"])
             return {"x": round(x, 2), "y": round(y, 2), "in_water": verdict["in_water"] == "yes", "photo": pid,
+                    "clothing_unverified": in_water and verdict["match"] not in CONFIRM_MATCH,
                     "evidence": verdict["evidence"], "confidence": verdict["confidence"], "found_at": time.time()}, verdict
         if verdict["person"] != "unsure" or attempt:
             return None, verdict
@@ -246,7 +250,8 @@ async def search(state: RescueState) -> dict:
                 if hit:
                     det["kind"] = "target"
                     found = {**hit, "id": det["id"], "elapsed_s": round(hit["found_at"] - state["started_at"])}
-                    _emit(state, "searcher", "found", f"确认找到目标 {det['id']}：{hit['evidence']}" + ("；目标在水中，需立即救援" if hit["in_water"] else ""), found)
+                    head = "在水中发现人员（衣着在水下无法确认）" if hit.get("clothing_unverified") else f"确认找到目标 {det['id']}"
+                    _emit(state, "searcher", "found", f"{head}：{hit['evidence']}" + ("；需立即救援" if hit["in_water"] else ""), found)
                     break
                 det["kind"] = "rejected"
                 _emit(state, "searcher", "rejected", f"{det['id']} 不是要找的人：{verdict['evidence']}")

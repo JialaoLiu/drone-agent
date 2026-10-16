@@ -1,28 +1,17 @@
 <script setup lang="ts">
+import type { Scenario } from '../../scenarios'
 import type { Plan } from '../../types'
 import PreflightList from './PreflightList.vue'
 
-defineProps<{ plan: Plan; awaiting: boolean; busy: boolean }>()
+defineProps<{ plan: Plan; awaiting: boolean; busy: boolean; scenario: Scenario }>()
 const emit = defineEmits<{ decide: [approved: boolean] }>()
-
-const POLICY: Record<string, string> = {
-  none: '只拍整列照片，不做近距复核', flagged: '只复核初筛判为缺陷的板',
-  flagged_and_unsure: '复核疑似缺陷和看不清的板', all: '每一块板都近距复核',
-}
 </script>
 
 <template>
   <div class="card plan" :class="{ awaiting }">
     <h2>{{ awaiting ? '计划待确认' : '执行计划' }}</h2>
     <dl>
-      <dt>巡检的列</dt><dd>{{ plan.targets.join('、') }}</dd>
-      <dt>复核策略</dt><dd>{{ POLICY[plan.closeup_policy] ?? plan.closeup_policy }}</dd>
-      <dt>拍摄距离</dt><dd>{{ plan.standoff_m }} 米</dd>
-      <dt>架次</dt>
-      <dd>
-        <div v-for="(s, i) in plan.sorties" :key="i">第 {{ i + 1 }} 架次：{{ s.join('、') }} 列，耗电约 {{ plan.estimated_battery?.[i]?.toFixed(0) }}%</div>
-      </dd>
-      <dt>预计时间</dt><dd>{{ plan.estimated_minutes }} 分钟</dd>
+      <template v-for="(r, i) in scenario.planRows(plan as any)" :key="i"><dt>{{ r.label }}</dt><dd>{{ r.value }}</dd></template>
     </dl>
     <p v-if="plan.rationale" class="muted small">规划员：{{ plan.rationale }}</p>
     <p class="check" :class="plan.violations?.length ? 'bad' : 'ok'">

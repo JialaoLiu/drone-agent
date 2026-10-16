@@ -423,7 +423,7 @@ def _ground_extent(site: Site, centered: bool = False) -> float:
     return max(max(xs) - min(xs), max(ys) - min(ys)) + 40
 
 
-def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun: tuple[float, float, float]) -> str:
+def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun: tuple[float, float, float], centered: bool = False) -> str:
     parts = [_panel_model(p, textures[p.id]) for p in site.panels]
     parts += [_array_stand(a) for a in site.arrays]
     parts += [_tree(o) for o in site.obstacles]
@@ -432,8 +432,8 @@ def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun
     parts.append('<include><uri>model://x500_inspect</uri><name>x500_inspect_0</name><pose>0 0 0.25 0 0 0</pose></include>')
     o = site.origin
     xs, ys = [p[0] for p in site.geofence], [p[1] for p in site.geofence]
-    gx, gy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
-    ground_size = _ground_extent(site)
+    gx, gy = (0.0, 0.0) if centered else ((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2)
+    ground_size = _ground_extent(site, centered)
     return f'''<?xml version="1.0" encoding="UTF-8"?>
 <!-- 由 droneagent.sim.scene 生成：场景 {name}，种子 {site.seed}。不要手改，重新生成即可。 -->
 <sdf version="1.9">
@@ -492,7 +492,17 @@ def generate(seed: int, name: str | None = None, defect_rate: float = 0.12, out_
                    "note": "仿真地面为程序生成的平面草地贴图，不是真实影像" + (
                        f"；场地高差 {site.terrain['relief']} 米" + ("，平面地面与真实地形基本一致" if site.terrain["relief"] <= 3
                                                              else "，平面地面与真实地形不一致，离地高度以高程数据为准") if site.terrain else "")}
-    _ground(rng).save(ground)
+    centered = False
+    if location:
+        # 真实场地：地面铺该位置的卫星影像（以起飞点为中心），仿真画面与真实地貌一致；下载失败时用程序生成的草地
+        from ..rescue.scene import satellite_ground
+        extent = _ground_extent(site, centered=True)
+        if satellite_ground(origin, extent, ground):
+            centered = True
+            site.ground = {"source": "satellite", "extent_m": round(extent, 1),
+                           "note": "仿真地面为该位置的卫星影像（Esri World Imagery）" + (f"；场地高差 {site.terrain['relief']} 米" if site.terrain else "")}
+    if not centered:
+        _ground(rng).save(ground)
     normal = tex_dir / "panel_normal.png"
     _panel_base(random.Random(seed * 7 + 1)).save(normal)
     tex_paths = {}
@@ -512,7 +522,7 @@ def generate(seed: int, name: str | None = None, defect_rate: float = 0.12, out_
 
     azimuth, elevation = rng.uniform(0, 2 * math.pi), rng.uniform(math.radians(35), math.radians(70))
     sun = (math.cos(elevation) * math.sin(azimuth), math.cos(elevation) * math.cos(azimuth), -math.sin(elevation))
-    (out / f"{name}.sdf").write_text(_world_sdf(name, site, tex_paths, str(ground), sun), encoding="utf-8")
+    (out / f"{name}.sdf").write_text(_world_sdf(name, site, tex_paths, str(ground), sun, centered), encoding="utf-8")
     data = asdict(site)
     (out / "site.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     return out
