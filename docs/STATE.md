@@ -11,18 +11,20 @@
 | 相机桥 | http://127.0.0.1:8874 | 在 Gazebo 的 Python 环境中运行，提供照片与相机位姿 |
 | 仿真 | PX4 SITL + Gazebo 8.10（无窗口） | MAVLink UDP 14540，同一时间只能有一个程序占用 |
 
-一键启动：`scripts/start.sh [场景名]`；停止：`scripts/start.sh stop`。运行前需挂载外置硬盘上的 `/Volumes/LJL4T/DevData.sparsebundle`。
+一键启动：`scripts/start.sh [场景名]`；停止：`scripts/start.sh stop`。不上传仓库的内容都在仓库旁边的 `../drone-agent-related/`（2026-10-16 起不再依赖外置硬盘）。
 
 ## 数据落在哪里
 
 | 位置 | 内容 | 是否提交 |
 | --- | --- | --- |
-| `/Volumes/DevData/px4/PX4-Autopilot` | PX4 源码、编译产物、Gazebo 环境（约 8 GB） | 否 |
-| `/Volumes/DevData/drone-agent/worlds/<场景>/` | 生成的场景：SDF、贴图、`site.json`（含标准答案） | 否（按种子可重建） |
-| `/Volumes/DevData/drone-agent/photos/<任务>/` | 任务照片、位姿、HTML 报告 | 否 |
-| `/Volumes/DevData/drone-agent/captures/<场景>/` | 评测用的完整录制（每列整列照片 + 每块板近照） | 否 |
-| `/Volumes/DevData/drone-agent/app.db` | 任务、事件、照片记录、发现、模型调用 | 否 |
-| `/Volumes/DevData/drone-agent/checkpoints.db` | LangGraph 检查点（等待确认的任务可恢复） | 否 |
+| `../drone-agent-related/px4/PX4-Autopilot` | PX4 源码、编译产物、Gazebo 环境（约 8 GB） | 否 |
+| `../drone-agent-related/data/worlds/<场景>/` | 生成的场景：SDF、贴图、`site.json`（含标准答案） | 否（按种子可重建） |
+| `../drone-agent-related/data/photos/<任务>/` | 任务照片、位姿、HTML 报告 | 否 |
+| `../drone-agent-related/data/captures/<场景>/` | 评测用的完整录制（每列整列照片 + 每块板近照） | 否 |
+| `../drone-agent-related/data/app.db` | 任务、事件、照片记录、发现、模型调用 | 否 |
+| `../drone-agent-related/data/checkpoints.db` |
+| `../drone-agent-related/datasets/` | 公开数据集（不提交） | 否 |
+| `../drone-agent-related/reviews/` | 代码审查报告 | 否 | LangGraph 检查点（等待确认的任务可恢复） | 否 |
 | `backend/eval/results/` | 评测报告与明细 | 是 |
 | `backend/.env` | 模型密钥 | 否 |
 

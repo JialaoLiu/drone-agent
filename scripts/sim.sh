@@ -10,8 +10,9 @@
 set -eo pipefail   # 不用 -u：PX4 的环境脚本引用了未定义的变量
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PX4_DIR=${PX4_DIR:-/Volumes/DevData/px4/PX4-Autopilot}
-DATA_DIR=${DRONE_AGENT_DATA:-/Volumes/DevData/drone-agent}
+RELATED_DIR=${DRONE_AGENT_RELATED:-$(cd "$PROJECT_DIR/.." && pwd)/drone-agent-related}
+PX4_DIR=${PX4_DIR:-$RELATED_DIR/px4/PX4-Autopilot}
+DATA_DIR=${DRONE_AGENT_DATA:-$RELATED_DIR/data}
 LOG_DIR="$DATA_DIR/logs"
 WORLD=${1:-solar_1}
 

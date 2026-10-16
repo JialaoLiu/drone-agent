@@ -42,7 +42,7 @@
 
 ### 2.1 启动前
 
-1. 挂载外置硬盘上的磁盘映像：在访达中双击 `/Volumes/LJL4T/DevData.sparsebundle`，确认出现 `/Volumes/DevData`。PX4、场景、照片和数据库都在这里。
+1. 确认仓库旁边有 `drone-agent-related` 目录（`/Users/jarvislao/Desktop/StudyFile/Coding/drone-agent-related`）：PX4、场景、照片、数据库、数据集都在这里，不需要外置硬盘。
 2. `backend/.env` 中已填好 `LLM_API_KEY`（DeepSeek）。这个文件不提交。
 
 ### 2.2 一键启动
@@ -64,7 +64,7 @@ scripts/start.sh solar_46
 scripts/start.sh stop
 ```
 
-日志在 `/Volumes/DevData/drone-agent/logs/`（`api.log`、`web.log`）。
+日志在 `drone-agent-related/data/logs/`（`api.log`、`web.log`）。
 
 ## 3. 页面总览
 
@@ -227,7 +227,7 @@ claude mcp add drone-agent -- env PYTHONPATH=<backend 绝对路径>/src uv --dir
 ## 10. 常见问题
 
 **网页打不开，或提示连接失败。**
-先确认 `/Volumes/DevData` 已挂载，再执行 `scripts/start.sh stop` 后重新启动。看 `logs/api.log` 是否有报错。
+先确认 `drone-agent-related` 目录在仓库旁边，再执行 `scripts/start.sh stop` 后重新启动。看 `logs/api.log` 是否有报错。
 
 **顶部状态里出现 “Preflight Fail: No connection to the GCS” 或 “Accel TIMEOUT”。**
 仿真刚启动时 PX4 的正常提示，后端连上后会消失，不影响起飞。若长时间无法起飞，在“场景库”点当前场景的“重启”。
@@ -295,6 +295,6 @@ claude mcp add drone-agent -- env PYTHONPATH=<backend 绝对路径>/src uv --dir
 | 想立即停止一切 | `scripts/start.sh stop` |
 | 场景贴图看起来没更新 | 仿真不会重新加载贴图，在“场景库”重启该场景 |
 | 评测脚本卡住 | 确认后端已停止（端口被占用）；仍卡住时 Ctrl+C 后重试 |
-| 磁盘空间不足 | 照片在 `/Volumes/DevData/drone-agent/photos/`，可按任务删除旧目录（先确认不再需要） |
+| 磁盘空间不足 | 照片在 `drone-agent-related/data/photos/`，可按任务删除旧目录（先确认不再需要） |
 
 问题记录与排查过程见 `docs/BUGS.yaml` 和 `docs/engineering-log.md`；后续计划见 `docs/roadmap.md`。

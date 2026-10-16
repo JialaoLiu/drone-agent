@@ -29,8 +29,10 @@ def env(name: str, default: str = "") -> str:
 
 
 # 仿真：PX4 源码目录、日志目录（大文件放外置盘映像）
-PX4_DIR = Path(env("PX4_DIR", "/Volumes/DevData/px4/PX4-Autopilot"))
-DATA_DIR = Path(env("DRONE_AGENT_DATA", "/Volumes/DevData/drone-agent"))
+# 不上传仓库的内容（PX4、运行数据、数据集）放在仓库旁边的 drone-agent-related 目录
+RELATED_DIR = Path(env("DRONE_AGENT_RELATED", str(Path(__file__).resolve().parents[3].parent / "drone-agent-related")))
+PX4_DIR = Path(env("PX4_DIR", str(RELATED_DIR / "px4" / "PX4-Autopilot")))
+DATA_DIR = Path(env("DRONE_AGENT_DATA", str(RELATED_DIR / "data")))
 SIM_DIR = PROJECT_DIR / "sim"
 MODELS_DIR = SIM_DIR / "models"
 WORLDS_DIR = DATA_DIR / "worlds"          # 生成的巡检场景（SDF、贴图、标准答案）

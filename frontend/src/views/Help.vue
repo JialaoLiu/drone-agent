@@ -32,7 +32,7 @@ const STEPS = [
   <section class="card faq">
     <h2>常见问题</h2>
     <dl>
-      <dt>仿真没有反应 / 一直“启动中”？</dt><dd>确认外置硬盘上的 DevData 映像已挂载；在终端运行 <code>scripts/start.sh stop</code> 后再 <code>scripts/start.sh</code>。日志在 /Volumes/DevData/drone-agent/logs。</dd>
+      <dt>仿真没有反应 / 一直“启动中”？</dt><dd>确认仓库旁边有 drone-agent-related 目录；在终端运行 <code>scripts/start.sh stop</code> 后再 <code>scripts/start.sh</code>。日志在 drone-agent-related/data/logs。</dd>
       <dt>任务卡在“等待确认”？</dt><dd>打开任务详情，在右侧计划卡片点“确认起飞”；或下达任务时勾选“自动起飞”。</dd>
       <dt>想换一个完全不同的场地？</dt><dd>场景库里输入新的种子或点“随机生成一个”，再启动仿真。</dd>
       <dt>飞机悬停不动？</dt><dd>点右上角“一键返航”。任务出错时系统也会自动返航，原因写在协作记录里。</dd>

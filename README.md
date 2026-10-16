@@ -137,8 +137,9 @@ flowchart LR
 **1. 安装 PX4 与 Gazebo**（参考 [PX4 macOS 环境](https://docs.px4.io/main/en/dev_setup/dev_env_mac)）
 
 ```bash
-git clone https://github.com/PX4/PX4-Autopilot.git /Volumes/DevData/px4/PX4-Autopilot
-cd /Volumes/DevData/px4/PX4-Autopilot
+# 默认放在仓库旁边的 drone-agent-related 目录；放在别处时在 backend/.env 设置 PX4_DIR
+git clone https://github.com/PX4/PX4-Autopilot.git ../drone-agent-related/px4/PX4-Autopilot
+cd ../drone-agent-related/px4/PX4-Autopilot
 git submodule update --init --recursive
 ./Tools/setup/macos.sh --sim-tools      # 只用无窗口仿真时可以跳过 XQuartz；另需 brew install pkgconf
 make px4_sitl

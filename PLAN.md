@@ -179,7 +179,7 @@ LangGraph 作业图
 - 代码、图表、界面中不写“AI”字样，除非用户要求；对话和代码中不使用 emoji。
 - 密钥只放 `.env`（加入 .gitignore），不打印、不提交。`.env` 已从 data-agent 复制（DeepSeek）；需要 OpenAI 时请用户补充 Key。
 - 下载外部文件（工具链、数据集）前先说明来源和大小，征得同意。
-- 大文件放 `/Volumes/DevData`；开工前确认映像已挂载（双击 `/Volumes/LJL4T/DevData.sparsebundle`）。
+- 大文件放仓库旁边的 `../drone-agent-related/`（2026-10-16 起，原外置硬盘 `/Volumes/DevData` 不再使用）。
 - 用户自己做最终验收测试；后端可以自测。
 - 参考项目：`../data-agent`（LangGraph 检查点、先落库再推送、评测与问题记录的做法可以直接沿用）。
 

@@ -3,7 +3,8 @@
 # 用法：scripts/start.sh [场景名，默认 solar_1]；停止：scripts/start.sh stop
 set -eo pipefail
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-DATA_DIR=${DRONE_AGENT_DATA:-/Volumes/DevData/drone-agent}
+RELATED_DIR=${DRONE_AGENT_RELATED:-$(cd "$PROJECT_DIR/.." && pwd)/drone-agent-related}
+DATA_DIR=${DRONE_AGENT_DATA:-$RELATED_DIR/data}
 LOG_DIR="$DATA_DIR/logs"
 SCENE=${1:-solar_1}
 
@@ -15,7 +16,7 @@ if [ "$SCENE" = "stop" ]; then
 fi
 
 if [ ! -d "$(dirname "$DATA_DIR")" ]; then
-	echo "数据目录所在的磁盘不存在：$DATA_DIR（外置硬盘映像是否已挂载？）" >&2
+	echo "数据目录的上级不存在：$DATA_DIR（drone-agent-related 目录是否在仓库旁边？）" >&2
 	exit 1
 fi
 mkdir -p "$LOG_DIR"
