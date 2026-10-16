@@ -45,3 +45,16 @@
 | Mapbox Token | 在 Mapbox 账户的 Access tokens 页面复制默认公开 Token（`pk.` 开头、80 个字符以上），替换 `backend/.env` 里的 `MAPBOX_TOKEN`；之后重新生成真实场地即可看到卫星地面 |
 | 真实图像数据集 | 浏览器登录 Kaggle，下载 `alicjalena/pv-panel-defect-dataset`（约 500 MB，CC BY-NC-SA 4.0），把 zip 放到 `drone-agent-related/datasets/` |
 | 外置硬盘上的旧副本 | `/Volumes/DevData/px4` 和 `/Volumes/DevData/drone-agent` 已不再使用；是否删除由你决定（我没有删） |
+
+## 第二阶段（2026-10-16 晚）
+
+| 步骤 | 结果 | 提交 |
+| --- | --- | --- |
+| P1 真实图像评测 | 645 张现场照片：核心四类检出 73.7%、精确 98.4%；灰尘 34.5%（被当成反光）；费用 ¥4.6，超出自设 ¥2 上限 | c327bae |
+| P2 污损规则 | 仿真全部复核检出 96.8% → 100%、精确 100% → 96.9%；真实照片灰尘 3/16 → 6/16 | d3102fb |
+| P5 百度卫星底图 | 所有要素统一换算 BD-09；水面轮廓与卫星图湖岸重合 | ed94e92、00b0eb5 |
+| P4 数字孪生 | OpenStreetMap 地物 + Copernicus 高程；5 个地点评测；发现并修复离地高度上限（DR-051）与真实场地无法起飞（DR-050）；文翰湖孪生场景实时任务 7/9、无误报 | e5fd4b3、15aa1f8 |
+| P3 人工验收清单 | docs/acceptance-checklist.md，带截图 | 本次提交 |
+| 成本分析 | 约 90% 费用在模型输出；优化路线与对“本地模型”方案的评估写入 roadmap | 本次提交 |
+
+外置盘旧副本和数据集 zip 已移到废纸篓，需要用户自己清空才会释放空间。
