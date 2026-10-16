@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { groundUrl } from '../api'
 import type { Finding, Plan, Site, Telemetry, Truth } from '../types'
 
 const props = defineProps<{
@@ -41,12 +42,16 @@ const sorties = computed(() => {
     return { color: sortieColors[i % sortieColors.length], line, stops, detours: path.filter((s) => s.kind === 'transit') }
   })
 })
+// 真实场地的卫星影像：以场地原点为中心、边长 extent_m 米
+const ground = computed(() => (props.site.ground?.source === 'satellite' ? props.site.ground.extent_m : 0))
 const drone = computed(() => (props.telemetry && props.telemetry.updated ? props.telemetry : null))
 </script>
 
 <template>
   <svg :viewBox="`0 0 ${width} ${height}`" class="map" role="img" aria-label="场地平面图">
     <rect :width="width" :height="height" fill="var(--map-ground)" />
+    <image v-if="ground" :href="groundUrl(site.name)" :x="sx(-ground / 2)" :y="sy(ground / 2)" :width="ground * SCALE" :height="ground * SCALE"
+      preserveAspectRatio="none" opacity="0.85" />
     <polygon :points="pts(site.geofence)" fill="none" stroke="var(--muted)" stroke-dasharray="6 5" stroke-width="2" />
     <text :x="sx(site.geofence[0][0]) + 6" :y="sy(site.geofence[0][1]) - 6" class="label">电子围栏 · 限高 {{ site.max_altitude }} 米</text>
 

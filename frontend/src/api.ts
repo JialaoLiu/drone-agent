@@ -1,4 +1,4 @@
-import type { Mission, MissionSummary, Preflight, SceneInfo, SimStatus, Site, Truth } from './types'
+import type { Mission, MissionSummary, Place, Preflight, SceneInfo, SimStatus, Site, Truth } from './types'
 
 // 后端设置了 DRONE_AGENT_ACCESS_TOKEN 时，所有请求都要带访问令牌；令牌只保存在本机浏览器
 const TOKEN_KEY = 'drone_access_token'
@@ -35,7 +35,10 @@ export const startSim = (scene: string) => json<SimStatus>('/sim/start', { metho
 export const stopSim = () => json<SimStatus>('/sim/stop', { method: 'POST' })
 export const emergencyReturn = () => json<{ message: string }>('/sim/return', { method: 'POST' })
 export const listScenes = () => json<SceneInfo[]>('/scenes')
-export const createScene = (seed: number) => json<{ name: string }>('/scenes', { method: 'POST', body: JSON.stringify({ seed }) })
+export const createScene = (seed: number, location: Place | null = null) =>
+  json<{ name: string; ground?: Site['ground'] }>('/scenes', { method: 'POST', body: JSON.stringify({ seed, location }) })
+export const searchPlaces = (q: string, city: string) => json<Place[]>(`/places?${new URLSearchParams({ q, city })}`)
+export const groundUrl = (scene: string) => `/api/site/${encodeURIComponent(scene)}/ground`
 export const getSite = (name: string) => json<Site>(`/site/${encodeURIComponent(name)}`)
 export const getTruth = (name: string) => json<Truth>(`/site/${encodeURIComponent(name)}/truth`)
 export const listMissions = () => json<MissionSummary[]>('/missions')

@@ -20,6 +20,15 @@ if [ "$WORLD" = "stop" ]; then
 	pkill -f "bin/px4 -d" || true
 	pkill -f "gz sim" || true
 	pkill -f "camera_bridge.py" || true
+	# PX4 偶尔不响应 SIGTERM，残留进程会让下一次启动报 “PX4 server already running”：等 10 秒，仍在就强制结束
+	for _ in $(seq 1 20); do
+		pgrep -f "bin/px4 -d|gz sim|camera_bridge.py|px4-mavlink --instance" > /dev/null || break
+		sleep 0.5
+	done
+	pkill -9 -f "bin/px4 -d" || true
+	pkill -9 -f "gz sim" || true
+	pkill -9 -f "camera_bridge.py" || true
+	pkill -9 -f "px4-mavlink --instance" || true     # PX4 的命令行客户端，服务端退出后有时会挂住
 	exit 0
 fi
 

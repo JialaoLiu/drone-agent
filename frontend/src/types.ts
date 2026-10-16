@@ -3,7 +3,8 @@ export interface Telemetry {
   flight_mode: string; gimbal_pitch: number; status: string[]; updated: number
 }
 export interface SimStatus { scene: string | null; camera: boolean; px4: boolean; telemetry: Partial<Telemetry>; active_mission: string | null }
-export interface SceneInfo { name: string; seed: number; panels: number; arrays: number }
+export interface SceneInfo { name: string; seed: number; panels: number; arrays: number; location?: string | null; ground?: string }
+export interface Place { name: string; address: string; city: string; lat: number; lon: number; source: string }
 export interface Panel { id: string; array: string; row: number; col: number; center: number[]; corners: number[][] }
 export interface Site {
   name: string; seed: number; geofence: number[][]; max_altitude: number; min_altitude: number
@@ -11,6 +12,8 @@ export interface Site {
   obstacles: { id: string; label: string; center: number[]; radius: number; height: number }[]
   arrays: { id: string; center: number[]; rows: number; cols: number; size: number[] }[]
   panels: Panel[]
+  location?: Place | null
+  ground?: { source: 'satellite' | 'procedural'; extent_m: number; meters_per_pixel: number | null; note: string } | null
 }
 export interface Truth { defects: { panel_id: string; type: string; label: string; severity: string }[] }
 export interface MissionEvent { seq: number; role: string; kind: string; message: string; payload: Record<string, unknown>; created_at: string }

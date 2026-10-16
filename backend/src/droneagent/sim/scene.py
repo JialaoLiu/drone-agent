@@ -57,6 +57,8 @@ class Site:
     obstacles: list[dict]                # {id, label, center: [x, y], radius, height}
     arrays: list[dict]                   # {id, center, rows, cols, size: [长, 宽]}
     panels: list[Panel] = field(default_factory=list)
+    location: dict | None = None         # 真实场地：{name, address, city, lat, lon, source}；为空时使用 PX4 默认坐标
+    ground: dict | None = None           # 地面贴图：{source: satellite | procedural, extent_m, meters_per_pixel, note}
 
     def defects(self) -> list[Panel]:
         return [p for p in self.panels if p.defect]
@@ -355,6 +357,14 @@ def _substation(z: dict) -> str:
             f'<material><diffuse>0.4 0.45 0.4 1</diffuse></material></visual></link></model>')
 
 
+def _ground_extent(site: Site, centered: bool = False) -> float:
+    """地面边长：覆盖围栏外 20 米。centered 为真时以原点为中心（卫星影像以场地经纬度为中心）。"""
+    xs, ys = [p[0] for p in site.geofence], [p[1] for p in site.geofence]
+    if centered:
+        return 2 * max(max(abs(v) for v in xs), max(abs(v) for v in ys)) + 40
+    return max(max(xs) - min(xs), max(ys) - min(ys)) + 40
+
+
 def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun: tuple[float, float, float]) -> str:
     parts = [_panel_model(p, textures[p.id]) for p in site.panels]
     parts += [_array_stand(a) for a in site.arrays]
@@ -364,8 +374,9 @@ def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun
     parts.append('<include><uri>model://x500_inspect</uri><name>x500_inspect_0</name><pose>0 0 0.25 0 0 0</pose></include>')
     o = site.origin
     xs, ys = [p[0] for p in site.geofence], [p[1] for p in site.geofence]
-    gx, gy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
-    ground_size = max(max(xs) - min(xs), max(ys) - min(ys)) + 40     # 地面覆盖围栏外 20 米
+    # 卫星影像以场地原点为中心；程序贴图以围栏中心为中心
+    gx, gy = ((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2) if not site.ground or site.ground["source"] != "satellite" else (0.0, 0.0)
+    ground_size = site.ground["extent_m"] if site.ground else _ground_extent(site)
     return f'''<?xml version="1.0" encoding="UTF-8"?>
 <!-- 由 droneagent.sim.scene 生成：场景 {name}，种子 {site.seed}。不要手改，重新生成即可。 -->
 <sdf version="1.9">
@@ -391,24 +402,39 @@ def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun
 
 
 def generate(seed: int, name: str | None = None, defect_rate: float = 0.12, out_dir: Path | None = None,
-             textures: bool = True) -> Path:
-    """生成场景，返回场景目录。textures=False 时只生成场地信息（用于布局评测，快）。"""
+             textures: bool = True, location: dict | None = None) -> Path:
+    """生成场景，返回场景目录。textures=False 时只生成场地信息（用于布局评测，快）。
+    location 给出真实场地（maps.search_place 的结果）时，场地原点放在该经纬度，地面优先使用该位置的卫星影像；
+    阵列、禁飞区、树仍按种子随机布置，与影像中的真实地物无关。"""
     name = name or f"solar_{seed}"
     rng = random.Random(seed)
     out = (out_dir or config.WORLDS_DIR) / name
     tex_dir = out / "textures"
     (tex_dir if textures else out).mkdir(parents=True, exist_ok=True)
     layout = _layout(rng)
-    site = Site(name=name, seed=seed, origin=ORIGIN, geofence=layout["geofence"], max_altitude=layout["max_altitude"],
+    origin = {"lat": location["lat"], "lon": location["lon"], "alt": float(location.get("alt", 10.0))} if location else ORIGIN
+    site = Site(name=name, seed=seed, origin=origin, geofence=layout["geofence"], max_altitude=layout["max_altitude"],
                 min_altitude=layout["min_altitude"], no_fly_zones=layout["no_fly_zones"], obstacles=layout["obstacles"],
-                arrays=layout["arrays"])
+                arrays=layout["arrays"], location=location)
     site.panels = _panels(site.arrays, defect_rate, rng)
     if not textures:
         (out / "site.json").write_text(json.dumps(asdict(site), ensure_ascii=False, indent=1), encoding="utf-8")
         return out
 
     ground = tex_dir / "ground.png"
-    _ground(rng).save(ground)
+    extent = _ground_extent(site, centered=bool(location))
+    site.ground = {"source": "procedural", "extent_m": round(extent, 1), "meters_per_pixel": None, "note": "程序生成的草地贴图"}
+    if location:
+        from .. import maps
+        try:
+            png, mpp = maps.satellite_image(location["lat"], location["lon"], extent)
+            ground.write_bytes(png)
+            site.ground = {"source": "satellite", "extent_m": round(extent, 1), "meters_per_pixel": round(mpp, 3),
+                           "note": "Mapbox 卫星影像（© Mapbox © Maxar）"}
+        except maps.MapError as error:
+            site.ground["note"] = f"卫星影像不可用（{error}），使用程序生成的草地贴图"
+    if site.ground["source"] == "procedural":
+        _ground(rng).save(ground)
     normal = tex_dir / "panel_normal.png"
     _panel_base(random.Random(seed * 7 + 1)).save(normal)
     tex_paths = {}
@@ -443,11 +469,21 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--name")
     parser.add_argument("--defect-rate", type=float, default=0.12)
+    parser.add_argument("--place", help="真实地点名称，例如 文翰湖公园（用百度地点检索取坐标）")
+    parser.add_argument("--city", default="全国", help="检索范围，例如 佛山")
     args = parser.parse_args()
     config.ensure_dirs()
-    out = generate(args.seed, args.name, args.defect_rate)
+    location = None
+    if args.place:
+        from .. import maps
+        found = maps.search_place(args.place, args.city)
+        if not found:
+            raise SystemExit(f"没有找到地点：{args.place}")
+        location = found[0]
+        print(f"地点：{location['name']}（{location['address']}），WGS-84 {location['lat']}, {location['lon']}")
+    out = generate(args.seed, args.name or (f"site_{args.seed}" if location else None), args.defect_rate, location=location)
     site = load_site(out.name)
-    print(f"已生成 {out}：{len(site['panels'])} 块板，缺陷 {sum(1 for p in site['panels'] if p['defect'])} 块")
+    print(f"已生成 {out}：{len(site['panels'])} 块板，缺陷 {sum(1 for p in site['panels'] if p['defect'])} 块；地面：{site['ground']['note']}")
 
 
 if __name__ == "__main__":

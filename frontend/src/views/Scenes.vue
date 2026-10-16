@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { createScene, getSite, getTruth, listScenes, startSim, stopSim } from '../api'
+import { createScene, getSite, getTruth, listScenes, searchPlaces, startSim, stopSim } from '../api'
 import SceneThumb from '../components/SceneThumb.vue'
 import SiteMap from '../components/SiteMap.vue'
 import { useSim } from '../composables/sim'
-import type { SceneInfo, Site, Truth } from '../types'
+import type { Place, SceneInfo, Site, Truth } from '../types'
 
 const { sim, refresh } = useSim()
 const scenes = ref<SceneInfo[]>([])
@@ -14,6 +14,32 @@ const busy = ref('')
 const error = ref('')
 const preview = ref<string | null>(null)
 const truth = ref<Truth | null>(null)
+
+// 真实场地：地名检索（百度），选中后按当前种子生成；阵列等仍随机布置
+const placeQuery = ref('')
+const placeCity = ref('')
+const places = ref<Place[]>([])
+const groundNote = ref('')
+
+async function findPlaces() {
+  if (!placeQuery.value.trim()) return
+  busy.value = 'places'
+  error.value = ''
+  try { places.value = await searchPlaces(placeQuery.value.trim(), placeCity.value.trim() || '全国') }
+  catch (e) { error.value = (e as Error).message } finally { busy.value = '' }
+}
+
+async function generateAt(place: Place) {
+  busy.value = 'generate'
+  error.value = ''
+  try {
+    const { name, ground } = await createScene(seed.value, place)
+    groundNote.value = `${place.name}：${ground?.note ?? ''}`
+    places.value = []
+    await load()
+    preview.value = name
+  } catch (e) { error.value = (e as Error).message } finally { busy.value = '' }
+}
 
 const previewSite = computed(() => (preview.value ? sites.value[preview.value] : null))
 
@@ -64,6 +90,22 @@ onMounted(load)
       <button :disabled="!!busy" @click="generate(true)">随机生成一个</button>
     </div>
   </div>
+  <section class="card place">
+    <h2>真实场地</h2>
+    <p class="small muted">输入地名（例如“文翰湖公园”），用百度地点检索取得坐标，场地原点放在真实位置，起飞天气按该位置判断；有 Mapbox Token 时地面换成该位置的卫星影像。光伏阵列、禁飞区、树仍按种子随机布置，与影像中的真实地物无关。</p>
+    <div class="gen">
+      <input v-model="placeQuery" placeholder="地名" @keydown.enter="findPlaces" />
+      <input v-model="placeCity" placeholder="城市（可选，例如 佛山）" @keydown.enter="findPlaces" />
+      <button :disabled="!!busy || !placeQuery.trim()" @click="findPlaces">查找</button>
+    </div>
+    <ul v-if="places.length" class="places">
+      <li v-for="p in places" :key="`${p.lat},${p.lon}`">
+        <span><b>{{ p.name }}</b> <span class="muted small">{{ p.city }} {{ p.address }} · {{ p.lat.toFixed(5) }}, {{ p.lon.toFixed(5) }}</span></span>
+        <button class="small" :disabled="!!busy" @click="generateAt(p)">用种子 {{ seed }} 生成</button>
+      </li>
+    </ul>
+    <p v-if="groundNote" class="small muted">{{ groundNote }}</p>
+  </section>
   <p v-if="error" class="notice">{{ error }}</p>
   <p class="small muted">当前仿真：{{ sim.scene ?? '未启动' }} <button v-if="sim.scene" class="small" :disabled="!!sim.active_mission" @click="stop">停止仿真</button></p>
 
@@ -72,6 +114,7 @@ onMounted(load)
       <SceneThumb v-if="sites[s.name]" :site="sites[s.name]" @click="preview = s.name; truth = null" />
       <div class="meta">
         <b>{{ s.name }}</b><span class="muted small">种子 {{ s.seed }}</span>
+        <span v-if="s.location" class="tag">{{ s.location }}{{ s.ground === 'satellite' ? ' · 卫星地面' : '' }}</span>
         <span v-if="sim.scene === s.name" class="tag ok">运行中</span>
       </div>
       <p class="small muted">{{ info(s.name) }}</p>
@@ -95,6 +138,10 @@ onMounted(load)
 </template>
 
 <style scoped>
+.place { margin-bottom: 14px; }
+.place h2 { margin: 0 0 4px; font-size: 15px; }
+.places { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
+.places li { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 6px; }
 .gen { display: flex; gap: 8px; align-items: center; }
 .gen input { width: 100px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-top: 10px; }

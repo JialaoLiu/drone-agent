@@ -18,7 +18,8 @@ def scenes() -> list[dict]:
     out = []
     for d in sorted(config.WORLDS_DIR.glob("*/site.json")):
         site = json.loads(d.read_text(encoding="utf-8"))
-        out.append({"name": site["name"], "seed": site["seed"], "panels": len(site["panels"]), "arrays": len(site["arrays"])})
+        out.append({"name": site["name"], "seed": site["seed"], "panels": len(site["panels"]), "arrays": len(site["arrays"]),
+                    "location": (site.get("location") or {}).get("name"), "ground": (site.get("ground") or {}).get("source", "procedural")})
     return out
 
 
@@ -48,7 +49,7 @@ def status() -> dict:
 
 
 def stop() -> None:
-    subprocess.run([str(SCRIPT), "stop"], capture_output=True, timeout=30)
+    subprocess.run([str(SCRIPT), "stop"], capture_output=True, timeout=40)
     time.sleep(2)
 
 

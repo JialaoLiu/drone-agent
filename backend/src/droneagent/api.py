@@ -80,9 +80,19 @@ def health() -> dict:
 
 # ---------- 场景与仿真 ----------
 
+class Place(BaseModel):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+    address: str = ""
+    city: str = ""
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    source: str = ""
+
+
 class NewScene(BaseModel):
     seed: int = Field(ge=1, le=100000)
     defect_rate: float = Field(0.12, ge=0.02, le=0.4)
+    location: Place | None = None         # 真实场地（来自 /places 的检索结果）
 
 
 @app.get("/scenes")
@@ -92,8 +102,21 @@ def get_scenes() -> list[dict]:
 
 @app.post("/scenes")
 def create_scene(body: NewScene) -> dict:
-    out = scene.generate(body.seed, f"solar_{body.seed}", body.defect_rate)
-    return {"name": out.name}
+    if body.location:
+        out = scene.generate(body.seed, f"site_{body.seed}", body.defect_rate, location=body.location.model_dump())
+    else:
+        out = scene.generate(body.seed, f"solar_{body.seed}", body.defect_rate)
+    return {"name": out.name, "ground": scene.load_site(out.name).get("ground")}
+
+
+@app.get("/places")
+def places(q: Annotated[str, Query(min_length=1, max_length=60)], city: str = "全国") -> list[dict]:
+    """真实地点检索（百度地点检索，坐标已换算为 WGS-84）。"""
+    from . import maps
+    try:
+        return maps.search_place(q, city or "全国")
+    except maps.MapError as error:
+        raise HTTPException(502, str(error)) from error
 
 
 @app.get("/sim")
@@ -175,6 +198,15 @@ def get_site(name: str) -> dict:
         p.pop("defect", None)
         p.pop("distractor", None)
     return site
+
+
+@app.get("/site/{name}/ground")
+def get_ground(name: str):
+    """真实场地的卫星影像（用作网页底图）；程序生成的贴图不提供。"""
+    site = _site(name)
+    if (site.get("ground") or {}).get("source") != "satellite":
+        raise HTTPException(404, "该场景没有卫星影像")
+    return FileResponse(config.WORLDS_DIR / site["name"] / "textures" / "ground.png", media_type="image/png")
 
 
 @app.get("/site/{name}/truth")
