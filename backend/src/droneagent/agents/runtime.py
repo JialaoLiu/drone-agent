@@ -104,7 +104,12 @@ async def flight() -> Flight:
     global _flight, _flight_lock
     if _flight_lock is None:
         _flight_lock = asyncio.Lock()
-    async with _flight_lock:
+    try:
+        await asyncio.wait_for(_flight_lock.acquire(), 30)     # 另一个连接过程卡住时不无限等待（DR-064）
+    except asyncio.TimeoutError as error:
+        from ..flight import FlightError
+        raise FlightError("飞控连接正在进行且超过 30 秒没有完成，请重启仿真") from error
+    try:
         if _flight is not None and time.time() - _flight.state.updated < 5:
             _sync_origin(_flight)
             return _flight
@@ -121,6 +126,8 @@ async def flight() -> Flight:
                 break
             await asyncio.sleep(0.1)
         return f
+    finally:
+        _flight_lock.release()
 
 
 def try_claim(mission_id: str) -> bool:

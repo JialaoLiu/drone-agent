@@ -121,10 +121,15 @@ class Flight:
         self.failure = FailureAsync(system)
         self._tasks = [asyncio.create_task(c) for c in (self._watch_position(), self._watch_battery(), self._watch_flags(),
                                                          self._watch_attitude(), self._watch_status(), self._watch_health())]
+        # 默认参数在后台逐个写入、每个最多等 3 秒：仿真重启后个别参数可能一直收不到应答，
+        # 写在连接流程里会让连接一直不返回，所有飞行前检查都卡到超时（DR-064）
+        self._tasks.append(asyncio.create_task(self._apply_defaults()))
+
+    async def _apply_defaults(self) -> None:
         for name, value in DEFAULT_PARAMS.items():
             try:
-                await self.param.set_param_float(name, value)
-            except Exception:  # 真机或其他飞控没有这些参数，忽略
+                await asyncio.wait_for(self.param.set_param_float(name, value), 3.0)
+            except Exception:  # 真机或其他飞控没有这些参数、或没有应答，忽略
                 pass
 
     # ---------- 遥测 ----------
