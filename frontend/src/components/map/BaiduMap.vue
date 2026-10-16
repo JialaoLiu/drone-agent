@@ -2,7 +2,7 @@
 // 百度卫星底图（只用于国内的真实场地）。场地内部坐标是 WGS-84 本地平面（x 东、y 北，米），
 // 所有要素都经同一个函数 toBd() 换算为 BD-09 再画到百度地图上，换算参数由后端 /site/{name}/basemap 给出。
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { Finding, Plan, Site, Telemetry } from '../types'
+import type { Finding, Plan, Site, Telemetry } from '../../types'
 
 export interface BaiduFrame {
   available: boolean; ak: string; origin_bd09: number[]
@@ -14,6 +14,7 @@ const el = ref<HTMLDivElement | null>(null)
 const error = ref('')
 let map: any = null
 let droneMarker: any = null
+let resizeObserver: ResizeObserver | null = null
 const overlays: any[] = []
 
 declare global { interface Window { BMapGL?: any; __baiduReady?: Promise<void>; __baiduInit?: () => void } }
@@ -84,18 +85,18 @@ onMounted(async () => {
     map.centerAndZoom(c, 18)
     map.enableScrollWheelZoom(true)
     draw()
-    // 卫星图（BMAP_SATELLITE_MAP）：地图第一次加载完成后再切换，初始化过程中切换会抛错并中断绘制
-    let switched = false
+    // 卫星图：首次加载时“切换类型 + 缩放到 19 级”的时序会让画面停在空白底色（DR-062）。
+    // 改为缩放 18 级（多数地区都有卫星影像），切换后若干秒内重复确认一次类型，并在容器尺寸变化时重算画布。
     const toSatellite = () => {
-      if (switched || !map) return
-      switched = true
-      try {
-        map.setMapType((window as any).BMAP_SATELLITE_MAP)
-        window.setTimeout(() => map?.centerAndZoom(toBd(0, 0), 19), 300)     // 切换类型后缩放级别会被重置
-      } catch { /* 百度地图内部会抛 clearLabelOverlayData 之类的错误，但卫星图已经切换成功，忽略 */ }
+      if (!map) return
+      const sat = (window as any).BMAP_SATELLITE_MAP
+      if (map.getMapType?.() === sat) return          // 已是卫星图：不重复切换，避免反复重载
+      try { map.setMapType(sat) } catch { /* 百度内部偶发无害错误，忽略 */ }
     }
     map.addEventListener('tilesloaded', toSatellite)
-    window.setTimeout(toSatellite, 1500)      // 瓦片已在缓存时，加载完成事件可能在监听之前就触发了
+    for (const ms of [800, 2000, 4000]) window.setTimeout(() => { toSatellite(); map?.centerAndZoom(toBd(0, 0), 18) }, ms)
+    resizeObserver = new ResizeObserver(() => { try { map?.resize?.() } catch { /* 忽略 */ } })
+    if (el.value) resizeObserver.observe(el.value)
   } catch (e) {
     error.value = (e as Error).message
   }
@@ -104,6 +105,7 @@ watch(() => [props.findings, props.plan], draw, { deep: true })
 watch(() => props.telemetry, updateDrone)
 onBeforeUnmount(() => {
   // 百度地图的 destroy 偶尔在内部抛错；不能让它中断页面切换
+  resizeObserver?.disconnect()
   const m = map
   map = null
   droneMarker = null

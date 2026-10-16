@@ -10,7 +10,9 @@ def test_queued_mission_starts_when_idle_on_same_scene(monkeypatch):
     runtime.active_mission = None
     busy = store.create_mission("第一个", "solar_7")
     store.update_mission(busy, status="running")
+    assert not queue.busy(exclude=busy)          # 只有它自己时，不能把自己算成“有任务在进行”
     nxt = store.create_mission("第二个", "solar_7")
+    assert queue.busy(exclude=nxt)
     assert queue.busy() and queue.enqueue(nxt, True) == 1
     assert queue.dispatch_next() is None                       # 还有任务在执行
     store.update_mission(busy, status="done")

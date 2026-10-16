@@ -93,7 +93,7 @@ class Place(BaseModel):
 
 
 class NewScene(BaseModel):
-    seed: int = Field(ge=1, le=100000)
+    seed: int | None = Field(None, ge=1, le=100000)   # 不给时随机选一个布局编号
     defect_rate: float = Field(0.12, ge=0.02, le=0.4)
     location: Place | None = None         # 真实场地（来自 /places 的检索结果）
 
@@ -103,13 +103,30 @@ def get_scenes() -> list[dict]:
     return simctl.scenes()
 
 
+def _unique_name(base: str) -> str:
+    """场景名不能覆盖已有场景（不同地点用同一个布局编号时会同名，负责人测试 1.28）。"""
+    name, n = base, 2
+    while (config.WORLDS_DIR / name / "site.json").exists():
+        name, n = f"{base}_{n}", n + 1
+    return name
+
+
 @app.post("/scenes")
 def create_scene(body: NewScene) -> dict:
+    import random
+    seed = body.seed or random.randint(1, 100000)
     if body.location:
-        out = scene.generate(body.seed, f"site_{body.seed}", body.defect_rate, location=body.location.model_dump())
+        out = scene.generate(seed, _unique_name(f"site_{seed}"), body.defect_rate, location=body.location.model_dump())
     else:
-        out = scene.generate(body.seed, f"solar_{body.seed}", body.defect_rate)
-    return {"name": out.name, "ground": scene.load_site(out.name).get("ground")}
+        out = scene.generate(seed, _unique_name(f"solar_{seed}"), body.defect_rate)
+    return {"name": out.name, "seed": seed, "ground": scene.load_site(out.name).get("ground")}
+
+
+@app.get("/places/suggest")
+def places_suggest(q: Annotated[str, Query(min_length=1, max_length=60)]) -> list[dict]:
+    """地点联想：国内用百度，境外用 OpenStreetMap（Photon）。坐标均为 WGS-84。"""
+    from . import maps
+    return maps.suggest_place(q)
 
 
 @app.get("/places")
@@ -201,6 +218,28 @@ def sim_start(body: SimStart) -> dict:
     return {**simctl.status(), "job": dict(_sim_job)}
 
 
+_view_cache: dict = {}
+
+
+@app.get("/sim/view")
+def sim_view(camera: str = Query("wide", pattern="^(wide|zoom)$")) -> Response:
+    """机载相机的实时画面（网页“实时视角”每秒请求一次）。同一相机 0.8 秒内复用上一帧，避免多个页面同时请求时压垮相机桥。"""
+    from .sim import camera as cam
+    hit = _view_cache.get(camera)
+    if hit and time.time() - hit[0] < 0.8:
+        return Response(hit[1], media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+    try:
+        frame = cam.capture(camera, timeout=3.0)
+    except cam.CameraUnavailable as error:
+        raise HTTPException(503, str(error)) from error
+    img = frame.image.copy()
+    img.thumbnail((720, 720))
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", quality=75)
+    _view_cache[camera] = (time.time(), buf.getvalue())
+    return Response(buf.getvalue(), media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
 @app.post("/sim/return")
 def sim_return() -> dict:
     """一键返航：任何时候都可以调用；有任务在执行时同时取消该任务。"""
@@ -279,7 +318,7 @@ def create_mission(body: NewMission) -> dict:
         raise HTTPException(409, f"当前仿真场景是 {status['scene']}，与任务场景 {name} 不一致或尚未就绪")
     mid = store.create_mission(body.task, name)
     store.event(mid, "system", "created", f"收到任务：{body.task}")
-    if task_queue.busy():
+    if task_queue.busy(exclude=mid):
         # 一架飞机同一时间只执行一个任务：执行中再下达的任务排队，按顺序执行（上下文彼此独立）
         ahead = task_queue.enqueue(mid, body.auto_approve)
         return {"id": mid, "queued": True, "ahead": ahead}

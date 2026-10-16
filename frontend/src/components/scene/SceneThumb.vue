@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Site } from '../types'
+import type { Site } from '../../types'
 
 // 场景缩略图：围栏、禁飞区、树、光伏阵列、起飞点
 const props = defineProps<{ site: Site }>()

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { DEFECT_LABELS, panelUrl } from '../api'
-import type { Finding } from '../types'
+import { panelUrl } from '../../api'
+import type { Finding } from '../../types'
 
-const props = defineProps<{ findings: Finding[]; selected: string | null; score: Record<string, any> | null }>()
+const props = defineProps<{ findings: Finding[]; selected: string | null; types: Record<string, string> }>()
 const emit = defineEmits<{ select: [panelId: string]; photo: [photoId: number] }>()
 
 const STATUS: Record<string, string> = { confirmed: '确认缺陷', suspect: '待确认', unverified: '待确认', cleared: '复核后排除' }
@@ -20,7 +20,6 @@ const shown = computed(() => props.findings
   .filter((f) => !typeFilter.value || f.type === typeFilter.value)
   .sort((a, b) => ['confirmed', 'suspect', 'unverified', 'cleared'].indexOf(a.status) - ['confirmed', 'suspect', 'unverified', 'cleared'].indexOf(b.status)
     || (PRIORITY[a.type ?? ''] ?? 3) - (PRIORITY[b.type ?? ''] ?? 3) || a.panel_id.localeCompare(b.panel_id)))
-const pct = (v: unknown) => (typeof v === 'number' ? `${Math.round(v * 100)}%` : '—')
 // 近照没对准时，板不在近照里，改用整列照片的裁切
 const tilePhoto = (f: Finding) => (f.reason === 'misaimed' ? f.screen_photo : f.verify_photo ?? f.screen_photo)
 const REASON: Record<string, string> = { misaimed: '未能对准', unclear: '近照仍看不清', no_budget: '电量不够未复核', model_down: '模型不可用' }
@@ -39,15 +38,9 @@ const broken = ref(new Set<string>())
         <button :class="{ on: filter === 'cleared' }" @click="filter = 'cleared'">已排除 {{ counts.cleared }}</button>
         <select v-model="typeFilter">
           <option value="">全部类型</option>
-          <option v-for="(v, k) in DEFECT_LABELS" :key="k" :value="k">{{ v }}</option>
+          <option v-for="(v, k) in types" :key="k" :value="k">{{ v }}</option>
         </select>
       </div>
-    </div>
-    <div v-if="score" class="score">
-      <span>对照标准答案</span>
-      <b>检出率 {{ pct(score.recall) }}</b><b>精确率 {{ pct(score.precision) }}</b><b>类型正确 {{ pct(score.type_accuracy) }}</b>
-      <span v-if="score.missed?.length" class="muted">漏检 {{ score.missed.join('、') }}</span>
-      <span v-if="score.false_alarms?.length" class="muted">误报 {{ score.false_alarms.join('、') }}</span>
     </div>
     <div v-if="shown.length" class="cards">
       <article v-for="f in shown" :key="f.panel_id" :class="[f.status, { on: f.panel_id === selected }]" @click="emit('select', f.panel_id)">
@@ -56,10 +49,10 @@ const broken = ref(new Set<string>())
         <div v-else class="noimg">无照片</div>
         <div class="body">
           <div class="row"><b>{{ f.panel_id }}</b><span class="tag" :class="f.status === 'confirmed' ? 'bad' : f.status === 'cleared' ? '' : 'warn'">{{ statusLabel(f) }}</span></div>
-          <div class="row small"><span>{{ f.type ? DEFECT_LABELS[f.type] ?? f.type : '—' }}</span><span class="muted">置信度 {{ f.confidence != null ? f.confidence.toFixed(2) : '—' }}</span></div>
+          <div class="row small"><span>{{ f.type ? types[f.type] ?? f.type : '—' }}</span><span class="muted">置信度 {{ f.confidence != null ? f.confidence.toFixed(2) : '—' }}</span></div>
           <p class="evidence">{{ f.evidence }}</p>
           <div class="links">
-            <button v-if="f.screen_photo" class="link" @click.stop="emit('photo', f.screen_photo)">整列照片</button>
+            <button v-if="f.screen_photo" class="link" @click.stop="emit('photo', f.screen_photo)">初筛照片</button>
             <button v-if="f.verify_photo" class="link" @click.stop="emit('photo', f.verify_photo)">近照</button>
           </div>
         </div>

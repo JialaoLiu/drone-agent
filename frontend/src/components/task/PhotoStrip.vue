@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { photoUrl } from '../api'
-import type { Photo } from '../types'
+import { photoUrl } from '../../api'
+import type { Photo } from '../../types'
 
 const props = defineProps<{ photos: Photo[]; open: number | null }>()
 const emit = defineEmits<{ open: [photoId: number | null] }>()

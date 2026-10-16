@@ -13,9 +13,11 @@ from . import runtime
 _lock = threading.Lock()
 
 
-def busy() -> bool:
-    """有任务正在规划、等待确认或执行。"""
-    return bool(runtime.active_mission) or any(m["status"] in runtime.LIVE_STATUSES for m in store.list_missions(limit=50))
+def busy(exclude: str | None = None) -> bool:
+    """有任务正在规划、等待确认或执行（exclude：不算这个任务，例如刚创建、还没开始的它自己）。"""
+    if runtime.active_mission and runtime.active_mission != exclude:
+        return True
+    return any(m["status"] in runtime.LIVE_STATUSES and m["id"] != exclude for m in store.list_missions(limit=50))
 
 
 def enqueue(mid: str, auto_approve: bool) -> int:

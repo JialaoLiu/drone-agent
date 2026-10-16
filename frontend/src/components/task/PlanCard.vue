@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Plan } from '../types'
+import type { Plan } from '../../types'
 import PreflightList from './PreflightList.vue'
 
 defineProps<{ plan: Plan; awaiting: boolean; busy: boolean }>()

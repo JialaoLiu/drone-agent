@@ -161,3 +161,67 @@ def search_place(query: str, region: str = "全国") -> list[dict]:
         out.append({"name": item.get("name", ""), "address": item.get("address", ""), "city": item.get("city", ""),
                     "lat": round(lat, 7), "lon": round(lon, 7), "source": "百度地点检索（GCJ-02 换算为 WGS-84，误差约 1–2 米）"})
     return out
+
+
+# ---------- 地点联想（输入时的候选） ----------
+
+PHOTON = "https://photon.komoot.io/api/"
+_suggest_cache: dict[str, list[dict]] = {}
+
+
+def _baidu_suggest(query: str) -> list[dict]:
+    data = _baidu_get("/place/v2/suggestion", {"query": query, "region": "全国", "city_limit": "false", "output": "json", "ret_coordtype": "gcj02ll"})
+    out = []
+    for item in data.get("result", []):
+        loc = item.get("location")
+        if not loc:
+            continue
+        lat, lon = gcj02_to_wgs84(loc["lat"], loc["lng"])
+        out.append({"name": item.get("name", ""), "address": item.get("district", "") or item.get("address", ""), "city": item.get("city", ""),
+                    "lat": round(lat, 7), "lon": round(lon, 7), "source": "百度地点联想（GCJ-02 换算为 WGS-84）"})
+    return out
+
+
+def _photon_suggest(query: str) -> list[dict]:
+    """境外地点：Photon（基于 OpenStreetMap 的联想检索，坐标为 WGS-84）。"""
+    try:
+        r = httpx.get(PHOTON, params={"q": query, "limit": 6}, headers={"User-Agent": "drone-agent/1.0 (simulation research)"}, timeout=6)
+        r.raise_for_status()
+        feats = r.json().get("features", [])
+    except (httpx.HTTPError, ValueError):
+        return []
+    out = []
+    for f in feats:
+        p, (lon, lat) = f.get("properties", {}), f.get("geometry", {}).get("coordinates", [None, None])
+        if lat is None:
+            continue
+        place = ", ".join(x for x in (p.get("city") or p.get("county"), p.get("state"), p.get("country")) if x)
+        out.append({"name": p.get("name") or place, "address": place, "city": p.get("city") or "", "lat": round(lat, 7), "lon": round(lon, 7),
+                    "source": "OpenStreetMap（Photon 检索，WGS-84）"})
+    return out
+
+
+def suggest_place(query: str) -> list[dict]:
+    """输入联想：中文先查百度（国内）再补 OpenStreetMap；拉丁字母只查 OpenStreetMap
+    （百度检索英文地名会返回国内同名商户，例如 Melbourne → 上海的餐厅，负责人测试 1.28）。"""
+    q = query.strip()
+    if len(q) < 2:
+        return []
+    if q in _suggest_cache:
+        return _suggest_cache[q]
+    cjk = any("一" <= ch <= "鿿" for ch in q)
+    out: list[dict] = []
+    if cjk:
+        try:
+            out += _baidu_suggest(q)
+        except MapError:
+            pass
+    out += _photon_suggest(q)
+    seen, uniq = set(), []
+    for p in out:
+        key = (p["name"], round(p["lat"], 3), round(p["lon"], 3))
+        if key not in seen:
+            seen.add(key)
+            uniq.append(p)
+    _suggest_cache[q] = uniq[:8]
+    return _suggest_cache[q]

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PreflightItem } from '../types'
+import type { PreflightItem } from '../../types'
 
 defineProps<{ items: PreflightItem[] }>()
 const mark = (ok: boolean | null) => (ok === true ? '通过' : ok === false ? '不通过' : '提示')

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import { ROLE_LABELS } from '../api'
-import type { MissionEvent } from '../types'
+import { ROLE_LABELS } from '../../api'
+import type { MissionEvent } from '../../types'
 
 const props = defineProps<{ events: MissionEvent[] }>()
 const list = ref<HTMLElement>()

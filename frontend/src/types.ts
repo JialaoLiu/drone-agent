@@ -2,12 +2,22 @@ export interface Telemetry {
   x: number; y: number; z: number; yaw: number; battery: number; armed: boolean; in_air: boolean
   flight_mode: string; gimbal_pitch: number; status: string[]; updated: number
 }
-export interface SimStatus { scene: string | null; camera: boolean; px4: boolean; telemetry: Partial<Telemetry>; active_mission: string | null }
-export interface SceneInfo { name: string; seed: number; panels: number; arrays: number; location?: string | null; ground?: string }
+export interface SimJob { state: 'idle' | 'starting' | 'error'; scene: string | null; stage: string; error: string; started_at: number }
+export interface SimStatus {
+  scene: string | null; camera: boolean; px4: boolean; telemetry: Partial<Telemetry>; active_mission: string | null; job?: SimJob
+}
+export interface SceneInfo {
+  name: string; seed: number; panels: number; arrays: number; scenario?: string; location?: string | null; ground?: string; created_at?: number
+}
 export interface Place { name: string; address: string; city: string; lat: number; lon: number; source: string }
+export interface Settings {
+  vision_thinking: 'off' | 'screen' | 'on'; segment_screen: boolean; recheck_thinking: boolean
+  fields?: Record<string, { label: string; help?: string; options?: Record<string, string> }>
+}
 export interface Panel { id: string; array: string; row: number; col: number; center: number[]; corners: number[][] }
 export interface Site {
   name: string; seed: number; geofence: number[][]; max_altitude: number; min_altitude: number
+  scenario?: string; origin?: { lat: number; lon: number; alt?: number }
   no_fly_zones: { id: string; label: string; center: number[]; radius: number }[]
   obstacles: { id: string; label: string; center: number[]; radius: number; height: number }[]
   arrays: { id: string; center: number[]; rows: number; cols: number; size: number[] }[]
@@ -36,7 +46,9 @@ export interface Plan {
   preflight?: Preflight
   routes?: RouteStep[][]
 }
-export interface MissionSummary { id: string; task: string; scene: string; status: string; created_at: string; updated_at: string }
+export interface MissionSummary {
+  id: string; task: string; scene: string; status: string; created_at: string; updated_at: string; kind?: 'mission' | 'troubleshoot'
+}
 export interface Mission extends MissionSummary {
   brief: Record<string, unknown> | null; plan: Plan | null; result: Record<string, unknown> | null
   findings: Finding[]; photos: Photo[]; usage: { total: { calls: number; cost_yuan: number; images: number } }

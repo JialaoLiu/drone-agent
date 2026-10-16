@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { MissionEvent } from '../types'
+import type { MissionEvent } from '../../types'
 
 const props = defineProps<{ events: MissionEvent[] }>()
 
