@@ -40,7 +40,8 @@ def collect(state: dict, site: dict, battery_end: float) -> dict:
                         "reason": REASONS.get(f.get("reason") or "", "初筛疑似，未做近距复核")}
                        for f in unverified],
         "cleared": sum(1 for f in findings if f["status"] == "cleared"),
-        "photos": {"overview": sum(1 for p in photos if p["kind"] == "overview"), "closeup": sum(1 for p in photos if p["kind"] == "closeup")},
+        "photos": {"overview": sum(1 for p in photos if p["kind"] == "overview"), "closeup": sum(1 for p in photos if p["kind"] == "closeup"),
+                   "segment": sum(1 for p in photos if p["kind"] == "segment")},
         "flight_seconds": round(time.time() - started) if started else 0,
         "battery_used": round(state.get("battery_used") or ((state.get("battery_start") or battery_end) - battery_end), 1),
         "sorties": len(state.get("plan", {}).get("sorties", [])) or 1,
@@ -154,34 +155,59 @@ def render(mission_id: str, task: str, site: dict, result: dict) -> str:
             if tile:
                 cells.append(f'<img src="{_img(tile.image, 220)}" alt="近照">')
         x, y, _ = panels[d["panel_id"]]["center"]
-        rows.append(f"""<section class="defect"><h3>{html.escape(d['panel_id'])} · {html.escape(d['label'])}</h3>
-<p>位置：{x:.1f} 米（东）、{y:.1f} 米（北）；置信度 {d['confidence'] or 0:.2f}；{'已近距复核' if d['verify_photo'] else '整列照片即可确认'}</p>
+        tone = {"broken": "p0", "missing": "p0", "crack": "p1"}.get(d.get("type") or "", "p2")
+        rows.append(f"""<section class="defect {tone}"><div class="dh"><b>{html.escape(d['panel_id'])}</b><span class="badge {tone}">{html.escape(d['label'])}</span>
+<span class="muted">置信度 {d['confidence'] or 0:.2f} · {'已近距复核' if d['verify_photo'] else '初筛照片即可确认'}</span></div>
+<p class="muted">位置：东 {x:.1f} 米、北 {y:.1f} 米（相对起飞点）</p>
 <p class="evidence">{html.escape(d['evidence'] or '')}</p><div class="imgs">{''.join(cells)}</div></section>""")
-    unverified = "".join(f"<li>{html.escape(u['panel_id'])}（{html.escape(u.get('reason') or '')}）：{html.escape(u['evidence'] or '')}</li>"
+    unverified = "".join(f"<li><b>{html.escape(u['panel_id'])}</b>（{html.escape(u.get('reason') or '')}）：{html.escape(u['evidence'] or '')}</li>"
                          for u in result["unverified"])
     skipped = "、".join(result["skipped_arrays"]) or "无"
+    n_def, n_unv = len(result["defects"]), len(result["unverified"])
+    verdict = ("bad", f"发现 {n_def} 处缺陷，需要安排处理") if n_def else ("ok", "没有确认的缺陷")
+    if n_unv:
+        verdict = ("warn", verdict[1] + f"；另有 {n_unv} 处疑似需要人工复查")
+    photos = result["photos"]
     page = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>巡检报告 {mission_id}</title><style>
-body{{font-family:-apple-system,"PingFang SC",sans-serif;max-width:960px;margin:24px auto;padding:0 16px;color:#1c1f24;background:#fff}}
-h1{{font-size:22px}} .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0}}
-.stats div{{border:1px solid #e3e6eb;border-radius:8px;padding:8px 10px}} .stats b{{display:block;font-size:20px}}
-.defect{{border-top:1px solid #e3e6eb;padding:12px 0}} .imgs{{display:flex;gap:8px;flex-wrap:wrap}} .imgs img{{border-radius:6px;max-width:100%}}
-.evidence{{color:#555}} .summary{{line-height:1.7;background:#f6f7f9;padding:12px;border-radius:8px}}
-@media (prefers-color-scheme: dark){{body{{background:#111317;color:#e6e8eb}} .stats div,.defect{{border-color:#2c3139}} .summary{{background:#1f2329}} .evidence{{color:#9aa1ab}}}}
+:root{{--t:#1c1f24;--m:#6b7280;--l:#e3e6eb;--bg:#f6f7f9;--card:#fff;--a:#2f6fdf;--bad:#c2410c;--badbg:#fdecdf;--warn:#b45309;--warnbg:#fdf3e2;--ok:#15803d;--okbg:#e7f6ec}}
+@media (prefers-color-scheme: dark){{:root{{--t:#e6e8eb;--m:#9aa1ab;--l:#2c3139;--bg:#111317;--card:#181b20;--a:#7aa2ff;--bad:#fb923c;--badbg:#3a2115;--warn:#fbbf24;--warnbg:#33270f;--ok:#4ade80;--okbg:#12301f}}}}
+*{{box-sizing:border-box}} body{{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;color:var(--t);background:var(--bg);line-height:1.6}}
+.wrap{{max-width:980px;margin:0 auto;padding:24px 18px 48px}}
+header{{background:linear-gradient(135deg,#10192b,#1e3a6e);color:#fff;padding:28px 18px}} header .wrap{{padding:0 18px}}
+header h1{{margin:0 0 6px;font-size:24px}} header p{{margin:0;color:#c7d0de;font-size:14px}}
+.verdict{{margin:-18px 0 16px;padding:12px 16px;border-radius:12px;background:var(--card);border:1px solid var(--l);border-left:6px solid var(--a);font-weight:600}}
+.verdict.bad{{border-left-color:var(--bad)}} .verdict.warn{{border-left-color:var(--warn)}} .verdict.ok{{border-left-color:var(--ok)}}
+.summary{{background:var(--card);border:1px solid var(--l);border-radius:12px;padding:14px 16px;margin-bottom:16px}}
+.kpi{{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px}}
+.kpi div{{background:var(--card);border:1px solid var(--l);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--m)}} .kpi b{{display:block;font-size:22px;color:var(--t)}}
+.kpi.small b{{font-size:16px}} h2{{font-size:17px;margin:26px 0 10px}} .muted{{color:var(--m);font-size:13px}}
+.defects{{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px}}
+.defect{{background:var(--card);border:1px solid var(--l);border-left:5px solid var(--l);border-radius:12px;padding:12px 14px;break-inside:avoid}}
+.defect.p0{{border-left-color:var(--bad)}} .defect.p1{{border-left-color:var(--warn)}} .defect.p2{{border-left-color:var(--a)}}
+.dh{{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}} .badge{{font-size:12px;padding:1px 9px;border-radius:999px;background:var(--bg)}}
+.badge.p0{{background:var(--badbg);color:var(--bad)}} .badge.p1{{background:var(--warnbg);color:var(--warn)}}
+.defect p{{margin:4px 0}} .evidence{{font-size:14px}} .imgs{{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}} .imgs img{{border-radius:8px;max-width:100%;max-height:260px}}
+ul.unv{{background:var(--card);border:1px solid var(--l);border-radius:12px;padding:12px 12px 12px 30px}}
+footer{{color:var(--m);font-size:12px;margin-top:28px;border-top:1px solid var(--l);padding-top:10px}}
+@media print{{header{{background:#10192b;-webkit-print-color-adjust:exact;print-color-adjust:exact}} body{{background:#fff}}}}
+@media (max-width:520px){{.defects{{grid-template-columns:1fr}}}}
 </style></head><body>
-<h1>光伏巡检报告</h1><p>任务：{html.escape(task)}<br>任务编号：{mission_id} · 场景：{html.escape(site['name'])}</p>
+<header><div class="wrap"><h1>光伏巡检报告</h1><p>任务：{html.escape(task)}<br>任务编号 {mission_id} · 场景 {html.escape(site['name'])}{(' · ' + html.escape(site['location']['name'])) if site.get('location') else ''}</p></div></header>
+<div class="wrap">
+<div class="verdict {verdict[0]}">{verdict[1]}</div>
 <div class="summary">{html.escape(result.get('summary') or '')}</div>
-<div class="stats"><div>巡检的列<b>{'、'.join(result['inspected_arrays']) or '无'}</b></div><div>检查的板<b>{result['panels_inspected']}</b></div>
-<div>确认缺陷<b>{len(result['defects'])}</b></div><div>未复核疑似<b>{len(result['unverified'])}</b></div>
-<div>照片<b>{result['photos']['overview']} 整列 / {result['photos']['closeup']} 近照</b></div>
-<div>架次<b>{result.get('sorties', 1)}</b></div><div>飞行时间<b>{result['flight_seconds'] // 60} 分 {result['flight_seconds'] % 60} 秒</b></div><div>耗电<b>{result['battery_used']}%</b></div>
+<div class="kpi"><div>确认缺陷<b>{n_def}</b></div><div>待人工复查<b>{n_unv}</b></div><div>检查的板<b>{result['panels_inspected']}</b></div><div>巡检的列<b>{'、'.join(result['inspected_arrays']) or '无'}</b></div></div>
+<div class="kpi small"><div>飞行时间<b>{result['flight_seconds'] // 60} 分 {result['flight_seconds'] % 60} 秒</b></div><div>架次<b>{result.get('sorties', 1)}</b></div>
+<div>耗电<b>{result['battery_used']}%</b></div><div>照片<b>{photos['overview']} 整列 / {photos['closeup']} 近照{(' / ' + str(photos['segment']) + ' 分段') if photos.get('segment') else ''}</b></div>
 <div>模型费用<b>¥{(result.get('usage') or {}).get('cost_yuan', 0):.4f}</b></div></div>
-<p>未巡检的列：{skipped}{('；异常：' + html.escape(result['error'])) if result.get('error') else ''}</p>
+<p class="muted">未巡检的列：{skipped}{('；异常：' + html.escape(result['error'])) if result.get('error') else ''}</p>
 {('<p><b>未完成判断的列：' + html.escape('、'.join(result['unjudged_arrays'])) + '（视觉模型不可用，只有照片）</b></p>') if result.get('unjudged_arrays') else ''}
-<h2>确认的缺陷（按处理优先级）</h2>{''.join(rows) or ('<p>没有确认的缺陷。</p>' if not result.get('unjudged_arrays') else '<p>已完成判断的部分没有确认的缺陷。</p>')}
-<h2>未复核的疑似缺陷</h2>{('<ul>' + unverified + '</ul>') if unverified else '<p>无。</p>'}
-<p style="color:#888;font-size:12px">本报告由巡检系统自动生成：缺陷判断来自视觉模型并经近距复核，位置与统计数字由程序计算。</p>
-</body></html>"""
+<h2>确认的缺陷（按处理优先级：破碎与缺失 → 裂纹 → 污损）</h2>
+{('<div class="defects">' + ''.join(rows) + '</div>') if rows else ('<p>没有确认的缺陷。</p>' if not result.get('unjudged_arrays') else '<p>已完成判断的部分没有确认的缺陷。</p>')}
+<h2>待人工复查的疑似</h2>{('<ul class="unv">' + unverified + '</ul>') if unverified else '<p class="muted">无。</p>'}
+<footer>本报告由巡检系统生成：缺陷判断来自视觉模型并经近距复核，位置与统计数字由程序计算；处理建议由报告员撰写，不含数字。</footer>
+</div></body></html>"""
     path = config.PHOTOS_DIR / mission_id / "report.html"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(page, encoding="utf-8")
