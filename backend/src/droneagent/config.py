@@ -53,9 +53,9 @@ VISION_PROVIDER = env("VISION_PROVIDER", "deepseek")          # deepseek | opena
 VISION_THINKING_MODE = env("VISION_THINKING", "off")         # 2026-10-16 对比实验：关闭后费用省 75%–86%，复核后的检出率、精确率不变
 VISION_THINKING = VISION_THINKING_MODE != "off"                 # 初筛是否开启推理
 VISION_THINKING_VERIFY = VISION_THINKING_MODE == "on"           # 复核是否开启推理
-# “再看一次”（初筛与复核冲突，或复核不确定）时是否开启推理。2026-10-16 recheck 评测：12 个场景触发 110 次，
-# 同样请求再看只纠正 1 块漏检，开推理再看纠正 3 块、没有改错，多花约 ¥0.2
-VISION_THINKING_RECHECK = env("VISION_THINKING_RECHECK", "on") != "off"
+# “再看一次”时是否开启推理。2026-10-16 recheck 评测第一版显示开推理多纠正 2 块，但那 3 块都是一眼可见的缺失，
+# 实时任务里直接确认、不做近照复核；按实时流程重算，三种做法结论完全相同，所以默认关闭（工程日志 37）
+VISION_THINKING_RECHECK = env("VISION_THINKING_RECHECK", "off") != "off"
 TRIAGE_ENABLED = env("TRIAGE_ENABLED", "0") == "1"             # 初筛前用本地分类器过滤明显正常的板（需先运行 evaluate triage 训练）
 VISION_MODEL = env("VISION_MODEL", "deepseek-v4-flash-vision-exp")
 OPENAI_API_KEY = env("OPENAI_API_KEY")

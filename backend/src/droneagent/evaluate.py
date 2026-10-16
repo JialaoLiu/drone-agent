@@ -602,8 +602,10 @@ def run_recheck(scenes: list[str], provider: str | None) -> dict:
             tile = vision.rectify(Frame.load(cap / f"closeup_{pid}"), panels[pid], (vision.CLOSE_W, vision.CLOSE_H))
             if tile is None:
                 return None
-            first, u0 = vision.verify(tile, provider)
             scr = cands.get(pid) or {}
+            if scr.get("type") == "missing" and scr.get("confidence", 0) >= inspection.CONFIRM_WITHOUT_CLOSEUP:
+                return None          # 与实时任务一致：一眼可见的缺失直接确认，不做近照复核（第一版评测漏了这条，高估了再看的作用）
+            first, u0 = vision.verify(tile, provider)
             conflict = first["status"] == "ok" and scr.get("status") == "defect" and scr.get("confidence", 0) >= inspection.CONFLICT_CONFIDENCE
             out = {"scene": scene, "panel": pid, "truth": (panels[pid]["defect"] or {}).get("type"),
                    "screen": scr.get("status"), "trigger": "unsure" if first["status"] == "unsure" else "conflict" if conflict else None,
@@ -619,6 +621,11 @@ def run_recheck(scenes: list[str], provider: str | None) -> dict:
             return out
 
         judged = [r for r in pool.map(judge, list(panels)) if r]
+        confirmed = [pid for pid, c in cands.items() if c.get("type") == "missing" and c.get("confidence", 0) >= inspection.CONFIRM_WITHOUT_CLOSEUP]
+        for k in RECHECK_POLICIES:
+            totals[k]["defects"] += sum(1 for pid in confirmed if panels[pid]["defect"])
+            totals[k]["tp"] += sum(1 for pid in confirmed if panels[pid]["defect"])
+            totals[k]["fp"] += sum(1 for pid in confirmed if not panels[pid]["defect"])
         for r in judged:
             for k in RECHECK_POLICIES:
                 v = r[k]

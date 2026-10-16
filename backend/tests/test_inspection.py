@@ -86,6 +86,7 @@ def test_adjudicate_rechecks_conflicts(monkeypatch):
     verdict, usages, again = inspection.adjudicate(None, {"status": "defect", "confidence": 0.8})
     assert again and verdict["status"] == "defect" and len(usages) == 2
     # 再看一次时按配置打开推理
+    monkeypatch.setattr(inspection.config, "VISION_THINKING_RECHECK", True)
     seen = []
     monkeypatch.setattr(vision, "verify", lambda tile, provider=None, attempt=0, thinking=None: (seen.append((attempt, thinking)) or {"id": "X", "status": "ok", "type": None, "confidence": 0.7, "evidence": ""}, usage))
     inspection.adjudicate(None, {"status": "defect", "confidence": 0.8})
