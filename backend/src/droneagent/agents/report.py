@@ -46,8 +46,44 @@ def collect(state: dict, site: dict, battery_end: float) -> dict:
         "sorties": len(state.get("plan", {}).get("sorties", [])) or 1,
         "battery_end": round(battery_end, 1),
         "error": state.get("error"),
+        "unjudged_arrays": state.get("unjudged", []),
         "closeup_policy": state.get("plan", {}).get("closeup_policy"),
     }
+
+
+def facts_sentence(result: dict) -> str:
+    """结论中的事实部分，全部来自程序统计。"""
+    counts: dict[str, int] = {}
+    for d in result["defects"]:
+        counts[d["label"]] = counts.get(d["label"], 0) + 1
+    arrays = "、".join(result["inspected_arrays"])
+    parts = [f"本次巡检了 {arrays} 列共 {result['panels_inspected']} 块板" if arrays else "本次没有完成任何一列的巡检"]
+    if result["defects"]:
+        parts.append(f"确认缺陷 {len(result['defects'])} 块（" + "、".join(f"{k} {v}" for k, v in counts.items()) + "）")
+    elif arrays:
+        parts.append("没有确认的缺陷")
+    if result["unverified"]:
+        parts.append(f"另有 {len(result['unverified'])} 块疑似缺陷未确认，需要人工复查")
+    if result["cleared"]:
+        parts.append(f"复核后排除 {result['cleared']} 处疑似")
+    if result.get("unjudged_arrays"):
+        parts.append(f"{'、'.join(result['unjudged_arrays'])} 列只拍了照片，视觉模型不可用，未完成判断")
+    if result["skipped_arrays"]:
+        parts.append(f"{'、'.join(result['skipped_arrays'])} 列未巡检")
+    if result.get("error"):
+        parts.append(f"执行中出现异常：{result['error']}")
+    return "，".join(parts) + "。"
+
+
+def default_advice(result: dict, priorities: list[str]) -> str:
+    """报告员不可用或建议被丢弃时，由程序按优先级规则生成建议。"""
+    order = priorities or [d["panel_id"] for d in result["defects"]]
+    if not order and not result["unverified"]:
+        return ""
+    text = f"建议优先处理 {'、'.join(order[:6])}。" if order else ""
+    if result["unverified"]:
+        text += "未确认的疑似缺陷请到现场或用照片人工确认。"
+    return text
 
 
 def for_reporter(result: dict) -> dict:
@@ -59,6 +95,7 @@ def for_reporter(result: dict) -> dict:
         "unverified": [{"panel_id": u["panel_id"], "疑似": u["evidence"], "未确认原因": u.get("reason")} for u in result["unverified"]],
         "复核后排除的疑似": result["cleared"], "复核策略": result["closeup_policy"],
         "架次": result.get("sorties", 1), "飞行秒数": result["flight_seconds"], "耗电百分比": result["battery_used"], "异常": result["error"],
+        "只拍照未判断的列": result.get("unjudged_arrays", []),
     }
 
 
@@ -122,7 +159,8 @@ h1{{font-size:22px}} .stats{{display:grid;grid-template-columns:repeat(auto-fit,
 <div>架次<b>{result.get('sorties', 1)}</b></div><div>飞行时间<b>{result['flight_seconds'] // 60} 分 {result['flight_seconds'] % 60} 秒</b></div><div>耗电<b>{result['battery_used']}%</b></div>
 <div>模型费用<b>¥{(result.get('usage') or {}).get('cost_yuan', 0):.4f}</b></div></div>
 <p>未巡检的列：{skipped}{('；异常：' + html.escape(result['error'])) if result.get('error') else ''}</p>
-<h2>确认的缺陷（按处理优先级）</h2>{''.join(rows) or '<p>没有发现缺陷。</p>'}
+{('<p><b>未完成判断的列：' + html.escape('、'.join(result['unjudged_arrays'])) + '（视觉模型不可用，只有照片）</b></p>') if result.get('unjudged_arrays') else ''}
+<h2>确认的缺陷（按处理优先级）</h2>{''.join(rows) or ('<p>没有确认的缺陷。</p>' if not result.get('unjudged_arrays') else '<p>已完成判断的部分没有确认的缺陷。</p>')}
 <h2>未复核的疑似缺陷</h2>{('<ul>' + unverified + '</ul>') if unverified else '<p>无。</p>'}
 <p style="color:#888;font-size:12px">本报告由巡检系统自动生成：缺陷判断来自视觉模型并经近距复核，位置与统计数字由程序计算。</p>
 </body></html>"""

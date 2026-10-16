@@ -33,6 +33,13 @@ class FlightError(RuntimeError):
     pass
 
 
+GIMBAL_LIST_TIMEOUT = 5.0      # 等待云台列表的上限（秒）
+
+
+class Preempted(FlightError):
+    """普通飞行指令被拦下：任务已取消，或飞控返航已接管。不是故障，不需要诊断。"""
+
+
 @dataclass
 class Telemetry:
     x: float = 0.0
@@ -64,6 +71,24 @@ class Flight:
         self.listeners: list = []      # 遥测回调（用于推送到前端）
         self.status_log: list[tuple[float, str]] = []   # 带时间的飞控状态消息，供飞行前检查判断“最近”是否有传感器超时
         self._health: tuple[float, dict] | None = None    # 最近一次飞控自检（时间、结果）
+        # 指令优先权：飞控返航接管后（preempted 非空），或 cancel_check 返回原因时，普通指令（起飞、航点、云台）一律不再发送。
+        # 返航、降落不受限制。
+        self.preempted: str | None = None
+        self.cancel_check = None          # 无参函数，返回取消原因或 None；由当前执行的任务设置
+
+    def guard(self) -> None:
+        reason = self.preempted or (self.cancel_check() if self.cancel_check else None)
+        if reason:
+            raise Preempted(reason)
+
+    def begin_control(self, cancel_check=None) -> None:
+        """新的任务开始控制飞机：飞机在地面时清除上一次的返航接管标记。"""
+        if not self.state.in_air:
+            self.preempted = None
+        self.cancel_check = cancel_check
+
+    def end_control(self) -> None:
+        self.cancel_check = None
 
     async def __aenter__(self) -> "Flight":
         await self.connect()
@@ -167,15 +192,19 @@ class Flight:
 
     async def wait_ready(self, timeout: float = 90.0) -> None:
         """等待飞控可解锁（定位、航向、起飞点都就绪）。"""
+        # 用缓存的自检结果轮询：订阅本身可能不再产出数据，超时必须独立于数据到达（深度审查 H04）
         deadline = time.time() + timeout
-        async for h in self.telemetry.subscribe_health():
-            if h.is_armable and h.is_global_position_ok and h.is_home_position_ok:
+        while time.time() < deadline:
+            h = self._health[1] if self._health and time.time() - self._health[0] < 5 else None
+            if h and h["armable"] and h["global_position"] and h["home"]:
                 return
-            if time.time() > deadline:
-                raise FlightError("飞控在规定时间内没有就绪（定位或传感器未通过检查）")
+            await asyncio.sleep(0.5)
+        raise FlightError("飞控在规定时间内没有就绪（定位或传感器未通过检查）")
 
     async def takeoff(self, altitude: float, timeout: float = 60.0) -> None:
+        self.guard()
         await self.wait_ready()
+        self.guard()
         await self.action.set_takeoff_altitude(altitude)
         await self.action.set_current_speed(CRUISE_SPEED)
         try:
@@ -183,7 +212,7 @@ class Flight:
             await self.action.takeoff()
         except Exception as error:
             raise FlightError(f"起飞被拒绝：{error}") from error
-        await self._wait(lambda: self.state.z >= altitude - 0.8, timeout, "起飞未在规定时间内到达高度")
+        await self._wait(lambda: self.state.z >= altitude - 0.8, timeout, "起飞未在规定时间内到达高度", guarded=True)
 
     async def goto(self, x: float, y: float, z: float, yaw: float, tolerance: float = 0.8, timeout: float | None = None) -> float:
         """飞到本地坐标点，返回实际耗时。超时说明没能到达（风、故障或被拦截）。"""
@@ -191,6 +220,7 @@ class Flight:
             raise FlightError("还没有收到位置信息")
         lat, lon, _ = self.origin.to_global(x, y)
         started = time.time()
+        self.guard()
         try:
             await self.action.goto_location(lat, lon, self._home_amsl + z, yaw)
         except Exception as error:
@@ -198,25 +228,34 @@ class Flight:
         dist = math.dist((self.state.x, self.state.y, self.state.z), (x, y, z))
         limit = timeout or (dist / CRUISE_SPEED * 2.5 + 15)
         await self._wait(lambda: math.dist((self.state.x, self.state.y, self.state.z), (x, y, z)) < tolerance
-                         and abs(((self.state.yaw - yaw + 180) % 360) - 180) < 8, limit, f"未能在 {limit:.0f} 秒内到达 ({x:.1f}, {y:.1f}, {z:.1f})")
+                         and abs(((self.state.yaw - yaw + 180) % 360) - 180) < 8, limit, f"未能在 {limit:.0f} 秒内到达 ({x:.1f}, {y:.1f}, {z:.1f})",
+                         guarded=True)
         return time.time() - started
 
     async def point_gimbal(self, pitch: float, settle: float = 2.0) -> None:
         """设置云台俯仰。飞控重新上锁后云台控制权会丢失，失败时重新获取控制权再试一次。"""
         pitch = max(-90.0, min(20.0, pitch))
+
+        async def first_gimbal() -> int:
+            async for gl in self.gimbal.subscribe_gimbal_list():
+                if gl.gimbals:
+                    return gl.gimbals[0].gimbal_id
+            raise FlightError("没有找到云台")
+
         for attempt in range(2):
+            self.guard()
             try:
                 if self._gimbal_id is None or attempt:
-                    async for gl in self.gimbal.subscribe_gimbal_list():
-                        if gl.gimbals:
-                            self._gimbal_id = gl.gimbals[0].gimbal_id
-                            break
+                    # 云台列表订阅可能一直不产出：设上限，超时按云台失败处理（深度审查 H04）
+                    self._gimbal_id = await asyncio.wait_for(first_gimbal(), GIMBAL_LIST_TIMEOUT)
                     await self.gimbal.take_control(self._gimbal_id, ControlMode.PRIMARY)
                 await self.gimbal.set_angles(self._gimbal_id, 0.0, pitch, 0.0, GimbalMode.YAW_FOLLOW, SendMode.ONCE)
                 break
+            except Preempted:
+                raise
             except Exception as error:
                 if attempt:
-                    raise FlightError(f"云台控制失败：{error}") from error
+                    raise FlightError(f"云台控制失败：{error or type(error).__name__}") from error
                 await asyncio.sleep(1)
         self.state.gimbal_pitch = pitch
         await asyncio.sleep(settle)   # 等云台转到位、画面稳定
@@ -232,6 +271,7 @@ class Flight:
             await self.action.return_to_launch()
         except Exception as error:
             raise FlightError(f"返航指令被拒绝：{error}") from error
+        self.preempted = "飞控返航已接管"
 
     async def land(self, timeout: float = 120.0) -> None:
         try:
@@ -261,9 +301,12 @@ class Flight:
         await self.param.set_param_int("SYS_FAILURE_EN", 1)
         await self.failure.inject(getattr(FailureUnit, unit), getattr(FailureType, kind), instance)
 
-    async def _wait(self, condition, timeout: float, message: str) -> None:
+    async def _wait(self, condition, timeout: float, message: str, guarded: bool = False) -> None:
+        """guarded 为真时（普通指令的等待），取消或返航接管会立即结束等待。"""
         deadline = time.time() + timeout
         while not condition():
+            if guarded:
+                self.guard()
             if time.time() > deadline:
                 raise FlightError(message)
             await asyncio.sleep(0.2)

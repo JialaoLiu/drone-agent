@@ -22,7 +22,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
 from .. import config, health, inspection, safety, store, survey, vision
-from ..flight import FlightError
+from ..flight import FlightError, Preempted
 from ..llm import ModelUnavailable, Usage
 from ..sim import camera
 from ..sim.scene import load_site
@@ -50,6 +50,8 @@ class State(TypedDict, total=False):
     current: str
     overview_photo: int
     candidates: list[dict]
+    screen_failed: bool               # 本列初筛因模型不可用没有完成
+    unjudged: list[str]               # 只拍了照片、没有完成判断的列
     inspected: list[str]
     skipped: list[str]
     airborne: bool
@@ -250,6 +252,10 @@ async def approval(state: State) -> dict:
 
 async def takeoff(state: State) -> dict:
     f = await runtime.flight()
+    # 本任务取得控制权：之后每条普通指令发送前、等待中都会检查是否已取消（深度审查 H02）
+    f.begin_control(lambda: "任务已取消" if _cancelled(state) else None)
+    if _cancelled(state):
+        return {"outcome": "cancelled", "queue": [], "current": ""}
     first = next(s for s in state["steps"] if s["kind"] == "overview")
     altitude = max(state.get("plan", {}).get("standoff_m", 20) * 0.9, 10.0)
     sortie = state.get("sortie", 0)
@@ -259,6 +265,8 @@ async def takeoff(state: State) -> dict:
     if not check["ok"]:
         _emit(state, "safety", "preflight", _preflight_text(check), check)
         return {"error": check["advice"], "outcome": "failed", "queue": [], "current": ""}
+    if _cancelled(state):       # 检查期间被取消
+        return {"outcome": "cancelled", "queue": [], "current": ""}
     _emit(state, "pilot", "takeoff", (f"第 {sortie + 1}/{total} 架次，" if total > 1 else "")
           + f"起飞，爬升到 {altitude:.0f} 米（当前电量 {f.state.battery:.0f}%）")
     try:
@@ -306,7 +314,7 @@ async def _shoot(state: State, step: survey.Step, index: int) -> tuple[camera.Fr
     if via:
         _emit(state, "pilot", "detour", f"直飞会穿过禁飞区，经 {len(via)} 个绕行点飞往 {step.target}", {"via": [list(w) for w in via]})
     for w in via:
-        await f.goto(*w, step.yaw)
+        await f.goto(*w, step.yaw)      # goto 内部在发送前和等待中检查取消 / 返航接管
     await f.goto(*step.position, step.yaw)
     await f.point_gimbal(step.pitch, settle=2.5 if step.kind == "overview" else 1.5)
     frame = await asyncio.to_thread(camera.capture, step.camera)
@@ -337,7 +345,7 @@ async def overview(state: State) -> dict:
         result = await asyncio.to_thread(inspection.screen_frame, frame, _panels(site, array["id"]), None, _parallel)
     except ModelUnavailable as error:
         _emit(state, "inspector", "error", f"视觉模型不可用：{error}，本列只保留照片，未做判断")
-        result = inspection.Screening([], 0)
+        return {"overview_photo": pid, "candidates": [], "screen_failed": True}
     for usage in result.usages:
         _usage(state, "inspector", usage)
     candidates = []
@@ -352,7 +360,7 @@ async def overview(state: State) -> dict:
           f"{array['id']} 列初筛 {result.tiles} 块板：疑似缺陷 {len(flagged)} 块"
           + (f"（{'、'.join(c['id'] for c in flagged)}）" if flagged else "")
           + f"，看不清 {len(candidates) - len(flagged)} 块", {"candidates": candidates, "photo": pid})
-    return {"overview_photo": pid, "candidates": candidates}
+    return {"overview_photo": pid, "candidates": candidates, "screen_failed": False}
 
 
 async def closeups(state: State) -> dict:
@@ -360,6 +368,10 @@ async def closeups(state: State) -> dict:
     site = _site(state)
     panels = {p["id"]: p for p in site["panels"]}
     array = _arrays(site)[state["current"]]
+    if state.get("screen_failed") and state["plan"]["closeup_policy"] != "all":
+        # 初筛没做成：不能从“没有候选”推断整列正常，记为未完成判断（深度审查 H07）
+        _emit(state, "inspector", "unjudged", f"{array['id']} 列初筛未完成，只保留照片，报告中标为未完成判断")
+        return {"unjudged": state.get("unjudged", []) + [array["id"]]}
     cands = {c["id"]: c for c in state.get("candidates", [])}
     targets, confirmed_now = inspection.select_targets(state["plan"]["closeup_policy"], state.get("candidates", []),
                                                        _panels(site, array["id"]))
@@ -439,9 +451,21 @@ async def closeups(state: State) -> dict:
 
 
 async def return_home(state: State) -> dict:
-    if not state.get("airborne"):
-        return {}
     f = await runtime.flight()
+    # 以飞控遥测为准：起飞只成功一半（已离地但没到高度）时任务标记可能没写上（深度审查 H01）
+    if not (state.get("airborne") or f.state.in_air or f.state.armed):
+        return {}
+    f.end_control()            # 取消后仍允许返航指令
+    if f.preempted:
+        # 飞控返航已接管（一键返航）：不再发送任何指令，只等落地
+        _emit(state, "pilot", "return", f"{f.preempted}，等待降落（电量 {f.state.battery:.0f}%）")
+        try:
+            await f._wait(lambda: not f.state.in_air or not f.state.armed, 240, "飞控返航超时")
+        except FlightError as err:
+            _emit(state, "pilot", "error", str(err))
+        _emit(state, "pilot", "landed", f"已降落，电量 {f.state.battery:.0f}%")
+        used = (state.get("battery_used") or 0.0) + max(0.0, (state.get("sortie_battery") or state.get("battery_start") or 100) - f.state.battery)
+        return {"airborne": False, "battery_used": used}
     via = survey.detour((f.state.x, f.state.y, f.state.z), (0.0, 0.0, f.state.z), _site(state))
     _emit(state, "pilot", "return", f"返航降落（电量 {f.state.battery:.0f}%）" + (f"，绕开禁飞区经 {len(via)} 个绕行点" if via else ""))
     try:
@@ -483,12 +507,19 @@ async def write_report(state: State) -> dict:
     f = await runtime.flight()
     site = _site(state)
     result = report.collect(state, site, f.state.battery)
+    # 结论中的事实与数字全部由程序生成；报告员只给处理建议，且建议里不允许出现数字（深度审查 H08）
+    facts = report.facts_sentence(result)
     try:
-        summary, usage = await asyncio.to_thread(roles.report_summary, report.for_reporter(result))
+        advice, usage = await asyncio.to_thread(roles.report_summary, report.for_reporter(result))
         _usage(state, "reporter", usage)
     except ModelUnavailable as error:
-        summary = {"summary": f"（报告员不可用：{error}；以下为程序生成的统计）", "priorities": []}
-    result.update(summary)
+        advice = {"advice": "", "priorities": [], "advice_rejected": False}
+        _emit(state, "reporter", "error", f"报告员不可用：{error}，结论只包含程序统计")
+    if advice.get("advice_rejected"):
+        _emit(state, "reporter", "advice_rejected", "报告员的建议含有数字或不存在的编号，已丢弃，改用程序生成的建议",
+              {"rejected": advice.get("rejected_text", "")})
+    text = advice.get("advice") or report.default_advice(result, advice.get("priorities") or [])
+    result.update(summary=(facts + " " + text).strip(), priorities=advice.get("priorities") or [], advice_source="reporter" if advice.get("advice") else "program")
     result["usage"] = store.usage_summary(state["mission_id"])["total"]
     path = await asyncio.to_thread(report.render, state["mission_id"], state["task"], site, result)
     result["report_path"] = str(path)
@@ -502,10 +533,15 @@ async def write_report(state: State) -> dict:
 async def _flight_failure(state: State, error: Exception) -> dict:
     """飞行出错：诊断员分析、飞手返航，任务标记失败但仍生成报告。"""
     f = await runtime.flight()
+    airborne = bool(state.get("airborne") or f.state.in_air or f.state.armed)
+    if isinstance(error, Preempted):
+        # 取消或一键返航：不是故障，不做诊断，直接进入返航
+        _emit(state, "pilot", "preempted", f"停止执行：{error}")
+        return {"outcome": "cancelled", "queue": [], "current": "", "airborne": airborne}
     _emit(state, "pilot", "error", f"飞行异常：{error}")
     analysis = await diagnose.explain_failure(state["mission_id"], str(error), f.state.as_dict(), state.get("started_at"))
     _emit(state, "diagnostician", "diagnosis", analysis["text"], analysis)
-    return {"error": str(error), "outcome": "failed", "queue": [], "current": ""}
+    return {"error": str(error), "outcome": "failed", "queue": [], "current": "", "airborne": airborne}
 
 
 def after_step(state: State) -> str:
@@ -557,6 +593,19 @@ async def graph():
 
 
 async def _run(mission_id: str, payload) -> None:
+    # 同一任务只允许一个执行实例（例如两个窗口同时点确认，深度审查 H05）
+    if not runtime.begin_run(mission_id):
+        store.event(mission_id, "system", "duplicate", "该任务已有执行实例，忽略重复的启动或确认")
+        return
+    try:
+        await _run_once(mission_id, payload)
+    finally:
+        runtime.end_run(mission_id)
+        if runtime.current_flight() is not None:
+            runtime.current_flight().end_control()
+
+
+async def _run_once(mission_id: str, payload) -> None:
     g = await graph()
     cfg = {"configurable": {"thread_id": mission_id}, "recursion_limit": 200}
     try:

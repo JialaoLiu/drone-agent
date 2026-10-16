@@ -66,6 +66,28 @@ def try_claim(mission_id: str) -> bool:
         return True
 
 
+_running: set[str] = set()
+
+
+def begin_run(mission_id: str) -> bool:
+    """登记一个任务执行实例；同一任务已有实例在执行时返回 False。"""
+    with _mission_lock:
+        if mission_id in _running:
+            return False
+        _running.add(mission_id)
+        return True
+
+
+def end_run(mission_id: str) -> None:
+    with _mission_lock:
+        _running.discard(mission_id)
+
+
+def current_flight():
+    """已建立的飞控连接（没有时返回 None，不触发连接）。"""
+    return _flight
+
+
 def release(mission_id: str) -> None:
     global active_mission
     with _mission_lock:

@@ -48,22 +48,44 @@ async def _record(scene: str, standoff: float) -> Path:
     # 总是重启仿真：场景重新生成后，旧进程里加载的还是旧贴图
     print(f"启动仿真场景 {scene}…", flush=True)
     await asyncio.to_thread(simctl.start, scene)
+    from . import health
+
     site = load_site(scene)
     out = CAPTURES / scene
+    # 录制同样要过安全员：先展开完整航线（含绕行），校验围栏、禁飞区、净空、高度（深度审查 H03）。
+    # 电量与步数上限是单次任务的规划约束，录制按一次长飞行处理，不在此检查。
+    steps = []
+    for a in survey.order_arrays(site["arrays"]):
+        ov = survey.overview_step(a, standoff)
+        steps += [ov] + [survey.closeup_step(p, ov.position) for p in site["panels"] if p["array"] == a["id"]]
+    route = survey.with_detours(steps, site)
+    bad = [v for v in safety.check_plan(site, route, battery=1000.0, reserve=0.0) if v.code not in ("battery", "too_many")]
+    if bad:
+        raise RuntimeError("录制航线未通过安全校验：" + "；".join(v.message for v in bad[:5]))
     async with Flight(Origin(**site["origin"])) as f:
+        check = await health.preflight(f)
+        if not check["ok"]:
+            raise RuntimeError("飞行前检查未通过：" + check["advice"])
         await f.takeoff(10)
-        for a in survey.order_arrays(site["arrays"]):
-            ov = survey.overview_step(a, standoff)
-            await f.goto(*ov.position, ov.yaw)
-            await f.point_gimbal(ov.pitch, settle=2.5)
-            camera.capture("wide").save(out / f"overview_{a['id']}")
-            for p in [p for p in site["panels"] if p["array"] == a["id"]]:
-                cu = survey.closeup_step(p, ov.position)
-                await f.goto(*cu.position, cu.yaw)
-                await f.point_gimbal(cu.pitch, settle=1.5)
-                camera.capture("zoom").save(out / f"closeup_{p['id']}")
-            print(f"{a['id']} 列已拍摄，电量 {f.state.battery:.0f}%", flush=True)
-        await f.return_home()
+        try:
+            for st in route:
+                await f.goto(*st.position, st.yaw)
+                if st.kind == "transit":
+                    continue
+                await f.point_gimbal(st.pitch, settle=2.5 if st.kind == "overview" else 1.5)
+                if st.kind == "overview":
+                    camera.capture("wide").save(out / f"overview_{st.target}")
+                    print(f"{st.target} 列整列照片已拍摄，电量 {f.state.battery:.0f}%", flush=True)
+                else:
+                    camera.capture("zoom").save(out / f"closeup_{st.target}")
+            for w in survey.detour((f.state.x, f.state.y, f.state.z), (0.0, 0.0, f.state.z), site):
+                await f.goto(*w, f.state.yaw)
+            await f.return_home()
+        except Exception:
+            if f.state.in_air:
+                await f.failsafe_return()
+                await f._wait(lambda: not f.state.in_air, 240, "返航超时")
+            raise
     (out / "site.json").write_text(json.dumps(site, ensure_ascii=False), encoding="utf-8")
     (out / "meta.json").write_text(json.dumps({"scene": scene, "standoff_m": standoff, "recorded_at": datetime.now().isoformat()}), encoding="utf-8")
     return out

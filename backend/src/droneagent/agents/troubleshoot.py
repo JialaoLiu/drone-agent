@@ -16,8 +16,9 @@ import asyncio
 import json
 import time
 
-from .. import config, logs, store
-from ..flight import Flight, FlightError
+from .. import config, health, logs, safety, simctl, store
+from ..flight import Flight, FlightError, Preempted
+from ..sim.scene import load_site
 from ..llm import ModelUnavailable, chat_json
 from . import runtime
 
@@ -80,15 +81,50 @@ def reference() -> dict:
     return {p["name"]: p["default"] for p in meta if p["name"] in TRACKED and "default" in p}
 
 
-async def test_flight(f: Flight) -> dict:
+TEST_ALTITUDE = 8.0
+TEST_SIDESTEP = 6.0
+TEST_CLIMB = 4.0
+
+
+def test_route(site: dict | None) -> list[tuple[float, float, float]]:
+    """固定测试动作的航点（起飞点上空 → 横移 → 爬升 → 返回）。按东、北、西、南依次尝试横移方向，
+    取第一个通过安全员校验的；起飞点上空本身不安全（例如紧挨着高树）时抛出 FlightError（深度审查 H03）。"""
+    z, top = TEST_ALTITUDE, TEST_ALTITUDE + TEST_CLIMB
+    for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+        side = (dx * TEST_SIDESTEP, dy * TEST_SIDESTEP)
+        points = [(0.0, 0.0, 0.0), (0.0, 0.0, z), (*side, z), (*side, top), (0.0, 0.0, top), (0.0, 0.0, 0.0)]
+        if site is None:
+            return points
+        bad = [v for i, (a, b) in enumerate(zip(points, points[1:])) for v in safety.check_segment(site, a, b, i)]
+        bad += [v for i, p in enumerate(points[1:-1]) for v in safety.check_point(site, p, i, airborne_ok=True)]
+        if not bad:
+            return points
+    raise FlightError("当前场地的起飞点附近没有满足安全余量的试飞空间（障碍物或禁飞区太近），排障不执行")
+
+
+def _current_site() -> dict | None:
+    scene = simctl.status().get("scene")
+    try:
+        return load_site(scene) if scene else None
+    except FileNotFoundError:
+        return None
+
+
+async def test_flight(f: Flight, route: list[tuple[float, float, float]] | None = None) -> dict:
     """固定的测试动作：起飞 8 米、悬停、向东横移 6 米、转向 90°、爬升 4 米，返回降落。返回日志指标。
 
     某个动作超时不会中断试飞：超时本身就是现象（例如爬升太慢），记为观察结果后继续，最后一定降落。
     """
+    route = route or test_route(None)
+    side, top = route[2], route[3]
     started = time.time()
     observations: list[str] = []
+    check = await health.preflight(f)
+    if not check["ok"]:
+        raise FlightError("飞行前检查未通过：" + check["advice"])
     await f.wait_ready()
-    await f.action.set_takeoff_altitude(8)
+    f.guard()
+    await f.action.set_takeoff_altitude(TEST_ALTITUDE)
     try:
         await f.action.arm()
         await f.action.takeoff()
@@ -103,11 +139,13 @@ async def test_flight(f: Flight) -> dict:
         observations.append(f"起飞 45 秒后高度只有 {f.state.z:.1f} 米（目标 8 米）")
     await asyncio.sleep(5)
     z = max(f.state.z, 2.0)
-    for label, target in (("向东横移 6 米", (6, 0, z, 0)), ("原地转向 90°", (6, 0, z, 90)),
-                          ("爬升 4 米", (6, 0, z + 4, 90)), ("返回起飞点上空", (0, 0, z + 4, 0))):
+    for label, target in ((f"横移 {TEST_SIDESTEP:.0f} 米", (side[0], side[1], z, 0)), ("原地转向 90°", (side[0], side[1], z, 90)),
+                          (f"爬升 {TEST_CLIMB:.0f} 米", (side[0], side[1], z + TEST_CLIMB, 90)), ("返回起飞点上空", (0, 0, z + TEST_CLIMB, 0))):
         t = time.time()
         try:
             await f.goto(*target, tolerance=1.0, timeout=30)
+        except Preempted:
+            raise
         except FlightError:
             observations.append(f"{label}：30 秒内没有到位（位置 {f.state.x:.1f}, {f.state.y:.1f}, 高 {f.state.z:.1f}，航向 {f.state.yaw:.0f}°）")
             continue
@@ -150,17 +188,28 @@ async def job(mid: str, symptom: str, fault: str | None) -> None:
         store.update_mission(mid, status="failed")
         return
     store.update_mission(mid, status="running")
+    f = await runtime.flight()
+    # 取消与返航接管：试飞中的每条指令都会检查（深度审查 H02）
+    f.begin_control(lambda: "排障已取消" if store.mission_status(mid) == "cancelled" else None)
     try:
         result = await run(mid, symptom, fault)
-        store.update_mission(mid, status=result["status"], result=result)
+        store.update_mission(mid, status=result["status"], result=result, only_from=("running",))
     except Exception as error:   # 任何错误都要落库并让飞机回到地面
-        _emit(mid, "error", f"排障中断：{type(error).__name__}：{error}")
-        store.update_mission(mid, status="failed")
-        f = await runtime.flight()
-        if f.state.in_air:
-            await f.failsafe_return()
-        await reset_to_reference(f)
+        cancelled = isinstance(error, Preempted)
+        _emit(mid, "error", f"排障{'已停止' if cancelled else '中断'}：{error}" if cancelled else f"排障中断：{type(error).__name__}：{error}")
+        store.update_mission(mid, status="cancelled" if cancelled else "failed", only_from=("running", "cancelled"))
     finally:
+        # 无论成功、失败、取消还是模型不可用的早退，都先让飞机落地，再恢复良好配置（深度审查 H09）
+        f.end_control()
+        try:
+            if f.state.in_air:
+                if not f.preempted:
+                    await f.failsafe_return()
+                await f._wait(lambda: not f.state.in_air, 240, "返航超时")
+            await reset_to_reference(f)
+            _emit(mid, "reset", "仿真中的参数已恢复为良好配置")
+        except Exception as error:
+            _emit(mid, "error", f"恢复参数或返航失败：{error}；请重启仿真后再使用")
         runtime.release(mid)
 
 
@@ -168,12 +217,13 @@ async def run(mid: str, symptom: str, fault: str | None = None) -> dict:
     """执行一次排障。fault 不为空时先注入故障（仅评测与演示）。"""
     f = await runtime.flight()
     ref = reference()
+    route = test_route(_current_site())     # 先确认试飞空间安全，再注入故障
     if fault:
         spec = FAULTS[fault]
         await apply(f, {**spec["cause"], **spec["decoys"]})
         _emit(mid, "inject", "（演示）已在仿真中注入一个故障，诊断员不知道是哪一个", {})
     _emit(mid, "baseline", f"收到问题：{symptom}。先按固定测试动作试飞一次，记录基线指标")
-    baseline = await test_flight(f)
+    baseline = await test_flight(f, route)
     current = await read_params(f)
     diff = {k: {"current": v, "reference": ref.get(k)} for k, v in current.items() if ref.get(k) is not None and abs(v - ref[k]) > 1e-6}
     bad = [f"{m['label']} {m['value']}{m['unit']}" for m in baseline["metrics"].values() if m["status"] in ("warn", "bad")]
@@ -190,6 +240,7 @@ async def run(mid: str, symptom: str, fault: str | None = None) -> dict:
             decision, usage = await asyncio.to_thread(chat_json, DIAGNOSE, json.dumps(evidence, ensure_ascii=False))
         except ModelUnavailable as error:
             _emit(mid, "error", f"诊断员不可用：{error}")
+            await reset_to_reference(f)       # 飞机已在地面（试飞结束会降落），故障参数不能留到下一个任务（深度审查 H09）
             return {"status": "failed", "error": str(error)}
         store.record_call(mid, "diagnostician", usage.as_dict())
         usage_total.append(usage.as_dict())
@@ -201,7 +252,7 @@ async def run(mid: str, symptom: str, fault: str | None = None) -> dict:
         _emit(mid, "hypothesis", f"假设：{decision.get('hypothesis', '')}。实验：把 {'、'.join(restore)} 恢复为参考值后重飞。预期：{decision.get('expect', '')}",
               {"restore": restore})
         await apply(f, {p: ref[p] for p in restore})
-        result = await test_flight(f)
+        result = await test_flight(f, route)
         flights += 1
         changes = {k: {"before": baseline["metrics"][k]["value"], "after": m["value"], "status_after": m["status"]}
                    for k, m in result["metrics"].items() if k in baseline["metrics"] and k != "battery_used"}
@@ -224,7 +275,6 @@ async def run(mid: str, symptom: str, fault: str | None = None) -> dict:
                   "fix": {p: {"from": diff[p]["current"], "to": diff[p]["reference"]} for p in params}}
     _emit(mid, "conclusion", f"结论：{conclusion['root_cause']}。依据：{conclusion['evidence']} 建议：{conclusion['recommendation']}", conclusion)
     await reset_to_reference(f)
-    _emit(mid, "reset", "仿真中的参数已恢复为良好配置")
     if fault:
         truth = set(FAULTS[fault]["cause"])
         conclusion["correct"] = (not params) if not truth else (bool(params) and set(params) <= truth)

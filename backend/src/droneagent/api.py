@@ -52,7 +52,9 @@ def _authorized(token: str | None) -> bool:
 
 @app.middleware("http")
 async def require_token(request: Request, call_next):
-    if request.url.path not in ("/", "/health") and not _authorized(request.headers.get("x-access-token")):
+    # JSON 接口用请求头；照片、裁切图、报告由浏览器直接加载，读取同源 cookie（深度审查 M01）
+    token = request.headers.get("x-access-token") or request.cookies.get("drone_access_token")
+    if request.url.path not in ("/", "/health") and not _authorized(token):
         return JSONResponse({"detail": "需要访问令牌"}, status_code=401)
     return await call_next(request)
 
@@ -229,7 +231,9 @@ def approve(mid: str, body: Decision) -> dict:
         raise HTTPException(409, "任务不在等待确认状态")
     if body.approved and runtime.active_mission:
         raise HTTPException(409, "另一个任务正在执行")
-    store.update_mission(mid, status="planning" if body.approved else "cancelled", only_from=("awaiting_approval",))
+    # 条件更新成功的请求才恢复执行；并发的第二个请求返回 409（深度审查 H05）
+    if not store.update_mission(mid, status="planning" if body.approved else "cancelled", only_from=("awaiting_approval",)):
+        raise HTTPException(409, "任务已被确认或取消")
     mission.resume(mid, body.approved)
     return {"status": store.mission_status(mid)}
 

@@ -91,12 +91,21 @@ def screen(tiles: list[Tile], provider: str | None = None) -> tuple[list[dict], 
             '只输出 JSON：{"panels":[{"id":"编号","status":"defect|unsure","type":"crack|soiling|broken|missing|null",'
             '"confidence":0到1之间的数,"evidence":"一句话说明看到了什么"}]}')
     data, usage = chat_json(GUIDE, user, [contact_sheet(tiles)], model=_model(provider), provider=_provider(provider))
+    panels = data.get("panels") if isinstance(data, dict) else None
+    if not isinstance(panels, list):
+        # 输出结构不对：整张拼图的板都按“看不清”处理，交给复核，不能当成“没有可疑板”（深度审查 H06）
+        return [{"id": pid, "status": "unsure", "type": None, "confidence": 0.0, "evidence": "初筛输出格式错误，未能判断"}
+                for pid in ids], usage
     out = []
-    for p in data.get("panels", []):
-        if p.get("id") in ids and p.get("status") in ("defect", "unsure"):
-            p["type"] = p.get("type") if p.get("type") in DEFECT_TYPES else None
-            p["confidence"] = float(p.get("confidence") or 0)
-            out.append(p)
+    for p in panels:
+        if not isinstance(p, dict) or p.get("id") not in ids:
+            continue
+        status = _status(p)            # 与复核共用规范化：无法识别的状态判为 unsure，不会被丢弃
+        if status == "ok":
+            continue
+        kind = str(p.get("type") or "").strip().lower()
+        out.append({"id": p["id"], "status": status, "type": kind if kind in DEFECT_TYPES else None,
+                    "confidence": _confidence(p), "evidence": str(p.get("evidence") or "")[:200]})
     return out, usage
 
 

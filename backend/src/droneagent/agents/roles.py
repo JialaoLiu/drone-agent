@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from ..llm import Usage, chat_json
 
@@ -93,14 +94,26 @@ def plan(brief: dict, site: dict, battery: float, feedback: list[dict] | None = 
             "rationale": str(data.get("rationale") or "")[:200]}, usage
 
 
-REPORTER = """你是无人机巡检团队的报告员。根据给定的结构化巡检结果写一段中文结论，只输出 JSON：
-{"summary": "3–5 句话：巡检了哪些列、发现了什么、哪些需要优先处理、哪些没有完成或没有复核", "priorities": ["按处理优先级排列的板编号"]}
-只能使用给定数据中的编号和数字，不要编造；破碎、缺失优先级最高，其次裂纹，污损最低。未复核的疑似缺陷要明确说明需要人工确认。
-没有内容的项（例如没有未巡检的列、没有异常）直接不提，不要写“为空”。用面向现场运维人员的自然中文，不要出现字段名。"""
+REPORTER = """你是无人机巡检团队的报告员。统计数字由程序写在结论开头，你只负责处理建议。只输出 JSON：
+{"advice": "1–3 句处理建议：先处理哪些板、为什么、未确认的疑似怎么办", "priorities": ["按处理优先级排列的板编号"]}
+建议里不要写任何数字，包括汉字数字（“两处”“三块”也不行；数量已由程序写在结论开头），提到具体的板时只用给定数据中的板编号；破碎、缺失优先级最高，其次裂纹，污损最低。
+没有需要处理的内容时 advice 留空。用面向现场运维人员的自然中文，不要出现字段名。"""
+
+PANEL_ID = re.compile(r"[A-Z]-R\d+-C\d+")
+
+
+def check_advice(advice: str, valid: set[str]) -> bool:
+    """建议只能引用数据中存在的板编号，去掉编号后不能再有任何数字（数字一律由程序给出）。"""
+    if any(pid not in valid for pid in PANEL_ID.findall(advice)):
+        return False
+    return not re.search(r"[0-9０-９零一二三四五六七八九十百千万两]+\s*(块|个|处|列|%|％|分钟|秒|次|成)", PANEL_ID.sub("", advice)) \
+        and not re.search(r"[0-9０-９]", PANEL_ID.sub("", advice))
 
 
 def report_summary(result: dict) -> tuple[dict, Usage]:
     data, usage = chat_json(REPORTER, json.dumps(result, ensure_ascii=False))
     valid = {f["panel_id"] for f in result.get("defects", [])} | {f["panel_id"] for f in result.get("unverified", [])}   # 只接受数据里有的编号
-    return {"summary": str(data.get("summary") or "")[:800],
+    advice = str(data.get("advice") or "")[:400]
+    ok = check_advice(advice, valid)
+    return {"advice": advice if ok else "", "advice_rejected": bool(advice) and not ok, "rejected_text": "" if ok else advice,
             "priorities": [p for p in data.get("priorities") or [] if p in valid]}, usage
