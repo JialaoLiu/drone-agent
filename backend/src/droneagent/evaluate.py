@@ -543,7 +543,7 @@ def run_real(splits: list[str], limit: int = 0) -> dict:
         verdict, usage = vision.verify_photo(img)
         usages = [usage]
         if verdict["status"] == "unsure":
-            verdict, usage = vision.verify_photo(img)
+            verdict, usage = vision.verify_photo(img, attempt=1)
             usages.append(usage)
         return {"split": split, "class": cls, "file": path.name, **verdict, "cost": sum(u.cost_yuan or 0 for u in usages)}
 

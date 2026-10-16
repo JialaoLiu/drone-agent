@@ -80,7 +80,7 @@ def adjudicate(tile: vision.Tile, screened: dict | None, provider: str | None = 
     screened = screened or {}
     conflict = verdict["status"] == "ok" and screened.get("status") == "defect" and screened.get("confidence", 0) >= CONFLICT_CONFIDENCE
     if verdict["status"] == "unsure" or conflict:
-        verdict, usage = vision.verify(tile, provider)
+        verdict, usage = vision.verify(tile, provider, attempt=1)
         usages.append(usage)
         return verdict, usages, True
     return verdict, usages, False

@@ -82,11 +82,11 @@ def test_adjudicate_rechecks_conflicts(monkeypatch):
     answers = iter([{"id": "X", "status": "ok", "type": None, "confidence": 0.7, "evidence": ""},
                     {"id": "X", "status": "defect", "type": "crack", "confidence": 0.8, "evidence": ""}])
     usage = Usage("m", 1, 1, 0, 1, 0.0)
-    monkeypatch.setattr(vision, "verify", lambda tile, provider=None: (next(answers), usage))
+    monkeypatch.setattr(vision, "verify", lambda tile, provider=None, attempt=0: (next(answers), usage))
     verdict, usages, again = inspection.adjudicate(None, {"status": "defect", "confidence": 0.8})
     assert again and verdict["status"] == "defect" and len(usages) == 2
     # 初筛本来就不确定时，不再追加复核
-    monkeypatch.setattr(vision, "verify", lambda tile, provider=None: ({"id": "X", "status": "ok", "type": None, "confidence": 0.9, "evidence": ""}, usage))
+    monkeypatch.setattr(vision, "verify", lambda tile, provider=None, attempt=0: ({"id": "X", "status": "ok", "type": None, "confidence": 0.9, "evidence": ""}, usage))
     assert inspection.adjudicate(None, {"status": "unsure", "confidence": 0.3})[2] is False
 
 

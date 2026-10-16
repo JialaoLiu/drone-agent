@@ -110,7 +110,7 @@ def screen(tiles: list[Tile], provider: str | None = None) -> tuple[list[dict], 
     return out, usage
 
 
-def verify(tile: Tile, provider: str | None = None) -> tuple[dict, Usage]:
+def verify(tile: Tile, provider: str | None = None, attempt: int = 0) -> tuple[dict, Usage]:
     """复核：一块板的高清近照，给出最终判断。"""
     buf = io.BytesIO()
     tile.image.resize((CLOSE_W, CLOSE_H)).save(buf, "JPEG", quality=92)
@@ -118,7 +118,7 @@ def verify(tile: Tile, provider: str | None = None) -> tuple[dict, Usage]:
             '只输出 JSON：{"status":"ok|defect","type":"crack|soiling|broken|missing|null","confidence":0到1之间的数,'
             '"evidence":"一句话说明看到了什么、在板的哪个位置"}')
     data, usage = chat_json(GUIDE, user, [buf.getvalue()], model=_model(provider), provider=_provider(provider),
-                            thinking=config.VISION_THINKING_VERIFY, max_tokens=400)
+                            thinking=config.VISION_THINKING_VERIFY, max_tokens=400, attempt=attempt)
     status = _status(data)
     kind = str(data.get("type") or "").strip().lower()
     return {"id": tile.panel_id, "status": status,
@@ -126,7 +126,7 @@ def verify(tile: Tile, provider: str | None = None) -> tuple[dict, Usage]:
             "confidence": _confidence(data), "evidence": str(data.get("evidence") or "")[:200], "raw": data}, usage
 
 
-def verify_photo(image: Image.Image, provider: str | None = None) -> tuple[dict, Usage]:
+def verify_photo(image: Image.Image, provider: str | None = None, attempt: int = 0) -> tuple[dict, Usage]:
     """真实现场照片的复核（真实图像评测用）：系统说明、输出格式、结论规范化都与 verify 相同，
     只是保留照片原始比例（最长边 768 像素），并说明这是没有经过校正的现场照片。"""
     img = image.convert("RGB")
@@ -137,7 +137,7 @@ def verify_photo(image: Image.Image, provider: str | None = None) -> tuple[dict,
             '只输出 JSON：{"status":"ok|defect","type":"crack|soiling|broken|missing|null","confidence":0到1之间的数,'
             '"evidence":"一句话说明看到了什么、在哪个位置"}')
     data, usage = chat_json(GUIDE, user, [buf.getvalue()], model=_model(provider), provider=_provider(provider),
-                            thinking=config.VISION_THINKING_VERIFY, max_tokens=400)
+                            thinking=config.VISION_THINKING_VERIFY, max_tokens=400, attempt=attempt)
     status = _status(data)
     kind = str(data.get("type") or "").strip().lower()
     return {"status": status, "type": kind if status == "defect" and kind in DEFECT_TYPES else None,

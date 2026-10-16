@@ -51,3 +51,12 @@ def test_identical_request_uses_cache(monkeypatch):
     c, _ = llm.chat_json("系统", "另一个问题", [b"jpeg"], thinking=False)
     assert a == b == {"status": "ok"} and usage.cost_yuan == 0.0
     assert len(sent) == 2 and llm.STATS["cached_answers"] == 1
+
+
+def test_second_look_is_not_served_from_first_answer(monkeypatch):
+    sent = []
+    _fake(monkeypatch, sent)
+    monkeypatch.setenv("LLM_CACHE", "1")
+    llm.chat_json("系统", "同一张图", [b"jpeg"], thinking=False, attempt=0)
+    llm.chat_json("系统", "同一张图", [b"jpeg"], thinking=False, attempt=1)
+    assert len(sent) == 2

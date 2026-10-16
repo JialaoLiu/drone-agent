@@ -68,7 +68,7 @@ def image_part(jpeg: bytes) -> dict:
 
 def chat_json(system: str, user: str, images: list[bytes] | None = None, model: str | None = None,
               provider: str = "deepseek", temperature: float = 0.0, timeout: float = 90.0,
-              thinking: bool | None = None, max_tokens: int | None = None) -> tuple[dict, Usage]:
+              thinking: bool | None = None, max_tokens: int | None = None, attempt: int = 0) -> tuple[dict, Usage]:
     """调用一次模型并解析 JSON。超时或 5xx 重试一次；返回内容不是 JSON 时再重试一次。
 
     thinking=False 时关闭模型的推理过程（DeepSeek 的 thinking 参数）：推理按输出 Token 计费，而我们只需要结论 JSON。
@@ -87,7 +87,8 @@ def chat_json(system: str, user: str, images: list[bytes] | None = None, model: 
         body["thinking"] = {"type": "disabled"}
         if max_tokens:
             body["max_tokens"] = max_tokens
-    cache = _cache_path(body) if config.env("LLM_CACHE", "0") == "1" else None
+    # attempt 进入缓存键：同一张图有意“再看一次”时（attempt=1），不能直接拿到第一次的缓存答案
+    cache = _cache_path({**body, "attempt": attempt}) if config.env("LLM_CACHE", "0") == "1" else None
     if cache and cache.exists():
         hit = json.loads(cache.read_text(encoding="utf-8"))
         with _stats_lock:

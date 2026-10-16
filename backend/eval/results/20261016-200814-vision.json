@@ -1,0 +1,594 @@
+{
+ "suite": "vision",
+ "scenes": [
+  "solar_46",
+  "solar_63",
+  "solar_71"
+ ],
+ "repeat": 1,
+ "provider": "deepseek",
+ "model": "deepseek-v4-flash-vision-exp",
+ "summary": {
+  "none": {
+   "recall": 0.935,
+   "precision": 0.468,
+   "type_accuracy": 0.828,
+   "minor_recall": 0.6,
+   "distractor_false_alarms": 31,
+   "closeups_per_scene": 0.0,
+   "cost_yuan_per_scene": 0.0131,
+   "est_minutes": 3.7,
+   "rechecks": 0,
+   "recall_min": 0.9,
+   "recall_max": 1.0
+  },
+  "flagged": {
+   "recall": 0.935,
+   "precision": 1.0,
+   "type_accuracy": 0.966,
+   "minor_recall": 0.6,
+   "distractor_false_alarms": 0,
+   "closeups_per_scene": 19.0,
+   "cost_yuan_per_scene": 0.0264,
+   "est_minutes": 4.6,
+   "rechecks": 32,
+   "recall_min": 0.9,
+   "recall_max": 1.0
+  },
+  "flagged_and_unsure": {
+   "recall": 0.935,
+   "precision": 1.0,
+   "type_accuracy": 0.966,
+   "minor_recall": 0.6,
+   "distractor_false_alarms": 0,
+   "closeups_per_scene": 19.0,
+   "cost_yuan_per_scene": 0.0264,
+   "est_minutes": 4.6,
+   "rechecks": 32,
+   "recall_min": 0.9,
+   "recall_max": 1.0
+  },
+  "all": {
+   "recall": 1.0,
+   "precision": 1.0,
+   "type_accuracy": 0.968,
+   "minor_recall": 1.0,
+   "distractor_false_alarms": 0,
+   "closeups_per_scene": 86.3,
+   "cost_yuan_per_scene": 0.0731,
+   "est_minutes": 8.0,
+   "rechecks": 32,
+   "recall_min": 1.0,
+   "recall_max": 1.0
+  }
+ },
+ "runs": [
+  {
+   "round": 1,
+   "scene": "solar_46",
+   "seconds": 27,
+   "strategies": {
+    "none": {
+     "panels": 92,
+     "defects": 11,
+     "reported": 22,
+     "recall": 1.0,
+     "precision": 0.5,
+     "type_accuracy": 0.727,
+     "minor_recall": 1.0,
+     "distractor_false_alarms": 11,
+     "by_type": {
+      "broken": {
+       "total": 5,
+       "found": 5
+      },
+      "crack": {
+       "total": 5,
+       "found": 5
+      },
+      "soiling": {
+       "total": 1,
+       "found": 1
+      }
+     },
+     "missed": [],
+     "false_alarms": [
+      "A-R1-C03",
+      "A-R2-C07",
+      "A-R3-C06",
+      "A-R3-C08",
+      "B-R1-C02",
+      "B-R1-C10",
+      "B-R2-C02",
+      "B-R2-C09",
+      "B-R3-C06",
+      "C-R1-C11",
+      "D-R2-C12"
+     ],
+     "wrong_type": [
+      {
+       "panel": "A-R2-C06",
+       "truth": "broken",
+       "reported": "soiling"
+      },
+      {
+       "panel": "C-R1-C01",
+       "truth": "broken",
+       "reported": "soiling"
+      },
+      {
+       "panel": "D-R2-C07",
+       "truth": "broken",
+       "reported": "soiling"
+      }
+     ],
+     "closeups": 0,
+     "rechecks": 0,
+     "cost_yuan": 0.0139,
+     "est_minutes": 3.5,
+     "est_battery": 42.1
+    },
+    "flagged": {
+     "panels": 92,
+     "defects": 11,
+     "reported": 11,
+     "recall": 1.0,
+     "precision": 1.0,
+     "type_accuracy": 1.0,
+     "minor_recall": 1.0,
+     "distractor_false_alarms": 0,
+     "by_type": {
+      "broken": {
+       "total": 5,
+       "found": 5
+      },
+      "crack": {
+       "total": 5,
+       "found": 5
+      },
+      "soiling": {
+       "total": 1,
+       "found": 1
+      }
+     },
+     "missed": [],
+     "false_alarms": [],
+     "wrong_type": [],
+     "closeups": 22,
+     "rechecks": 11,
+     "cost_yuan": 0.0293,
+     "est_minutes": 4.6,
+     "est_battery": 55.3
+    },
+    "flagged_and_unsure": {
+     "panels": 92,
+     "defects": 11,
+     "reported": 11,
+     "recall": 1.0,
+     "precision": 1.0,
+     "type_accuracy": 1.0,
+     "minor_recall": 1.0,
+     "distractor_false_alarms": 0,
+     "by_type": {
+      "broken": {
+       "total": 5,
+       "found": 5
+      },
+      "crack": {
+       "total": 5,
+       "found": 5
+      },
+      "soiling": {
+       "total": 1,
+       "found": 1
+      }
+     },
+     "missed": [],
+     "false_alarms": [],
+     "wrong_type": [],
+     "closeups": 22,
+     "rechecks": 11,
+     "cost_yuan": 0.0293,
+     "est_minutes": 4.6,
+     "est_battery": 55.3
+    },
+    "all": {
+     "panels": 92,
+     "defects": 11,
+     "reported": 11,
+     "recall": 1.0,
+     "precision": 1.0,
+     "type_accuracy": 1.0,
+     "minor_recall": 1.0,
+     "distractor_false_alarms": 0,
+     "by_type": {
+      "broken": {
+       "total": 5,
+       "found": 5
+      },
+      "crack": {
+       "total": 5,
+       "found": 5
+      },
+      "soiling": {
+       "total": 1,
+       "found": 1
+      }
+     },
+     "missed": [],
+     "false_alarms": [],
+     "wrong_type": [],
+     "closeups": 92,
+     "rechecks": 11,
+     "cost_yuan": 0.078,
+     "est_minutes": 8.1,
+     "est_battery": 97.3
+    }
+   }
+  },
+  {
+   "round": 1,
+   "scene": "solar_63",
+   "seconds": 28,
+   "strategies": {
+    "none": {
+     "panels": 86,
+     "defects": 10,
+     "reported": 20,
+     "recall": 0.9,
+     "precision": 0.45,
+     "type_accuracy": 0.778,
+     "minor_recall": 0.8,
+     "distractor_false_alarms": 9,
+     "by_type": {
+      "broken": {
+       "total": 4,
+       "found": 4
+      },
+      "crack": {
+       "total": 4,
+       "found": 3
+      },
+      "soiling": {
+       "total": 2,
+       "found": 2
+      }
+     },
+     "missed": [
+      "C-R1-C08"
+     ],
+     "false_alarms": [
+      "A-R1-C09",
+      "B-R1-C06",
+      "B-R2-C01",
+      "C-R1-C12",
+      "D-R1-C02",
+      "D-R1-C03",
+      "D-R1-C07",
+      "D-R1-C09",
+      "E-R1-C09",
+      "E-R2-C09",
+      "E-R2-C12"
+     ],
+     "wrong_type": [
+      {
+       "panel": "B-R2-C07",
+       "truth": "broken",
+       "reported": "crack"
+      },
+      {
+       "panel": "D-R2-C09",
+       "truth": "broken",
+       "reported": "soiling"
+      }
+     ],
+     "closeups": 0,
+     "rechecks": 0,
+     "cost_yuan": 0.0131,
+     "est_minutes": 4.1,
+     "est_battery": 49.4
+    },
+    "flagged": {
+     "panels": 86,
+     "defects": 10,
+     "reported": 9,
+     "recall": 0.9,
+     "precision": 1.0,
+     "type_accuracy": 0.889,
+     "minor_recall": 0.8,
+     "distractor_false_alarms": 0,
+     "by_type": {
+      "broken": {
+       "total": 4,
+       "found": 4
+      },
+      "crack": {
+       "total": 4,
+       "found": 3
+      },
+      "soiling": {
+       "total": 2,
+       "found": 2
+      }
+     },
+     "missed": [
+      "C-R1-C08"
+     ],
+     "false_alarms": [],
+     "wrong_type": [
+      {
+       "panel": "B-R2-C07",
+       "truth": "broken",
+       "reported": "crack"
+      }
+     ],
+     "closeups": 20,
+     "rechecks": 11,
+     "cost_yuan": 0.0272,
+     "est_minutes": 5.1,
+     "est_battery": 61.4
+    },
+    "flagged_and_unsure": {
+     "panels": 86,
+     "defects": 10,
+     "reported": 9,
+     "recall": 0.9,
+     "precision": 1.0,
+     "type_accuracy": 0.889,
+     "minor_recall": 0.8,
+     "distractor_false_alarms": 0,
+     "by_type": {
+      "broken": {
+       "total": 4,
+       "found": 4
+      },
+      "crack": {
+       "total": 4,
+       "found": 3
+      },
+      "soiling": {
+       "total": 2,
+       "found": 2
+      }
+     },
+     "missed": [
+      "C-R1-C08"
+     ],
+     "false_alarms": [],
+     "wrong_type": [
+      {
+       "panel": "B-R2-C07",
+       "truth": "broken",
+       "reported": "crack"
+      }
+     ],
+     "closeups": 20,
+     "rechecks": 11,
+     "cost_yuan": 0.0272,
+     "est_minutes": 5.1,
+     "est_battery": 61.4
+    },
+    "all": {
+     "panels": 86,
+     "defects": 10,
+     "reported": 10,
+     "recall": 1.0,
+     "precision": 1.0,
+     "type_accuracy": 0.9,
+     "minor_recall": 1.0,
+     "distractor_false_alarms": 0,
+     "by_type": {
+      "broken": {
+       "total": 4,
+       "found": 4
+      },
+      "crack": {
+       "total": 4,
+       "found": 4
+      },
+      "soiling": {
+       "total": 2,
+       "found": 2
+      }
+     },
+     "missed": [],
+     "false_alarms": [],
+     "wrong_type": [
+      {
+       "panel": "B-R2-C07",
+       "truth": "broken",
+       "reported": "crack"
+      }
+     ],
+     "closeups": 86,
+     "rechecks": 11,
+     "cost_yuan": 0.0729,
+     "est_minutes": 8.4,
+     "est_battery": 101.0
+    }
+   }
+  },
+  {
+   "round": 1,
+   "scene": "solar_71",
+   "seconds": 26,
+   "strategies": {
+    "none": {
+     "panels": 86,
+     "defects": 10,
+     "reported": 20,
+     "recall": 0.9,
+     "precision": 0.45,
+     "type_accuracy": 1.0,
+     "minor_recall": 0.0,
+     "distractor_false_alarms": 11,
+     "by_type": {
+      "broken": {
+       "total": 1,
+       "found": 1
+      },
+      "crack": {
+       "total": 3,
+       "found": 2
+      },
+      "missing": {
+       "total": 5,
+       "found": 5
+      },
+      "soiling": {
+       "total": 1,
+       "found": 1
+      }
+     },
+     "missed": [
+      "C-R1-C03"
+     ],
+     "false_alarms": [
+      "A-R1-C01",
+      "A-R1-C03",
+      "A-R1-C08",
+      "B-R2-C01",
+      "D-R1-C03",
+      "D-R2-C03",
+      "D-R2-C06",
+      "D-R2-C12",
+      "D-R3-C03",
+      "D-R3-C04",
+      "D-R3-C05"
+     ],
+     "wrong_type": [],
+     "closeups": 0,
+     "rechecks": 0,
+     "cost_yuan": 0.0122,
+     "est_minutes": 3.4,
+     "est_battery": 40.8
+    },
+    "flagged": {
+     "panels": 86,
+     "defects": 10,
+     "reported": 9,
+     "recall": 0.9,
+     "precision": 1.0,
+     "type_accuracy": 1.0,
+     "minor_recall": 0.0,
+     "distractor_false_alarms": 0,
+     "by_type": {
+      "broken": {
+       "total": 1,
+       "found": 1
+      },
+      "crack": {
+       "total": 3,
+       "found": 2
+      },
+      "missing": {
+       "total": 5,
+       "found": 5
+      },
+      "soiling": {
+       "total": 1,
+       "found": 1
+      }
+     },
+     "missed": [
+      "C-R1-C03"
+     ],
+     "false_alarms": [],
+     "wrong_type": [],
+     "closeups": 15,
+     "rechecks": 10,
+     "cost_yuan": 0.0226,
+     "est_minutes": 4.2,
+     "est_battery": 49.8
+    },
+    "flagged_and_unsure": {
+     "panels": 86,
+     "defects": 10,
+     "reported": 9,
+     "recall": 0.9,
+     "precision": 1.0,
+     "type_accuracy": 1.0,
+     "minor_recall": 0.0,
+     "distractor_false_alarms": 0,
+     "by_type": {
+      "broken": {
+       "total": 1,
+       "found": 1
+      },
+      "crack": {
+       "total": 3,
+       "found": 2
+      },
+      "missing": {
+       "total": 5,
+       "found": 5
+      },
+      "soiling": {
+       "total": 1,
+       "found": 1
+      }
+     },
+     "missed": [
+      "C-R1-C03"
+     ],
+     "false_alarms": [],
+     "wrong_type": [],
+     "closeups": 15,
+     "rechecks": 10,
+     "cost_yuan": 0.0226,
+     "est_minutes": 4.2,
+     "est_battery": 49.8
+    },
+    "all": {
+     "panels": 86,
+     "defects": 10,
+     "reported": 10,
+     "recall": 1.0,
+     "precision": 1.0,
+     "type_accuracy": 1.0,
+     "minor_recall": 1.0,
+     "distractor_false_alarms": 0,
+     "by_type": {
+      "broken": {
+       "total": 1,
+       "found": 1
+      },
+      "crack": {
+       "total": 3,
+       "found": 3
+      },
+      "missing": {
+       "total": 5,
+       "found": 5
+      },
+      "soiling": {
+       "total": 1,
+       "found": 1
+      }
+     },
+     "missed": [],
+     "false_alarms": [],
+     "wrong_type": [],
+     "closeups": 81,
+     "rechecks": 10,
+     "cost_yuan": 0.0684,
+     "est_minutes": 7.5,
+     "est_battery": 89.4
+    }
+   }
+  }
+ ],
+ "tokens": {
+  "calls": 296,
+  "prompt_tokens": 196624,
+  "completion_tokens": 16642,
+  "cache_hit_tokens": 154880,
+  "reasoning_tokens": 0,
+  "cached_answers": 33
+ },
+ "thinking": false,
+ "thinking_mode": "off",
+ "price_period": "peak",
+ "cost_at_peak_yuan": 0.2228,
+ "cost_at_idle_yuan": 0.1114
+}
