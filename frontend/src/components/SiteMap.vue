@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { groundUrl } from '../api'
 import type { Finding, Plan, Site, Telemetry, Truth } from '../types'
 
 const props = defineProps<{
@@ -42,16 +41,20 @@ const sorties = computed(() => {
     return { color: sortieColors[i % sortieColors.length], line, stops, detours: path.filter((s) => s.kind === 'transit') }
   })
 })
-// 真实场地的卫星影像：以场地原点为中心、边长 extent_m 米
-const ground = computed(() => (props.site.ground?.source === 'satellite' ? props.site.ground.extent_m : 0))
+// 真实场地的地物（OpenStreetMap）：水面、建筑、树林、光伏电站轮廓
+const FEATURE_STYLE: Record<string, { fill: string; stroke: string; opacity: number }> = {
+  water: { fill: '#4dabf7', stroke: '#1c7ed6', opacity: 0.45 }, building: { fill: '#868e96', stroke: '#495057', opacity: 0.6 },
+  wood: { fill: '#2f9e44', stroke: '#2b8a3e', opacity: 0.25 }, solar: { fill: 'none', stroke: '#f08c00', opacity: 1 },
+  aeroway: { fill: '#fa5252', stroke: '#e03131', opacity: 0.2 },
+}
 const drone = computed(() => (props.telemetry && props.telemetry.updated ? props.telemetry : null))
 </script>
 
 <template>
   <svg :viewBox="`0 0 ${width} ${height}`" class="map" role="img" aria-label="场地平面图">
     <rect :width="width" :height="height" fill="var(--map-ground)" />
-    <image v-if="ground" :href="groundUrl(site.name)" :x="sx(-ground / 2)" :y="sy(ground / 2)" :width="ground * SCALE" :height="ground * SCALE"
-      preserveAspectRatio="none" opacity="0.85" />
+    <polygon v-for="(f, i) in site.features ?? []" :key="'f' + i" :points="pts(f.polygon)" :fill="FEATURE_STYLE[f.kind]?.fill"
+      :fill-opacity="FEATURE_STYLE[f.kind]?.opacity" :stroke="FEATURE_STYLE[f.kind]?.stroke" stroke-width="1.5"><title>{{ f.kind }}</title></polygon>
     <polygon :points="pts(site.geofence)" fill="none" stroke="var(--muted)" stroke-dasharray="6 5" stroke-width="2" />
     <text :x="sx(site.geofence[0][0]) + 6" :y="sy(site.geofence[0][1]) - 6" class="label">电子围栏 · 限高 {{ site.max_altitude }} 米</text>
 

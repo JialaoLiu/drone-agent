@@ -13,7 +13,10 @@ export interface Site {
   arrays: { id: string; center: number[]; rows: number; cols: number; size: number[] }[]
   panels: Panel[]
   location?: Place | null
-  ground?: { source: 'satellite' | 'procedural'; extent_m: number; meters_per_pixel: number | null; note: string } | null
+  ground?: { source: 'procedural'; extent_m: number; note: string } | null
+  features?: { kind: 'water' | 'building' | 'wood' | 'solar' | 'aeroway'; polygon: number[][]; height?: number }[] | null
+  twin?: Record<string, any> | null
+  terrain?: { relief: number; origin_elevation: number } | null
 }
 export interface Truth { defects: { panel_id: string; type: string; label: string; severity: string }[] }
 export interface MissionEvent { seq: number; role: string; kind: string; message: string; payload: Record<string, unknown>; created_at: string }

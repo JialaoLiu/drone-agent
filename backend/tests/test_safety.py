@@ -73,3 +73,17 @@ def test_split_sorties_respects_battery(site):
         assert safety.check_plan(site, build_steps(site, plan, targets=targets), battery=100, reserve=25) == []
     # 只允许一个架次时不拆分，交给安全员拒绝
     assert len(split_sorties(site, {**plan, "max_sorties": 1}, battery=100, reserve=25)) == 1
+
+
+def test_terrain_clearance_uses_height_above_ground():
+    from droneagent import safety
+    site = {"geofence": [[-100, -100], [100, -100], [100, 100], [-100, 100]], "no_fly_zones": [], "obstacles": [],
+            "min_altitude": 5.0, "max_altitude": 40.0,
+            "terrain": {"half": 100.0, "step": 100.0, "rel": [[0, 0, 0], [0, 0, 18], [0, -30, 0]]}}
+    # 东北角地面高 18 米：起飞点上方 20 米处离地只有约 2 米
+    assert [v.code for v in safety.check_point(site, (99, 0, 20))] == ["terrain"]
+    # 北边中间地面低 30 米：相对起飞点 20 米，离地 50 米，超过限高
+    assert [v.code for v in safety.check_point(site, (0, 99, 20))] == ["terrain"]
+    assert not safety.check_point(site, (-99, -99, 20))
+    # 没有高程数据的场地不受影响
+    assert not safety.check_point({**site, "terrain": None}, (0, 99, 20))

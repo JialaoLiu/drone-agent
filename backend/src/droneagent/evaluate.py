@@ -448,6 +448,70 @@ def _triage_replay(scenes: list[str], model, threshold: float) -> dict:
     return out
 
 
+# ---------- twin ----------
+
+# 评测地点（坐标固定，保证可复现）：国内用百度检索后换算的 WGS-84，境外直接给坐标
+TWIN_PLACES = [
+    {"name": "文翰湖公园（佛山，湖景）", "lat": 23.0172979, "lon": 113.232189},
+    {"name": "千灯湖（佛山，城区湖景）", "lat": 23.0560707, "lon": 113.142338},
+    {"name": "三山森林公园（佛山，山林）", "lat": 23.0341089, "lon": 113.2226896},
+    {"name": "Nyngan 光伏电站（澳大利亚，平原）", "lat": -31.55648, "lon": 147.08608},
+    {"name": "Adelaide Botanic Garden（澳大利亚，城区）", "lat": -34.9177, "lon": 138.6100},
+]
+
+
+def run_twin(seeds: list[int]) -> dict:
+    """真实场地数字孪生：同一地点、同一种子，比较“完全随机布置”与“孪生约束布置”。
+    指标：阵列压在水面或建筑上的比例、安全校验（含离地高度）通过率。不调用模型、不起飞。"""
+    import random
+
+    from . import twin
+    from .agents.mission import build_steps, split_sorties
+    from .sim import scene as scene_mod
+
+    rows = []
+    for place in TWIN_PLACES:
+        loc = {**place, "address": "", "city": "", "source": "评测固定坐标"}
+        try:
+            info = scene_mod._twin(loc)
+        except Exception as error:   # 数据源不可用时记录原因，不中断其他地点
+            rows.append({"place": place["name"], "error": f"{type(error).__name__}：{error}"})
+            print(f"{place['name']}：{error}", flush=True)
+            continue
+        blocked = info["blocked"]
+        naive_bad = naive_total = twin_bad = twin_total = 0
+        passes = {"none": 0, "flagged_and_unsure": 0, "all": 0}
+        terrain_violations = generated = 0
+        for seed in seeds:
+            naive = scene_mod._layout(random.Random(seed))
+            naive_total += len(naive["arrays"])
+            naive_bad += sum(1 for a in naive["arrays"] if blocked(*a["center"], a["radius"]))
+            try:
+                layout = scene_mod._layout(random.Random(seed), blocked=blocked, preferred=info["preferred"], real_obstacles=info["obstacles"])
+            except RuntimeError:
+                continue
+            generated += 1
+            twin_total += len(layout["arrays"])
+            twin_bad += sum(1 for a in layout["arrays"] if blocked(*a["center"], a["radius"]))
+            site = {**layout, "name": "twin", "origin": info["origin"], "terrain": info["terrain"], "panels": []}
+            site["panels"] = [asdict_panel for asdict_panel in scene_mod._panels_dicts(layout["arrays"], seed)]
+            for policy in passes:
+                plan = {"targets": [a["id"] for a in layout["arrays"]], "closeup_policy": policy, "standoff_m": 20.0, "max_sorties": 3}
+                codes = []
+                for targets in split_sorties(site, plan, 100.0, 25.0):
+                    codes += [v.code for v in safety.check_plan(site, build_steps(site, plan, targets=targets), battery=100.0, reserve=25.0)]
+                passes[policy] += not codes
+                terrain_violations += codes.count("terrain")
+        rows.append({"place": place["name"], "feature_counts": info["summary"]["feature_counts"], "osm_source": info["summary"]["osm_source"],
+                     "relief_m": info["terrain"]["relief"], "origin_shift_m": info["summary"]["origin_shift_m"], "obstacles": len(info["obstacles"]),
+                     "naive_arrays_blocked": round(naive_bad / max(1, naive_total), 3), "twin_arrays_blocked": round(twin_bad / max(1, twin_total), 3),
+                     "generated": generated, "seeds": len(seeds), "pass_rate": {k: round(v / max(1, generated), 3) for k, v in passes.items()},
+                     "terrain_violations": terrain_violations})
+        print(f"{place['name']}：随机布置压在水面 / 建筑上 {naive_bad}/{naive_total}，孪生布置 {twin_bad}/{twin_total}；"
+              f"生成 {generated}/{len(seeds)}；高差 {info['terrain']['relief']} 米", flush=True)
+    return {"suite": "twin", "seeds": seeds, "rows": rows}
+
+
 # ---------- real ----------
 
 REAL_DIR = config.RELATED_DIR / "datasets" / "pv-panel-defect"
@@ -608,6 +672,18 @@ def write_report(report: dict) -> Path:
                 a, f = r["all"], r["filtered"]
                 lines.append(f"| {r['scene']} | {a['defects_flagged']} / {a['defects']} | {a['precision']} | ¥{a['cost_yuan']} | "
                              f"{f['defects_flagged']} / {f['defects']} | {f['precision']} | {f['tiles_sent']} / {f['tiles']} | ¥{f['cost_yuan']} |")
+    elif report["suite"] == "twin":
+        lines += [f"每个地点 {len(report['seeds'])} 个种子；同一地点、同一种子比较“完全随机布置”与“孪生约束布置”（不调用模型、不起飞）。", "",
+                  "| 地点 | 地物（水面 / 建筑 / 树林 / 光伏轮廓） | 高差 | 随机布置：阵列压在水面或建筑上 | 孪生布置 | 生成成功 | 安全校验通过（只初筛 / 复核可疑 / 全部复核） | 离地高度违规 |",
+                  "| --- | --- | ---: | ---: | ---: | ---: | --- | ---: |"]
+        for r in report["rows"]:
+            if "error" in r:
+                lines.append(f"| {r['place']} | 数据不可用：{r['error']} | | | | | | |")
+                continue
+            c, p = r["feature_counts"], r["pass_rate"]
+            lines.append(f"| {r['place']} | {c['water']} / {c['building']} / {c['wood']} / {c['solar']} | {r['relief_m']} 米 | {r['naive_arrays_blocked']:.0%} | "
+                         f"{r['twin_arrays_blocked']:.0%} | {r['generated']}/{r['seeds']} | {p['none']:.0%} / {p['flagged_and_unsure']:.0%} / {p['all']:.0%} | {r['terrain_violations']} |")
+        lines += ["", "说明：高程为 Copernicus DEM GLO-30（地表模型，含树冠与建筑高度）；地物来自 OpenStreetMap，国内覆盖较弱；禁飞区仍为模拟。"]
     elif report["suite"] == "real":
         s = report["summary"]
         labels = {"Clean": "干净", "Dusty": "灰尘", "Bird-drop": "鸟粪", "Physical-Damage": "物理损坏", "Electrical-damage": "电气损坏", "Snow-Covered": "积雪"}
@@ -667,6 +743,8 @@ def main() -> None:
     rl = sub.add_parser("real", help="真实图像评测：公开光伏缺陷数据集的现场照片（调用视觉模型）")
     rl.add_argument("--splits", default="test")
     rl.add_argument("--limit", type=int, default=0, help="每个类别最多取多少张，0 为全部")
+    tw = sub.add_parser("twin", help="真实场地数字孪生：随机布置与孪生约束布置对比（不起飞、不调用模型）")
+    tw.add_argument("--seeds", default="1-10")
     rt = sub.add_parser("routes", help="绕行方法对比：栅格 A* 与可见性图（不起飞、不调用模型）")
     rt.add_argument("--seeds", default="1-100", help="例如 1-100")
     ts = sub.add_parser("troubleshoot", help="排障：注入已知故障，检验诊断员能否找到原因（需要仿真）")
@@ -687,6 +765,9 @@ def main() -> None:
         report = run_triage(args.train.split(","), args.test.split(","), args.replay)
     elif args.cmd == "real":
         report = run_real(args.splits.split(","), args.limit)
+    elif args.cmd == "twin":
+        lo, _, hi = args.seeds.partition("-")
+        report = run_twin(list(range(int(lo), int(hi or lo) + 1)))
     elif args.cmd == "routes":
         lo, _, hi = args.seeds.partition("-")
         report = run_routes(list(range(int(lo), int(hi or lo) + 1)))

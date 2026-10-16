@@ -92,7 +92,7 @@ onMounted(load)
   </div>
   <section class="card place">
     <h2>真实场地</h2>
-    <p class="small muted">输入地名（例如“文翰湖公园”），用百度地点检索取得坐标，场地原点放在真实位置，起飞天气按该位置判断；有 Mapbox Token 时地面换成该位置的卫星影像。光伏阵列、禁飞区、树仍按种子随机布置，与影像中的真实地物无关。</p>
+    <p class="small muted">输入地名（例如“文翰湖公园”），用百度地点检索取得坐标，场地原点放在真实位置。场景同时取用真实地物（OpenStreetMap：水面、建筑、树）与高程（Copernicus DEM）：阵列不会放在水面和建筑上，建筑作为障碍物，安全员按地形检查离地高度，起飞天气按该位置判断。仿真地面仍是平面贴图；禁飞区为模拟。</p>
     <div class="gen">
       <input v-model="placeQuery" placeholder="地名" @keydown.enter="findPlaces" />
       <input v-model="placeCity" placeholder="城市（可选，例如 佛山）" @keydown.enter="findPlaces" />

@@ -217,15 +217,6 @@ def get_basemap(name: str) -> dict:
     return {"available": True, "ak": ak, **frame}
 
 
-@app.get("/site/{name}/ground")
-def get_ground(name: str):
-    """真实场地的卫星影像（用作网页底图）；程序生成的贴图不提供。"""
-    site = _site(name)
-    if (site.get("ground") or {}).get("source") != "satellite":
-        raise HTTPException(404, "该场景没有卫星影像")
-    return FileResponse(config.WORLDS_DIR / site["name"] / "textures" / "ground.png", media_type="image/png")
-
-
 @app.get("/site/{name}/truth")
 def get_truth(name: str) -> dict:
     site = _site(name)

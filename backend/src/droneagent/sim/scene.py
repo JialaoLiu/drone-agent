@@ -58,7 +58,10 @@ class Site:
     arrays: list[dict]                   # {id, center, rows, cols, size: [长, 宽]}
     panels: list[Panel] = field(default_factory=list)
     location: dict | None = None         # 真实场地：{name, address, city, lat, lon, source}；为空时使用 PX4 默认坐标
-    ground: dict | None = None           # 地面贴图：{source: satellite | procedural, extent_m, meters_per_pixel, note}
+    ground: dict | None = None           # 地面贴图：{source, extent_m, note}（仿真地面为程序生成的平面贴图）
+    terrain: dict | None = None          # 真实场地的高程网格（相对起飞点，米），安全员用来检查离地高度
+    features: list | None = None         # 真实场地的地物（水面、建筑、树林、光伏电站轮廓，本地坐标），用于网页显示
+    twin: dict | None = None             # 真实场地的数据来源与约束说明
 
     def defects(self) -> list[Panel]:
         return [p for p in self.panels if p.defect]
@@ -204,11 +207,13 @@ def _viewpoint_xy(center: list[float], yaw: float, distance: float = STANDOFF) -
     return center[0] + s * math.sin(yaw), center[1] - s * math.cos(yaw)
 
 
-def _layout(rng: random.Random) -> dict:
+def _layout(rng: random.Random, blocked=None, preferred=None, real_obstacles: list[dict] | None = None) -> dict:
     """完全随机的场地布局：围栏形状、禁飞区、阵列数量 / 位置 / 朝向 / 行列数、树的位置都随种子变化。
 
     用拒绝采样保证布局可飞：阵列互不重叠且在围栏内；每列在默认拍摄距离处的拍摄点在围栏内、
     远离禁飞区和树；起飞点不在阵列或禁飞区里。生成失败时换一个子种子重试。
+    真实场地（数字孪生）额外约束：blocked(x, y, r) 为真的地方（水面、建筑）不放阵列；preferred(x, y)
+    给出时（附近有真实光伏电站轮廓）优先把阵列放在轮廓内；real_obstacles 给出时用真实的建筑和树代替随机的树。
     """
     for _ in range(200):
         # 围栏：以场地中心为圆心、半径随机起伏的六边形，起飞点 (0, 0) 位于其中靠边的位置
@@ -233,7 +238,7 @@ def _layout(rng: random.Random) -> dict:
         # 阵列：2–6 列，行列数与朝向随机（朝南，偏角 ±30°）
         arrays, panels = [], 0
         target = rng.randint(2, 6)
-        for _ in range(400):
+        for attempt in range(400):
             if len(arrays) >= target:
                 break
             rows, cols = rng.randint(1, 3), rng.randint(6, 14)
@@ -244,6 +249,14 @@ def _layout(rng: random.Random) -> dict:
             ax, ay = rng.uniform(cx - base, cx + base), rng.uniform(cy - base, cy + base)
             radius = math.hypot(w, length) / 2 + 2
             vx, vy = _viewpoint_xy([ax, ay], yaw)
+            if blocked and blocked(ax, ay, radius):
+                continue
+            if preferred and attempt < 300 and not preferred(ax, ay):     # 前 300 次只接受电站轮廓内的位置
+                continue
+            if real_obstacles and any(math.dist((ax, ay), o["center"]) < o["radius"] + radius + 3 or
+                                      math.dist(_viewpoint_xy([ax, ay], yaw), o["center"]) < o["radius"] + 4
+                                      for o in real_obstacles):
+                continue
             ok = (_inside(fence, ax, ay) and _edge_distance(fence, ax, ay) > radius + 2
                   and _inside(fence, vx, vy) and _edge_distance(fence, vx, vy) > 3
                   and math.hypot(ax, ay) > radius + 6
@@ -258,9 +271,11 @@ def _layout(rng: random.Random) -> dict:
                 panels += rows * cols
         if len(arrays) < 2:
             continue
-        # 树：3–8 棵，避开阵列、拍摄点、起飞点
+        # 树：3–8 棵，避开阵列、拍摄点、起飞点（真实场地改用真实的建筑与树）
         trees = []
-        for _ in range(300):
+        if real_obstacles is not None:
+            trees = [o for o in real_obstacles if _inside(fence, *o["center"]) and math.hypot(*o["center"]) > o["radius"] + 6]
+        for _ in range(300 if real_obstacles is None else 0):
             if len(trees) >= rng.randint(3, 8):
                 break
             tx, ty = rng.uniform(cx - base, cx + base), rng.uniform(cy - base, cy + base)
@@ -357,6 +372,49 @@ def _substation(z: dict) -> str:
             f'<material><diffuse>0.4 0.45 0.4 1</diffuse></material></visual></link></model>')
 
 
+def _twin(location: dict) -> dict:
+    """真实场地的数字孪生数据：高程与地物（见 twin.py）。起飞点落在水面或建筑上时，移到最近的空地。"""
+    from .. import twin
+    from ..geo import Origin
+
+    origin = {"lat": location["lat"], "lon": location["lon"]}
+    data = twin.features(origin, 160.0)
+    blocked = twin.blocked_fn(data)
+    shift = (0.0, 0.0)
+    if blocked(0, 0, 6):
+        for r in range(5, 85, 5):
+            spots = [(r * math.cos(k * math.pi / 8), r * math.sin(k * math.pi / 8)) for k in range(16)]
+            free = [p for p in spots if not blocked(p[0], p[1], 6)]
+            if free:
+                shift = free[0]
+                break
+        else:
+            raise RuntimeError("地点周围 80 米内都是水面或建筑，找不到起飞点")
+    if shift != (0.0, 0.0):        # 把地物坐标平移到新的起飞点
+        lat, lon, _ = Origin(origin["lat"], origin["lon"], 0).to_global(*shift)
+        origin = {"lat": round(lat, 7), "lon": round(lon, 7)}
+        for it in data["items"]:
+            if "polygon" in it:
+                it["polygon"] = [[round(x - shift[0], 2), round(y - shift[1], 2)] for x, y in it["polygon"]]
+            if "center" in it:
+                it["center"] = [round(it["center"][0] - shift[0], 2), round(it["center"][1] - shift[1], 2)]
+        blocked = twin.blocked_fn(data)
+    terrain = twin.terrain_grid(origin, 150.0)
+    counts = {k: sum(1 for it in data["items"] if it["kind"] == k) for k in ("water", "building", "wood", "solar", "tree", "aeroway")}
+    feats = [{"kind": it["kind"], "polygon": it["polygon"], **({"height": it["height"]} if "height" in it else {})}
+             for it in data["items"] if "polygon" in it]
+    return {"origin": {**origin, "alt": terrain["origin_elevation"]}, "blocked": blocked, "preferred": twin.preferred_fn(data),
+            "obstacles": twin.obstacles(data), "terrain": terrain, "features": feats,
+            "summary": {"osm_source": data["source"], "osm_attribution": data["attribution"], "feature_counts": counts,
+                        "origin_shift_m": [round(v, 1) for v in shift], "relief_m": terrain["relief"],
+                        "terrain_source": "Copernicus DEM GLO-30（地表模型，含树冠与建筑高度）"}}
+
+
+def _panels_dicts(arrays: list[dict], seed: int) -> list[dict]:
+    """评测用：只要板的几何，不要缺陷贴图。"""
+    return [asdict(p) for p in _panels(arrays, 0.12, random.Random(seed))]
+
+
 def _ground_extent(site: Site, centered: bool = False) -> float:
     """地面边长：覆盖围栏外 20 米。centered 为真时以原点为中心（卫星影像以场地经纬度为中心）。"""
     xs, ys = [p[0] for p in site.geofence], [p[1] for p in site.geofence]
@@ -374,9 +432,8 @@ def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun
     parts.append('<include><uri>model://x500_inspect</uri><name>x500_inspect_0</name><pose>0 0 0.25 0 0 0</pose></include>')
     o = site.origin
     xs, ys = [p[0] for p in site.geofence], [p[1] for p in site.geofence]
-    # 卫星影像以场地原点为中心；程序贴图以围栏中心为中心
-    gx, gy = ((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2) if not site.ground or site.ground["source"] != "satellite" else (0.0, 0.0)
-    ground_size = site.ground["extent_m"] if site.ground else _ground_extent(site)
+    gx, gy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    ground_size = _ground_extent(site)
     return f'''<?xml version="1.0" encoding="UTF-8"?>
 <!-- 由 droneagent.sim.scene 生成：场景 {name}，种子 {site.seed}。不要手改，重新生成即可。 -->
 <sdf version="1.9">
@@ -411,30 +468,31 @@ def generate(seed: int, name: str | None = None, defect_rate: float = 0.12, out_
     out = (out_dir or config.WORLDS_DIR) / name
     tex_dir = out / "textures"
     (tex_dir if textures else out).mkdir(parents=True, exist_ok=True)
-    layout = _layout(rng)
-    origin = {"lat": location["lat"], "lon": location["lon"], "alt": float(location.get("alt", 10.0))} if location else ORIGIN
+    twin_info = _twin(location) if location else None
+    if twin_info:
+        layout = _layout(rng, blocked=twin_info["blocked"], preferred=twin_info["preferred"], real_obstacles=twin_info["obstacles"])
+        origin = twin_info["origin"]
+    else:
+        layout = _layout(rng)
+        origin = ORIGIN
     site = Site(name=name, seed=seed, origin=origin, geofence=layout["geofence"], max_altitude=layout["max_altitude"],
                 min_altitude=layout["min_altitude"], no_fly_zones=layout["no_fly_zones"], obstacles=layout["obstacles"],
                 arrays=layout["arrays"], location=location)
+    if twin_info:
+        site.terrain, site.features = twin_info["terrain"], twin_info["features"]
+        pref = twin_info["preferred"]
+        site.twin = {**twin_info["summary"], "arrays_in_solar_outline": sum(1 for a in site.arrays if pref and pref(*a["center"]))}
     site.panels = _panels(site.arrays, defect_rate, rng)
     if not textures:
         (out / "site.json").write_text(json.dumps(asdict(site), ensure_ascii=False, indent=1), encoding="utf-8")
         return out
 
     ground = tex_dir / "ground.png"
-    extent = _ground_extent(site, centered=bool(location))
-    site.ground = {"source": "procedural", "extent_m": round(extent, 1), "meters_per_pixel": None, "note": "程序生成的草地贴图"}
-    if location:
-        from .. import maps
-        try:
-            png, mpp = maps.satellite_image(location["lat"], location["lon"], extent)
-            ground.write_bytes(png)
-            site.ground = {"source": "satellite", "extent_m": round(extent, 1), "meters_per_pixel": round(mpp, 3),
-                           "note": "Mapbox 卫星影像（© Mapbox © Maxar）"}
-        except maps.MapError as error:
-            site.ground["note"] = f"卫星影像不可用（{error}），使用程序生成的草地贴图"
-    if site.ground["source"] == "procedural":
-        _ground(rng).save(ground)
+    site.ground = {"source": "procedural", "extent_m": round(_ground_extent(site), 1),
+                   "note": "仿真地面为程序生成的平面草地贴图，不是真实影像" + (
+                       f"；场地高差 {site.terrain['relief']} 米" + ("，平面地面与真实地形基本一致" if site.terrain["relief"] <= 3
+                                                             else "，平面地面与真实地形不一致，离地高度以高程数据为准") if site.terrain else "")}
+    _ground(rng).save(ground)
     normal = tex_dir / "panel_normal.png"
     _panel_base(random.Random(seed * 7 + 1)).save(normal)
     tex_paths = {}

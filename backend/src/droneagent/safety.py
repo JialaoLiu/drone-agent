@@ -51,9 +51,27 @@ def battery_needed(steps: list[Step], start: tuple = (0, 0, 0)) -> float:
     return route_seconds(steps, start) / DRAIN_SECONDS * 100 * SAFETY_FACTOR
 
 
+def _ground(site: dict, x: float, y: float) -> float:
+    """地面相对起飞点的高度（米）。只有真实场地有高程数据，其余场地地面为平面（0）。"""
+    t = site.get("terrain")
+    if not t:
+        return 0.0
+    from .twin import relative_height
+    return relative_height(t, x, y)
+
+
 def check_point(site: dict, pos: tuple[float, float, float], index: int | None = None, airborne_ok: bool = False) -> list[Violation]:
     out = []
     x, y, z = pos
+    if not airborne_ok and site.get("terrain"):
+        agl = z - _ground(site, x, y)
+        if agl < site["min_altitude"]:
+            out.append(Violation("terrain", f"离地高度只有 {agl:.1f} 米（该处地面比起飞点高 {z - agl:.1f} 米），低于 {site['min_altitude']} 米",
+                                 index, "升高拍摄点或换一侧拍摄"))
+        elif agl > site["max_altitude"]:
+            # 限高按离地高度（真高）计算：地面比起飞点低时，相对起飞点的高度合规，离地高度却可能超限
+            out.append(Violation("terrain", f"离地高度 {agl:.1f} 米（该处地面比起飞点低 {agl - z:.1f} 米），超过限高 {site['max_altitude']} 米",
+                                 index, "该处地形起伏大；当前仿真地面为平面，暂不支持在这类场地规划"))
     if not airborne_ok and not (site["min_altitude"] <= z <= site["max_altitude"]):
         out.append(Violation("altitude", f"高度 {z:.1f} 米超出允许范围 {site['min_altitude']}–{site['max_altitude']} 米", index,
                              f"把高度调整到 {site['min_altitude']}–{site['max_altitude']} 米之间"))
@@ -74,15 +92,21 @@ def check_segment(site: dict, a: tuple, b: tuple, index: int) -> list[Violation]
             out.append(Violation("no_fly_zone", f"第 {index + 1} 段航线穿过{zone['label']}禁飞区", index, "绕行或调整访问顺序"))
     low = min(a[2], b[2])
     for ob in site["obstacles"]:
-        if low < ob["height"] + OBSTACLE_VERTICAL_MARGIN and _segment_distance(ob["center"], a, b) < ob["radius"] + MARGIN:
+        top = ob["height"] + _ground(site, *ob["center"])      # 障碍物顶部相对起飞点的高度（真实场地含地形）
+        if low < top + OBSTACLE_VERTICAL_MARGIN and _segment_distance(ob["center"], a, b) < ob["radius"] + MARGIN:
             out.append(Violation("obstacle", f"第 {index + 1} 段航线高度 {low:.1f} 米，离{ob['label']}（{ob['id']}，高 {ob['height']} 米）太近",
                                  index, f"升高到 {ob['height'] + OBSTACLE_VERTICAL_MARGIN:.0f} 米以上或绕行"))
-    steps = max(2, int(math.dist(a[:2], b[:2])))   # 航段抽样检查围栏
+    steps = max(2, int(math.dist(a[:2], b[:2])))   # 航段抽样检查围栏（真实场地同时检查离地高度）
+    terrain_hit = False
     for k in range(1, steps):
         x, y = a[0] + (b[0] - a[0]) * k / steps, a[1] + (b[1] - a[1]) * k / steps
         if not _inside(site["geofence"], x, y):
             out.append(Violation("geofence", f"第 {index + 1} 段航线越出电子围栏", index, "调整路线"))
             break
+        z = a[2] + (b[2] - a[2]) * k / steps
+        if site.get("terrain") and not terrain_hit and min(a[2], b[2]) >= site["min_altitude"] and z - _ground(site, x, y) < site["min_altitude"]:
+            terrain_hit = True
+            out.append(Violation("terrain", f"第 {index + 1} 段航线经过的地面较高，离地高度低于 {site['min_altitude']} 米", index, "升高航线"))
     return out
 
 

@@ -48,6 +48,9 @@ function draw() {
   const add = (o: any) => { map.addOverlay(o); overlays.push(o) }
   const s = props.site
   add(new B.Polygon(s.geofence.map((p) => toBd(p[0], p[1])), { strokeColor: '#ffffff', strokeWeight: 2, strokeStyle: 'dashed', fillOpacity: 0.01 }))
+  // 真实地物（OpenStreetMap，WGS-84）同样经 toBd() 换算后叠加，可用来目测换算是否对得上卫星图
+  const fstyle: Record<string, string> = { water: '#4dabf7', building: '#ced4da', wood: '#69db7c', solar: '#ffa94d', aeroway: '#ff8787' }
+  for (const f of s.features ?? []) add(new B.Polygon(f.polygon.map((p) => toBd(p[0], p[1])), { strokeColor: fstyle[f.kind] ?? '#fff', strokeWeight: 1.5, fillOpacity: 0.08, fillColor: fstyle[f.kind] ?? '#fff' }))
   for (const z of s.no_fly_zones) add(new B.Circle(toBd(z.center[0], z.center[1]), z.radius, { strokeColor: '#e03131', fillColor: '#e03131', fillOpacity: 0.25, strokeWeight: 2 }))
   for (const o of s.obstacles) add(new B.Circle(toBd(o.center[0], o.center[1]), o.radius, { strokeColor: '#2f9e44', fillColor: '#2f9e44', fillOpacity: 0.5, strokeWeight: 1 }))
   for (const p of s.panels) add(new B.Polygon(p.corners.map((c) => toBd(c[0], c[1])), { strokeColor: '#ffffff', strokeWeight: 0.5, fillColor: panelColor(p.id), fillOpacity: 0.9 }))
