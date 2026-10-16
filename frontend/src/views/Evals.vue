@@ -4,10 +4,11 @@ import { getEval, listEvals } from '../api'
 
 const evals = ref<{ name: string; suite: string; summary: any; scenes?: string[]; repeat?: number; model?: string; summary_rows?: any[] | null }[]>([])
 const detail = ref<Record<string, any> | null>(null)
-const SUITES: Record<string, string> = { vision: '巡检（复核策略对比）', planning: '任务理解与规划', troubleshoot: '飞行排障', layouts: '随机布局泛化', routes: '绕行方法对比', triage: '本地初筛分类器' }
+const SUITES: Record<string, string> = { vision: '巡检（复核策略对比）', planning: '任务理解与规划', troubleshoot: '飞行排障', layouts: '随机布局泛化', routes: '绕行方法对比', triage: '本地初筛分类器', real: '真实照片（公开数据集）', twin: '真实场地数字孪生' }
 const ROUTERS: Record<string, string> = { grid: '栅格 A*', visibility: '可见性图' }
 const STRATEGY: Record<string, string> = { none: '只初筛', flagged: '复核疑似缺陷', flagged_and_unsure: '复核疑似与看不清', all: '全部近距复核' }
 const latest = computed(() => Object.keys(SUITES).map((k) => evals.value.find((e) => e.suite === k)).filter(Boolean) as typeof evals.value)
+const REAL_LABELS: Record<string, string> = { Clean: '干净', Dusty: '灰尘', 'Bird-drop': '鸟粪', 'Physical-Damage': '物理损坏', 'Electrical-damage': '电气损坏', 'Snow-Covered': '积雪' }
 const pct = (v: number | null | undefined) => (v == null ? '—' : `${Math.round(v * 1000) / 10}%`)
 const stamp = (name: string) => name.replace(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2}).*/, '$1-$2-$3 $4:$5')
 
@@ -42,6 +43,23 @@ onMounted(async () => { evals.value = await listEvals() })
           <tbody><tr v-for="r in e.summary_rows ?? []" :key="r.target_recall"><td class="num">{{ pct(r.target_recall) }}</td><td class="num">{{ pct(r.defects_kept) }}</td><td class="num">{{ pct(r.tiles_sent) }}</td></tr></tbody>
         </table>
         <p class="muted small">默认不启用（TRIAGE_ENABLED=1 开启）：实际调用视觉模型时省约 19%，但被模型自身的判断波动盖住。</p>
+      </template>
+      <template v-if="e.suite === 'real'">
+        <p>{{ e.summary.images }} 张现场照片：核心四类检出 <b>{{ pct(e.summary.core_recall) }}</b>，精确 <b>{{ pct(e.summary.core_precision) }}</b>，干净板误报 {{ pct(e.summary.clean_false_alarm) }}</p>
+        <table class="data">
+          <thead><tr><th>类别</th><th class="num">张数</th><th class="num">结论正确</th></tr></thead>
+          <tbody><tr v-for="(v, k) in e.summary.per_class" :key="k"><td>{{ REAL_LABELS[k] ?? k }}</td><td class="num">{{ v.n }}</td><td class="num">{{ pct(v.correct_status) }}</td></tr></tbody>
+        </table>
+        <p class="muted small">判断说明为仿真画面编写；灰尘最难（容易被当成反光）。</p>
+      </template>
+      <template v-if="e.suite === 'twin'">
+        <p class="muted small">同一地点、同一种子：随机布置与孪生约束布置对比（阵列压在水面或建筑上的比例、安全校验）</p>
+        <table class="data">
+          <thead><tr><th>地点</th><th class="num">随机</th><th class="num">孪生</th><th class="num">安全校验</th></tr></thead>
+          <tbody><tr v-for="r in e.summary_rows ?? []" :key="r.place"><td>{{ r.place }}</td>
+            <td class="num">{{ r.error ? '—' : pct(r.naive_arrays_blocked) }}</td><td class="num">{{ r.error ? '—' : pct(r.twin_arrays_blocked) }}</td>
+            <td class="num">{{ r.error ? '数据不可用' : pct(r.pass_rate.all) }}</td></tr></tbody>
+        </table>
       </template>
       <p v-if="e.suite === 'routes'" class="muted small">需要绕行的航段 {{ e.summary.segments }} 段；{{ e.summary.length_saving_pct == null ? "总长对比不适用" : `可见性图总长少 ${e.summary.length_saving_pct}%` }}，默认仍用栅格 A*（拐点更少）。</p>
       <button class="small" @click="open(e.name)">查看明细</button>

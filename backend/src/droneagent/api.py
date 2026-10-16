@@ -426,7 +426,7 @@ def list_evals() -> list[dict]:
             continue
         out.append({"name": path.stem, "suite": data.get("suite", "gold"), "summary": data.get("summary"),
                     "scenes": data.get("scenes"), "repeat": data.get("repeat"), "model": data.get("model"),
-                    "summary_rows": data.get("rows") if data.get("suite") == "triage" else None})
+                    "summary_rows": data.get("rows") if data.get("suite") in ("triage", "twin") else None})
     return out
 
 

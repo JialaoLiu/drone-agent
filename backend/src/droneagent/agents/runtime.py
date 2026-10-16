@@ -12,7 +12,7 @@ import time
 from .. import config
 from ..flight import Flight
 from ..geo import Origin
-from ..sim.scene import ORIGIN
+from ..sim.scene import ORIGIN, load_site
 
 _loop: asyncio.AbstractEventLoop | None = None
 _flight: Flight | None = None
@@ -35,6 +35,32 @@ def submit(coro):
     return asyncio.run_coroutine_threadsafe(coro, loop())
 
 
+_origin_cache: dict = {"at": 0.0, "scene": None, "origin": ORIGIN}
+
+
+def scene_origin() -> dict:
+    """当前仿真场景的经纬度原点（真实场地不是 PX4 默认坐标）。按 2 秒缓存，避免频繁查询进程。"""
+    if time.time() - _origin_cache["at"] > 2:
+        from .. import simctl
+        scene = simctl.current_scene()
+        origin = ORIGIN
+        if scene:
+            try:
+                origin = load_site(scene)["origin"]
+            except (FileNotFoundError, OSError, KeyError):
+                origin = ORIGIN
+        _origin_cache.update(at=time.time(), scene=scene, origin=origin)
+    return _origin_cache["origin"]
+
+
+def _sync_origin(f: Flight) -> None:
+    """本地坐标的原点必须与仿真场景一致：切换到真实场地后，原点从 PX4 默认坐标变为该场地的经纬度。"""
+    o = scene_origin()
+    if (f.origin.lat, f.origin.lon) != (o["lat"], o["lon"]):
+        f.origin = Origin(o["lat"], o["lon"], o.get("alt", 0.0))
+        f._home_amsl = None          # 起飞点海拔随场地变化，重新从下一帧位置取得
+
+
 async def flight() -> Flight:
     """取得飞控连接；首次调用或连接失效时重新连接。"""
     global _flight, _flight_lock
@@ -42,9 +68,12 @@ async def flight() -> Flight:
         _flight_lock = asyncio.Lock()
     async with _flight_lock:
         if _flight is not None and time.time() - _flight.state.updated < 5:
+            _sync_origin(_flight)
             return _flight
         # 首次连接，或仿真重启后遥测中断：在同一个 MAVSDK 实例上重新发现飞控
-        f = _flight or Flight(Origin(**ORIGIN), config.MAVLINK_URL)
+        o = scene_origin()
+        f = _flight or Flight(Origin(o["lat"], o["lon"], o.get("alt", 0.0)), config.MAVLINK_URL)
+        _sync_origin(f)
         await f.connect(timeout=20)
         if not f.listeners:
             f.listeners.append(lambda s: telemetry.update(s.as_dict()))
