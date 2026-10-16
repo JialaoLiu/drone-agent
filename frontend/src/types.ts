@@ -18,6 +18,7 @@ export interface Panel { id: string; array: string; row: number; col: number; ce
 export interface Site {
   name: string; seed: number; geofence: number[][]; max_altitude: number; min_altitude: number
   scenario?: string; origin?: { lat: number; lon: number; alt?: number }
+  landmarks?: { id: string; label: string; center: number[] }[]
   no_fly_zones: { id: string; label: string; center: number[]; radius: number }[]
   obstacles: { id: string; label: string; center: number[]; radius: number; height: number }[]
   arrays: { id: string; center: number[]; rows: number; cols: number; size: number[] }[]
@@ -28,7 +29,12 @@ export interface Site {
   twin?: Record<string, any> | null
   terrain?: { relief: number; origin_elevation: number } | null
 }
-export interface Truth { defects: { panel_id: string; type: string; label: string; severity: string }[] }
+export interface TruthPerson { id: string; role: 'target' | 'bystander'; state: string; start: number[]; top: string; bottom: string; child: boolean }
+export interface Truth {
+  defects: { panel_id: string; type: string; label: string; severity: string }[]
+  people?: TruthPerson[]; decoys?: { id: string; color: string; center: number[] }[]; brief?: { description: string; last_seen_label: string }
+}
+export interface Marker { x: number; y: number; label: string; tone: 'target' | 'bad' | 'warn' | 'muted' | 'info' }
 export interface MissionEvent { seq: number; role: string; kind: string; message: string; payload: Record<string, unknown>; created_at: string }
 export interface Finding {
   panel_id: string; status: 'suspect' | 'confirmed' | 'cleared' | 'unverified'; type: string | null

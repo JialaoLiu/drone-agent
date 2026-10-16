@@ -30,6 +30,7 @@ class Frame:
     pose: CameraPose
     sim_time: float
     drone: tuple[float, float, float] | None = None   # 拍摄瞬间飞机在仿真中的真实位置（仅仿真可得）
+    people: dict | None = None                        # 救援场景：拍摄瞬间每个人的真实位置（仅用于评测，不给模型）
 
     def jpeg(self, quality: int = 90) -> bytes:
         buf = io.BytesIO()
@@ -38,7 +39,8 @@ class Frame:
 
     def meta(self) -> dict:
         return {"camera": self.camera, "sim_time": self.sim_time, "position": list(self.pose.position),
-                "rotation": self.pose.rotation, "hfov": self.pose.hfov, "width": self.pose.width, "height": self.pose.height}
+                "rotation": self.pose.rotation, "hfov": self.pose.hfov, "width": self.pose.width, "height": self.pose.height,
+                **({"people": self.people} if self.people else {})}
 
     def save(self, path: Path) -> None:
         """保存为 PNG（无损，便于复核）和位姿 JSON。"""
@@ -50,7 +52,7 @@ class Frame:
     def load(cls, path: Path) -> "Frame":
         m = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
         pose = CameraPose(position=tuple(m["position"]), rotation=m["rotation"], hfov=m["hfov"], width=m["width"], height=m["height"])
-        return cls(m["camera"], Image.open(path.with_suffix(".png")).convert("RGB"), pose, m["sim_time"])
+        return cls(m["camera"], Image.open(path.with_suffix(".png")).convert("RGB"), pose, m["sim_time"], people=m.get("people"))
 
 
 def _matmul(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:
@@ -83,8 +85,9 @@ def capture(camera: str = "wide", timeout: float = 5.0) -> Frame:
     if "x500_inspect_0" not in poses or "camera_link" not in poses:
         raise CameraUnavailable("还没有收到飞机位姿")
     image = Image.frombytes("RGB", (w, h), r.content)
+    people = {k: [round(v, 2) for v in p["position"]] for k, p in poses.items() if k.startswith("person_")} or None
     return Frame(camera=camera, image=image, pose=camera_pose(poses, camera, w, h), sim_time=float(r.headers["X-Sim-Time"]),
-                 drone=tuple(poses["x500_inspect_0"]["position"]))
+                 drone=tuple(poses["x500_inspect_0"]["position"]), people=people)
 
 
 def sim_state(timeout: float = 3.0) -> dict:

@@ -12,6 +12,7 @@ import TaskProgress from '../components/task/TaskProgress.vue'
 import TaskVerdict from '../components/task/TaskVerdict.vue'
 import Timeline from '../components/task/Timeline.vue'
 import TruthComparison from '../components/task/TruthComparison.vue'
+import RescueResult from '../components/task/RescueResult.vue'
 import MapView from '../components/map/MapView.vue'
 import { DIAGNOSIS_STAGES, scenarioOf } from '../scenarios'
 import { useMissions } from '../stores/missions'
@@ -19,7 +20,7 @@ import { useSim } from '../stores/sim'
 import { useSites } from '../stores/sites'
 import { useTaskStream } from '../stores/taskStream'
 import { useToast } from '../stores/toast'
-import type { Site, Truth } from '../types'
+import type { Marker, Site, Truth } from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -44,6 +45,11 @@ const scenario = computed(() => scenarioOf(site.value?.scenario))
 const result = computed(() => (mission.value?.result ?? null) as Record<string, any> | null)
 const flying = computed(() => live.value && mission.value?.status === 'running' && sim.value.scene === mission.value?.scene)
 const mapTelemetry = computed(() => (live.value ? telemetry.value : {}))
+// 救援：把搜索中看到的人和物画在地图上（目标红色、疑似与排除橙色、路人与物体灰色）
+const markers = computed<Marker[]>(() => ((result.value?.detections ?? []) as any[]).map((d) => ({
+  x: d.x, y: d.y, label: `${d.id} ${scenario.value.findingTypes[d.kind] ?? ''}`,
+  tone: d.kind === 'target' ? 'target' : ['candidate', 'rejected'].includes(d.kind) ? 'warn' : 'muted',
+})))
 const unverified = computed(() => mission.value?.findings.filter((f) => f.status === 'unverified' || f.status === 'suspect').length ?? 0)
 
 async function decide(approved: boolean) {
@@ -89,27 +95,29 @@ function select(pid: string) {
     </div>
 
     <template v-else>
-      <TaskVerdict :score="score" :unverified="unverified" :status="mission.status" :scenario="scenario" />
+      <TaskVerdict :score="score" :result="result" :unverified="unverified" :status="mission.status" :scenario="scenario" />
       <div class="layout">
         <div class="col">
           <LiveView :active="flying" />
           <div class="card map-card">
             <div class="map-head">
               <h2>场地 {{ site?.name ?? '' }}</h2>
-              <label v-if="!score" class="small"><input v-model="showTruth" type="checkbox" /> 显示标准答案</label>
+              <label v-if="!score || !scenario.usesPanels" class="small"><input v-model="showTruth" type="checkbox" /> 显示标准答案</label>
             </div>
             <MapView v-if="site" :site="site" :findings="mission.findings" :plan="mission.plan" :telemetry="mapTelemetry"
-                     :truth="showTruth || score ? truth : null" :score="score" :selected="selected" @select="selected = $event" />
+                     :truth="showTruth || (score && scenario.usesPanels) ? truth : null" :score="scenario.usesPanels ? score : null" :selected="selected"
+                     :markers="markers" @select="selected = $event" />
           </div>
         </div>
         <div class="col">
           <PlanCard v-if="mission.plan?.sorties" :plan="mission.plan" :awaiting="mission.status === 'awaiting_approval'" :busy="busy" @decide="decide" />
-          <TruthComparison v-if="score && score.defects != null" :score="score" :truth="truth" :scenario="scenario" @select="select" />
+          <TruthComparison v-if="scenario.usesPanels && score && score.defects != null" :score="score" :truth="truth" :scenario="scenario" @select="select" />
+          <RescueResult v-if="!scenario.usesPanels && result" :result="result" :scenario="scenario" @photo="openPhoto = $event" />
           <div class="card"><h2>团队协作记录</h2><Timeline :events="events" /></div>
         </div>
       </div>
       <div v-if="result?.summary" class="card summary"><h2>报告员结论</h2><p>{{ result.summary }}</p></div>
-      <FindingCards :findings="mission.findings" :selected="selected" :types="scenario.findingTypes" @select="selected = $event" @photo="openPhoto = $event" />
+      <FindingCards v-if="scenario.usesPanels" :findings="mission.findings" :selected="selected" :types="scenario.findingTypes" @select="selected = $event" @photo="openPhoto = $event" />
       <PhotoStrip :photos="mission.photos" :open="openPhoto" @open="openPhoto = $event" />
     </template>
   </template>

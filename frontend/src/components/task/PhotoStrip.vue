@@ -8,14 +8,17 @@ const emit = defineEmits<{ open: [photoId: number | null] }>()
 const overlay = ref(true)
 
 const current = computed(() => props.photos.find((p) => p.id === props.open) ?? null)
-const label = (p: Photo) => (p.kind === 'overview' ? `${p.target} 列整列` : p.kind === 'segment' ? `${p.target} 附近分段` : `${p.target} 近照`)
-const screening = (p: Photo) => p.kind === 'overview' || p.kind === 'segment'   // 初筛用的照片：叠加各板的判断框
+const KIND: Record<string, (t: string) => string> = {
+  overview: (t) => `${t} 列整列`, segment: (t) => `${t} 附近分段`, closeup: (t) => `${t} 近照`, search: (t) => `搜索点 ${t}`, confirm: (t) => `确认 ${t}`,
+}
+const label = (p: Photo) => (KIND[p.kind] ?? ((t: string) => t))(p.target)
+const screening = (p: Photo) => p.kind === 'overview' || p.kind === 'segment'   // 光伏初筛用的照片：叠加各板的判断框
 const recent = computed(() => [...props.photos].reverse().slice(0, 24))
 </script>
 
 <template>
   <div class="card">
-    <h2>照片 <span class="muted small">共 {{ photos.length }} 张（整列 {{ photos.filter((p) => p.kind === 'overview').length }}，分段 {{ photos.filter((p) => p.kind === 'segment').length }}）</span></h2>
+    <h2>照片 <span class="muted small">共 {{ photos.length }} 张</span></h2>
     <div v-if="photos.length" class="strip">
       <button v-for="p in recent" :key="p.id" class="thumb" :class="p.kind" @click="emit('open', p.id)">
         <img :src="photoUrl(p.id, screening(p), 240)" :alt="label(p)" loading="lazy" />

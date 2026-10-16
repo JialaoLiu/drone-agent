@@ -68,6 +68,9 @@ cd "$PX4_DIR/build/px4_sitl_default"
 PX4_GZ_STANDALONE=1 PX4_GZ_WORLD="$WORLD" PX4_GZ_MODEL_NAME=x500_inspect_0 PX4_SYS_AUTOSTART=4019 \
 	nohup ./bin/px4 -d > "$LOG_DIR/px4.log" 2>&1 &
 
-"$CONDA_PREFIX/bin/python" "$PROJECT_DIR/sim/camera_bridge.py" --world "$WORLD" --model x500_inspect_0 \
+CROWD_ARGS=()
+# 救援场景：相机桥同时按路线移动人物
+[ -f "$(dirname "$WORLD_FILE")/crowd.json" ] && CROWD_ARGS=(--crowd "$(dirname "$WORLD_FILE")/crowd.json")
+"$CONDA_PREFIX/bin/python" "$PROJECT_DIR/sim/camera_bridge.py" --world "$WORLD" --model x500_inspect_0 "${CROWD_ARGS[@]}" \
 	> "$LOG_DIR/camera_bridge.log" 2>&1 &
 echo "仿真已启动：场景 $WORLD，日志 $LOG_DIR"

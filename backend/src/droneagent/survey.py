@@ -14,7 +14,7 @@ from .sim.scene import PANEL_HEIGHT, TILT
 CRUISE_SPEED = 5.0          # m/s，与 flight.CRUISE_SPEED 一致
 # 每个拍摄点的停留时间（秒），按实测标定：整列拍摄含云台稳定与等待初筛结果（视觉模型约 20–50 秒，取 30），
 # 近距复核含转向、云台稳定、取图，复核结果在飞往下一块时并行返回。
-SHOT_SECONDS = {"overview": 30.0, "segment": 3.0, "closeup": 3.0, "transit": 0.0}   # 近距复核实测约 2.3 秒 / 块；绕行点不停留
+SHOT_SECONDS = {"overview": 30.0, "segment": 3.0, "closeup": 3.0, "search": 4.0, "confirm": 4.0, "transit": 0.0}   # 近距复核实测约 2.3 秒 / 块；绕行点不停留
 DETOUR_MARGIN = 5.0         # 绕行时离禁飞区边界的距离（大于安全员要求的 3 米）
 CLIMB_SPEED = 1.0           # 起飞爬升实测约 1 m/s
 DESCENT_SPEED = 0.7         # PX4 降落速度 MPC_LAND_SPEED 默认 0.7 m/s

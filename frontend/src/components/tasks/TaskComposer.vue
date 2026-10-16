@@ -36,7 +36,7 @@ async function submit() {
     <div class="scene">
       <span class="muted small">场景</span>
       <b>{{ sim.scene ?? '未启动' }}</b>
-      <span v-if="site" class="muted small">{{ scenario.label }} · {{ site.arrays.length }} {{ scenario.group }} · {{ site.panels.length }} {{ scenario.item }}{{ site.location ? ' · ' + site.location.name : '' }}</span>
+      <span v-if="site" class="muted small">{{ scenario.label }} · {{ scenario.summary(site) }}{{ site.location ? ' · ' + site.location.name : '' }}</span>
       <router-link to="/scenes" class="small">更换</router-link>
     </div>
     <textarea v-model="task" rows="3" :placeholder="`用一句话描述${scenario.verb}任务，例如：${examples[0]?.text ?? ''}`" @keydown.enter.meta.prevent="submit" @keydown.enter.ctrl.prevent="submit" />

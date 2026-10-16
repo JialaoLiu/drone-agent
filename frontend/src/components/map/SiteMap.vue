@@ -4,11 +4,11 @@
 import { computed } from 'vue'
 import { IMAGERY_ATTRIBUTION, tilesFor } from '../../geo/tiles'
 import { useTweenedPose } from '../../stores/tween'
-import type { Finding, Plan, Site, Telemetry, Truth } from '../../types'
+import type { Finding, Marker, Plan, Site, Telemetry, Truth } from '../../types'
 
 const props = defineProps<{
   site: Site; findings: Finding[]; plan: Plan | null; telemetry: Partial<Telemetry>
-  truth?: Truth | null; score?: Record<string, any> | null; selected?: string | null; satellite?: boolean
+  truth?: Truth | null; score?: Record<string, any> | null; selected?: string | null; satellite?: boolean; markers?: Marker[]
 }>()
 const emit = defineEmits<{ select: [panelId: string] }>()
 
@@ -53,6 +53,7 @@ const FEATURE: Record<string, { fill: string; stroke: string; opacity: number }>
   wood: { fill: '#2f9e44', stroke: '#2b8a3e', opacity: 0.2 }, solar: { fill: 'none', stroke: '#f08c00', opacity: 1 },
   aeroway: { fill: '#fa5252', stroke: '#e03131', opacity: 0.2 },
 }
+const MARK: Record<string, string> = { target: '#e03131', bad: '#e03131', warn: '#f59f00', muted: '#868e96', info: '#7048e8' }
 const source = computed(() => (props.telemetry?.updated ? { x: props.telemetry.x ?? 0, y: props.telemetry.y ?? 0, yaw: props.telemetry.yaw ?? 0 } : null))
 const drone = useTweenedPose(source)
 </script>
@@ -86,6 +87,18 @@ const drone = useTweenedPose(source)
           <circle :cx="sx(v.position[0])" :cy="sy(v.position[1])" r="7" :fill="s.color" />
           <text :x="sx(v.position[0]) + 10" :y="sy(v.position[1]) + 4" class="label small">{{ v.target }}</text>
         </g>
+      </g>
+      <g v-for="l in site.landmarks ?? []" :key="l.id">
+        <circle :cx="sx(l.center[0])" :cy="sy(l.center[1])" r="6" fill="#7048e8" stroke="#fff" stroke-width="1.5" />
+        <text :x="sx(l.center[0]) + 9" :y="sy(l.center[1]) + 4" class="label">{{ l.label }}</text>
+      </g>
+      <g v-for="p in truth?.people ?? []" :key="p.id">
+        <circle :cx="sx(p.start[0])" :cy="sy(p.start[1])" :r="p.role === 'target' ? 7 : 5" fill="none" :stroke="p.role === 'target' ? '#d6336c' : '#adb5bd'" stroke-width="2" stroke-dasharray="3 2" />
+        <text v-if="p.role === 'target'" :x="sx(p.start[0]) + 9" :y="sy(p.start[1]) - 6" class="label small">目标起点（{{ p.state === 'water' ? '落水' : p.state === 'walking' ? '走动' : '静止' }}）</text>
+      </g>
+      <g v-for="(m, i) in markers ?? []" :key="'m' + i" class="marker">
+        <circle :cx="sx(m.x)" :cy="sy(m.y)" :r="m.tone === 'target' ? 9 : 6" :fill="MARK[m.tone]" fill-opacity="0.85" stroke="#fff" stroke-width="2" />
+        <text v-if="m.tone === 'target' || m.tone === 'warn'" :x="sx(m.x) + 11" :y="sy(m.y) + 4" class="label small">{{ m.label }}</text>
       </g>
       <g :transform="`translate(${sx(0)},${sy(0)})`">
         <circle r="11" fill="var(--panel)" fill-opacity="0.7" stroke="var(--text)" stroke-width="2" />

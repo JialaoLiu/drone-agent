@@ -7,7 +7,7 @@ import Spinner from '../components/common/Spinner.vue'
 import MapView from '../components/map/MapView.vue'
 import PlaceSearch from '../components/scene/PlaceSearch.vue'
 import SceneThumb from '../components/scene/SceneThumb.vue'
-import { scenarioOf } from '../scenarios'
+import { allScenarios, scenarioOf } from '../scenarios'
 import { useSim } from '../stores/sim'
 import { useSites } from '../stores/sites'
 import { useToast } from '../stores/toast'
@@ -20,15 +20,21 @@ const scenes = ref<SceneInfo[]>([])
 const selected = ref<string | null>(null)
 const place = ref<Place | null>(null)
 const seed = ref<number | null>(null)
+const kind = ref<'solar' | 'rescue'>('solar')
 const advanced = ref(false)
 const generating = ref(false)
-const filter = ref<'all' | 'real' | 'random'>('all')
+const filter = ref<'all' | 'real' | 'random' | 'solar' | 'rescue'>('all')
 const page = ref(1)
 const PER = 12
 const preview = ref<string | null>(null)
 const truth = ref<Truth | null>(null)
 
-const filtered = computed(() => scenes.value.filter((s) => filter.value === 'all' || (filter.value === 'real' ? !!s.location : !s.location)))
+const filtered = computed(() => scenes.value.filter((s) => {
+  if (filter.value === 'all') return true
+  if (filter.value === 'real') return !!s.location
+  if (filter.value === 'random') return !s.location
+  return (s.scenario ?? 'solar') === filter.value
+}))
 const pages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PER)))
 const shown = computed(() => filtered.value.slice((page.value - 1) * PER, page.value * PER))
 const starting = computed(() => phase.value === 'starting')
@@ -40,7 +46,7 @@ async function refresh() {
 async function generate() {
   generating.value = true
   try {
-    const { name } = await createScene(advanced.value ? seed.value : null, place.value)
+    const { name } = await createScene(advanced.value ? seed.value : null, place.value, kind.value)
     show(`已生成场景 ${name}${place.value ? `（${place.value.name}）` : ''}`, 'ok')
     filter.value = 'all'; page.value = 1
     await refresh()
@@ -50,7 +56,7 @@ async function generate() {
 async function setPage(p: number) { page.value = p; await Promise.all(shown.value.map((s) => load(s.name))) }
 async function openPreview(name: string) { preview.value = name; truth.value = null; await load(name) }
 async function toggleTruth() { truth.value = truth.value ? null : await getTruth(preview.value!).catch(() => null) }
-const info = (s: SceneInfo) => `${s.arrays} ${scenarioOf(s.scenario).group} · ${s.panels} ${scenarioOf(s.scenario).item}`
+const info = (s: SceneInfo) => `${scenarioOf(s.scenario).label} · ${scenarioOf(s.scenario).summary(null, { arrays: s.arrays, panels: s.panels })}`
 const time = (t?: number) => (t ? new Date(t * 1000).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
 onMounted(refresh)
 </script>
@@ -58,6 +64,9 @@ onMounted(refresh)
 <template>
   <div class="bar card">
     <div class="gen">
+      <select v-model="kind" title="应用场景">
+        <option v-for="sc in allScenarios()" :key="sc.id" :value="sc.id">{{ sc.label }}</option>
+      </select>
       <PlaceSearch v-model="place" />
       <button class="primary" :disabled="generating" @click="generate"><Spinner v-if="generating" :size="12" /> {{ place ? '在这里生成场景' : '随机生成场景' }}</button>
       <button class="small link" @click="advanced = !advanced">{{ advanced ? '收起' : '高级' }}</button>
@@ -80,7 +89,7 @@ onMounted(refresh)
   <p class="small muted note">场景按随机布局编号生成：围栏、禁飞区、阵列的数量与朝向、树的位置、缺陷与干扰都随编号变化，并附标准答案。真实场地会取用当地的水面、建筑、树（OpenStreetMap）和高程，阵列不会放在水面和建筑上。场景里的光伏板是程序生成的贴图，不是数据集照片。</p>
 
   <div class="filters">
-    <button v-for="(l, k) in { all: '全部', real: '真实场地', random: '随机场地' }" :key="k" class="small" :class="{ on: filter === k }" @click="filter = k as any; setPage(1)">{{ l }}</button>
+    <button v-for="(l, k) in { all: '全部', real: '真实场地', random: '随机场地', solar: '光伏巡检', rescue: '应急救援' }" :key="k" class="small" :class="{ on: filter === k }" @click="filter = k as any; setPage(1)">{{ l }}</button>
     <span class="muted small">共 {{ filtered.length }} 个，新生成的在前</span>
   </div>
   <div class="cards">

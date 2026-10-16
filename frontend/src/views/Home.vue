@@ -23,7 +23,7 @@ const scenario = computed(() => scenarioOf(site.value?.scenario))
       <h2>三步开始</h2>
       <ol>
         <li :class="{ done: !!sim.scene }"><b>选场景</b><span>在 <router-link to="/scenes">场景库</router-link> 选一个随机场地，或搜索真实地点生成数字孪生场地，然后启动仿真。</span></li>
-        <li :class="{ done: phase === 'ready' || phase === 'busy' }"><b>下达任务</b><span>在左侧用一句话描述任务。调度员理解、规划员出计划、安全员校验，确认后起飞。</span></li>
+        <li :class="{ done: phase === 'ready' || phase === 'busy' }"><b>下达任务</b><span>在左侧用一句话描述任务（光伏巡检或应急救援，取决于场景）。调度员理解、规划员出计划、安全员校验，确认后起飞。</span></li>
         <li><b>看结果</b><span>任务进度、实时视角、发现与报告都在这个工作台里；历史任务在左侧随时可以回看。</span></li>
       </ol>
       <p class="small muted">当前：{{ phaseText }}{{ sim.scene ? ` · ${sim.scene}` : '' }}</p>

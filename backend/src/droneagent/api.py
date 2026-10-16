@@ -96,6 +96,7 @@ class NewScene(BaseModel):
     seed: int | None = Field(None, ge=1, le=100000)   # 不给时随机选一个布局编号
     defect_rate: float = Field(0.12, ge=0.02, le=0.4)
     location: Place | None = None         # 真实场地（来自 /places 的检索结果）
+    scenario: str = Field("solar", pattern="^(solar|rescue)$")
 
 
 @app.get("/scenes")
@@ -115,6 +116,10 @@ def _unique_name(base: str) -> str:
 def create_scene(body: NewScene) -> dict:
     import random
     seed = body.seed or random.randint(1, 100000)
+    if body.scenario == "rescue":
+        from .rescue import scene as rescue_scene
+        out = rescue_scene.generate(seed, _unique_name(f"rescue_{seed}"), body.location.model_dump() if body.location else None)
+        return {"name": out.name, "seed": seed, "ground": scene.load_site(out.name).get("ground")}
     if body.location:
         out = scene.generate(seed, _unique_name(f"site_{seed}"), body.defect_rate, location=body.location.model_dump())
     else:
@@ -274,6 +279,8 @@ def get_site(name: str) -> dict:
     for p in site["panels"]:
         p.pop("defect", None)
         p.pop("distractor", None)
+    for key in ("people", "decoys", "brief"):       # 救援场景：人员的真实位置与目标特征属于标准答案
+        site.pop(key, None)
     return site
 
 
@@ -297,6 +304,8 @@ def get_basemap(name: str) -> dict:
 @app.get("/site/{name}/truth")
 def get_truth(name: str) -> dict:
     site = _site(name)
+    if site.get("scenario") == "rescue":
+        return {"defects": [], "people": site["people"], "decoys": site.get("decoys", []), "brief": site.get("brief")}
     return {"defects": [{"panel_id": p["id"], **p["defect"]} for p in site["panels"] if p["defect"]]}
 
 
@@ -474,7 +483,13 @@ def get_score(mid: str) -> dict:
     m = store.get_mission(mid)
     if m is None:
         raise HTTPException(404, "任务不存在")
-    arrays = (m.get("result") or {}).get("inspected_arrays")
+    result = m.get("result") or {}
+    if result.get("scenario") == "rescue":
+        from .rescue import scoring as rescue_scoring
+        found = result.get("found") or {}
+        photo = store.get_photo(found["photo"]) if found.get("photo") else None
+        return rescue_scoring.score(scene.load_site(m["scene"]), result, (photo or {}).get("meta"))
+    arrays = result.get("inspected_arrays")
     if not arrays:
         raise HTTPException(409, "任务还没有巡检结果")
     reported = {f["panel_id"]: f["type"] for f in store.findings(mid) if f["status"] == "confirmed"}

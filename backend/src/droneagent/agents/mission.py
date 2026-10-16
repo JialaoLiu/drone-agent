@@ -654,16 +654,30 @@ def build() -> StateGraph:
     return g
 
 
-_graph = None
+_graphs: dict = {}
+_saver = None
 
 
-async def graph():
-    global _graph
-    if _graph is None:
-        config.ensure_dirs()
-        conn = await aiosqlite.connect(config.CHECKPOINT_DB)
-        _graph = build().compile(checkpointer=AsyncSqliteSaver(conn))
-    return _graph
+async def graph(scenario: str = "solar"):
+    """按场景类型取任务图（场景包）：光伏巡检与应急救援共用检查点数据库，线程号都是任务号。"""
+    global _saver
+    if scenario not in _graphs:
+        if _saver is None:
+            config.ensure_dirs()
+            _saver = AsyncSqliteSaver(await aiosqlite.connect(config.CHECKPOINT_DB))
+        if scenario == "rescue":
+            from . import rescue
+            _graphs[scenario] = rescue.build().compile(checkpointer=_saver)
+        else:
+            _graphs[scenario] = build().compile(checkpointer=_saver)
+    return _graphs[scenario]
+
+
+def scenario_of(scene: str) -> str:
+    try:
+        return load_site(scene).get("scenario", "solar")
+    except (FileNotFoundError, OSError):
+        return "solar"
 
 
 async def _run(mission_id: str, payload) -> None:
@@ -684,7 +698,8 @@ async def _run(mission_id: str, payload) -> None:
 
 
 async def _run_once(mission_id: str, payload) -> None:
-    g = await graph()
+    m = store.get_mission(mission_id)
+    g = await graph(scenario_of(m["scene"]) if m else "solar")
     cfg = {"configurable": {"thread_id": mission_id}, "recursion_limit": 200}
     try:
         result = await g.ainvoke(payload, cfg)

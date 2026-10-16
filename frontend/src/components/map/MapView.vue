@@ -3,14 +3,14 @@
 import { computed, ref, watch } from 'vue'
 import { getBasemap } from '../../api'
 import { scenarioOf } from '../../scenarios'
-import type { Finding, Plan, Site, Telemetry, Truth } from '../../types'
+import type { Finding, Marker, Plan, Site, Telemetry, Truth } from '../../types'
 import BaiduMap, { type BaiduFrame } from './BaiduMap.vue'
 import MapLegend from './MapLegend.vue'
 import SiteMap from './SiteMap.vue'
 
 const props = defineProps<{
   site: Site; findings: Finding[]; plan: Plan | null; telemetry: Partial<Telemetry>
-  truth?: Truth | null; score?: Record<string, any> | null; selected?: string | null
+  truth?: Truth | null; score?: Record<string, any> | null; selected?: string | null; markers?: Marker[]
 }>()
 const emit = defineEmits<{ select: [panelId: string] }>()
 const real = computed(() => !!props.site.location && !!props.site.origin)
@@ -39,8 +39,8 @@ const legend = computed(() => scenarioOf(props.site.scenario).legend)
     </div>
     <BaiduMap v-if="mode === 'baidu' && frame" :site="site" :frame="frame" :findings="findings" :plan="plan" :telemetry="telemetry" />
     <SiteMap v-else :site="site" :findings="findings" :plan="plan" :telemetry="telemetry" :truth="truth" :score="score"
-             :selected="selected" :satellite="mode === 'satellite'" @select="(id) => emit('select', id)" />
-    <MapLegend :items="legend" :comparison="!!score" />
+             :selected="selected" :satellite="mode === 'satellite'" :markers="markers" @select="(id) => emit('select', id)" />
+    <MapLegend :items="legend" :comparison="!!score && !!site.panels.length" />
   </div>
 </template>
 
