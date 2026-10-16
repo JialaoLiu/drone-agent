@@ -274,7 +274,7 @@ scripts/start.sh stop
 | `PYTHONPATH=src uv run python -m droneagent.sim.scene --seed 8 --lat -34.9285 --lon 138.6007 --label "Adelaide 测试场地"` | 直接按经纬度生成场景（国外地点） | 否 | 否 |
 | `PYTHONPATH=src uv run python -m droneagent.evaluate real --splits test` | 真实照片：公开光伏缺陷数据集（数据在 `drone-agent-related/datasets/`），按类别统计 | 否 | 是 |
 | `PYTHONPATH=src uv run python -m droneagent.evaluate twin --seeds 1-10` | 真实场地数字孪生：5 个真实地点，随机布置与孪生约束布置对比 | 否 | 否 |
-| `uv run python -m pytest` | 离线单元测试（67 个） | 否 | 否 |
+| `uv run python -m pytest` | 离线单元测试（70 个） | 否 | 否 |
 
 结果写入 `backend/eval/results/<时间>-<类型>.md` 和 `.json`，网页“评测结果”页自动读取。
 
@@ -293,7 +293,7 @@ claude mcp add drone-agent -- env PYTHONPATH=<backend 绝对路径>/src uv --dir
 ## 10. 常见问题
 
 **为什么评测这么花钱？**
-主要不是“看图”贵，而是视觉模型每次输出约 960 个 Token（我们只需要约 80 个的 JSON，其余是推理过程），输出单价又是输入的 4 倍；另外北京时间高峰时段单价是闲时的 2 倍。优化方向见 `docs/roadmap.md` 的“成本优化”。
+主要不是“看图”贵，而是视觉模型开着推理时每次输出约 960 个 Token（结论只需约 80 个）。对照实验后已默认关闭推理（`backend/.env` 的 `VISION_THINKING`，默认 off），费用省 75%–86%，复核后的结果不变。评测时加 `--cache` 可以复用相同请求的结论；北京时间高峰时段运行评测会提示单价翻倍。详见 `docs/roadmap.md` 的“成本优化”。
 
 **飞行前检查的“天气”提示不宜起飞，为什么还能飞？**
 仿真里的风场和真实天气无关，所以默认只提示。真机部署时在 `backend/.env` 设 `WEATHER_ENFORCE=1`，不通过就拒绝起飞，取不到天气数据也拒绝。
