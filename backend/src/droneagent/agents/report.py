@@ -86,16 +86,31 @@ def default_advice(result: dict, priorities: list[str]) -> str:
     return text
 
 
-def for_reporter(result: dict) -> dict:
-    """交给报告员的数据：字段含义直白，避免模型把照片编号之类的字段误读。"""
-    # 缺陷多时只保留前若干条（已按优先级排序），其余按类型和列汇总：报告员只写建议，不需要逐条细节
+def hotspot_arrays(defects: list[dict], top: int = 2) -> list[str]:
+    """破碎和缺失最集中的列（程序统计）：数量排前 top 名的列，与第 top 名并列的也算，最多 3 列；不到 2 处的列不算集中。
+    评测发现模型自己从清单里数“哪几列最集中”经常数错（不论清单是否压缩，见工程日志 35）。"""
+    from collections import Counter
+    counts = Counter(d["panel_id"].split("-")[0] for d in defects if PRIORITY.get(d.get("type") or "", 3) == 0)
+    ranked = [c for c in counts.most_common() if c[1] >= 2]
+    if not ranked:
+        return []
+    kth = ranked[min(top, len(ranked)) - 1][1]
+    return sorted(a for a, n in ranked if n >= kth)[:3]
+
+
+def for_reporter(result: dict, keep: int = context.KEEP_ITEMS) -> dict:
+    """交给报告员的数据：字段含义直白，避免模型把照片编号之类的字段误读。keep：清单保留的条数（评测对比用）。"""
+    # 缺陷多时只保留前若干条，另附全部条目按列和类型的数量：报告员只写建议，不需要逐条细节
+    # 同一优先级内置信度高的在前：压缩时保留的是最该先处理、把握最大的几条，而不是编号靠前的几条
+    ordered = sorted(result["defects"], key=lambda d: (PRIORITY.get(d.get("type") or "", 3), -(d["confidence"] or 0)))
     defects = [{"panel_id": d["panel_id"], "缺陷": d["label"], "置信度": round(d["confidence"] or 0, 2),
-                "确认方式": "近距复核确认" if d["verify_photo"] else "整列照片一眼可见（缺失）"} for d in result["defects"]]
+                "确认方式": "近距复核确认" if d["verify_photo"] else "整列照片一眼可见（缺失）"} for d in ordered]
     unverified = [{"panel_id": u["panel_id"], "疑似": u["evidence"], "未确认原因": u.get("reason")} for u in result["unverified"]]
     return {
         "巡检的列": result["inspected_arrays"], "未巡检的列": result["skipped_arrays"], "检查的板数": result["panels_inspected"],
-        "defects": context.compact_items(defects, "缺陷"),
-        "unverified": context.compact_items(unverified, "未确认原因"),
+        "defects": context.compact_items(defects, "缺陷", keep),
+        "破碎和缺失最集中的列": hotspot_arrays(result["defects"]),
+        "unverified": context.compact_items(unverified, "未确认原因", keep),
         "复核后排除的疑似": result["cleared"], "复核策略": result["closeup_policy"],
         "架次": result.get("sorties", 1), "飞行秒数": result["flight_seconds"], "耗电百分比": result["battery_used"], "异常": result["error"],
         "只拍照未判断的列": result.get("unjudged_arrays", []),

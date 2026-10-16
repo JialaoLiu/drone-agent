@@ -26,7 +26,7 @@ from pathlib import Path
 
 import yaml
 
-from . import config, inspection, safety, scoring, survey, vision
+from . import config, context, inspection, safety, scoring, survey, vision
 from .llm import ModelUnavailable
 from .sim.camera import Frame
 from .sim.scene import load_site
@@ -574,6 +574,164 @@ def run_real(splits: list[str], limit: int = 0) -> dict:
     return {"suite": "real", "summary": summary, "rows": rows}
 
 
+# ---------- recheck ----------
+
+RECHECK_POLICIES = {"none": "不再看", "same": "同样请求再看一次", "think": "再看一次时打开推理"}
+
+
+def run_recheck(scenes: list[str], provider: str | None) -> dict:
+    """“再看一次”值不值：全部近照先按默认（关闭推理）复核一次，对触发再看的板（复核不确定，或初筛高置信缺陷、复核判正常）
+    分别用三种做法收尾：不再看（第一次的结论直接用）、同样的请求再看一次（实时任务现在的做法）、再看时打开推理。
+    其余板三种做法结论相同。报告触发数、结论改变数、改对 / 改错数，以及按“全部复核”算的检出率、精确率和费用。"""
+    pool = ThreadPoolExecutor(8)
+    parallel = lambda fn, items: list(pool.map(fn, items))   # noqa: E731
+    rows, totals = [], {k: {"tp": 0, "fp": 0, "defects": 0, "cost": 0.0} for k in RECHECK_POLICIES}
+    for scene in scenes:
+        if not (CAPTURES / scene / "meta.json").exists():
+            raise SystemExit(f"没有 {scene} 的录制数据")
+        site, cap = _captured_site(scene), CAPTURES / scene
+        cands, screen_cost = {}, 0.0
+        for a in site["arrays"]:
+            s = inspection.screen_frame(Frame.load(cap / f"overview_{a['id']}"),
+                                        [p for p in site["panels"] if p["array"] == a["id"]], provider, parallel)
+            cands.update({c["id"]: c for c in s.candidates})
+            screen_cost += sum(u.cost_yuan or 0 for u in s.usages)
+        panels = {p["id"]: p for p in site["panels"]}
+
+        def judge(pid: str):
+            tile = vision.rectify(Frame.load(cap / f"closeup_{pid}"), panels[pid], (vision.CLOSE_W, vision.CLOSE_H))
+            if tile is None:
+                return None
+            first, u0 = vision.verify(tile, provider)
+            scr = cands.get(pid) or {}
+            conflict = first["status"] == "ok" and scr.get("status") == "defect" and scr.get("confidence", 0) >= inspection.CONFLICT_CONFIDENCE
+            out = {"scene": scene, "panel": pid, "truth": (panels[pid]["defect"] or {}).get("type"),
+                   "screen": scr.get("status"), "trigger": "unsure" if first["status"] == "unsure" else "conflict" if conflict else None,
+                   "none": first, "cost": {"none": u0.cost_yuan or 0}}
+            if out["trigger"]:
+                same, u1 = vision.verify(tile, provider, attempt=1)
+                think, u2 = vision.verify(tile, provider, attempt=1, thinking=True)
+                out.update(same=same, think=think)
+                out["cost"].update(same=out["cost"]["none"] + (u1.cost_yuan or 0), think=out["cost"]["none"] + (u2.cost_yuan or 0))
+            else:
+                out.update(same=first, think=first)
+                out["cost"].update(same=out["cost"]["none"], think=out["cost"]["none"])
+            return out
+
+        judged = [r for r in pool.map(judge, list(panels)) if r]
+        for r in judged:
+            for k in RECHECK_POLICIES:
+                v = r[k]
+                totals[k]["cost"] += r["cost"][k]
+                totals[k]["defects"] += r["truth"] is not None
+                if v["status"] == "defect":
+                    totals[k]["tp" if r["truth"] else "fp"] += 1
+            if r["trigger"]:
+                rows.append({"scene": r["scene"], "panel": r["panel"], "truth": r["truth"], "screen": r["screen"], "trigger": r["trigger"],
+                             **{k: {"status": r[k]["status"], "type": r[k]["type"], "evidence": r[k]["evidence"]} for k in RECHECK_POLICIES},
+                             "cost": r["cost"]})
+        for k in RECHECK_POLICIES:
+            totals[k]["cost"] += screen_cost
+        print(f"{scene}：触发再看 {sum(r['trigger'] is not None for r in judged)} 块", flush=True)
+    pool.shutdown()
+
+    def right(v: dict, truth) -> bool:
+        return v["status"] == ("defect" if truth else "ok")
+
+    summary = {}
+    for k in RECHECK_POLICIES:
+        t = totals[k]
+        changed = [r for r in rows if r[k]["status"] != r["none"]["status"]]
+        summary[k] = {"recall": round(t["tp"] / t["defects"], 3) if t["defects"] else None,
+                      "precision": round(t["tp"] / (t["tp"] + t["fp"]), 3) if t["tp"] + t["fp"] else None,
+                      "false_alarms": t["fp"], "cost_yuan": round(t["cost"], 4),
+                      "triggered_right": sum(right(r[k], r["truth"]) for r in rows),
+                      "triggered_unsure": sum(r[k]["status"] == "unsure" for r in rows),
+                      "changed": len(changed),
+                      "fixed": sum(right(r[k], r["truth"]) and not right(r["none"], r["truth"]) for r in changed),
+                      "broke": sum(right(r["none"], r["truth"]) and not right(r[k], r["truth"]) for r in changed)}
+    return {"suite": "recheck", "scenes": scenes, "triggered": len(rows),
+            "by_trigger": {t: sum(r["trigger"] == t for r in rows) for t in ("unsure", "conflict")},
+            "summary": summary, "rows": rows}
+
+
+# ---------- reporter ----------
+
+def _synthetic_result(site: dict, n_defects: int, seed: int) -> dict:
+    """按真实场地的板编号造一份巡检结果：缺陷类型随机，另有约五分之一的未确认疑似。"""
+    import random
+    from .agents import report
+    rng = random.Random(seed)
+    panels = [p["id"] for p in site["panels"]]
+    picked = rng.sample(panels, min(len(panels), n_defects + n_defects // 5))
+    kinds = list(vision.DEFECT_TYPES)
+    defects = [{"panel_id": pid, "type": (t := rng.choice(kinds)), "label": vision.DEFECT_TYPES[t], "confidence": round(rng.uniform(0.6, 0.95), 2),
+                "evidence": "", "screen_photo": 1, "verify_photo": None if t == "missing" else 2} for pid in picked[:n_defects]]
+    defects.sort(key=lambda d: (report.PRIORITY.get(d["type"], 3), d["panel_id"]))
+    unverified = [{"panel_id": pid, "type": None, "evidence": "整列照片上有一处看不清的痕迹", "screen_photo": 1,
+                   "reason": rng.choice(list(report.REASONS.values()))} for pid in picked[n_defects:]]
+    return {"inspected_arrays": [a["id"] for a in site["arrays"]], "skipped_arrays": [], "panels_inspected": len(panels),
+            "defects": defects, "unverified": unverified, "cleared": rng.randint(0, 5), "flight_seconds": 600, "battery_used": 40.0,
+            "sorties": 1, "error": None, "unjudged_arrays": [], "closeup_policy": "flagged_and_unsure"}
+
+
+def _column_claim(text: str, result: dict) -> bool | None:
+    """建议里“某几列最集中”的说法是否属实：说到的列都在程序统计的破碎和缺失最集中的列里（report.hotspot_arrays）。
+    没有这类说法时返回 None。"""
+    import re
+    from .agents import report
+    cols_pat = r"((?:[A-Z]\s*列?\s*(?:、|和|与)\s*)*[A-Z])\s*(?:两|三|四)?\s*列"
+    m = None
+    for seg in re.split(r"[。；]", text):
+        if not re.search(r"疑似|未确认", seg):          # 说未确认疑似集中在哪几列的不算
+            m = re.search(cols_pat + r"[^，]*?集中", seg) or re.search(r"集中[^，]*?" + cols_pat, seg)
+            if m:
+                break
+    if not m:
+        return None
+    cols = set(re.findall(r"[A-Z]", next(g for g in m.groups() if g)))
+    return cols <= set(report.hotspot_arrays(result["defects"]))
+
+
+def run_reporter(sizes: list[int], seeds: list[int], scene: str) -> dict:
+    """报告员输入压缩前后的建议质量：同一份结果分别给完整清单和压缩后的清单（context.compact_items），比较
+    建议被程序拒收的比例、优先处理清单是否先列破碎和缺失、未确认的疑似有没有交代处理方式，以及输入 Token。"""
+    import re
+    from .agents import report, roles
+    site = _captured_site(scene)
+    rows = []
+    for n in sizes:
+        for seed in seeds:
+            result = _synthetic_result(site, n, seed)
+            top = [d["panel_id"] for d in result["defects"] if report.PRIORITY[d["type"]] == 0]
+            for mode, keep in (("full", 10 ** 6), ("compact", context.KEEP_ITEMS)):
+                data = report.for_reporter(result, keep)
+                summary, usage = roles.report_summary(data)
+                pri = summary["priorities"]
+                k = min(len(top), 6)
+                text = summary["advice"] or summary["rejected_text"]
+                claim = _column_claim(text, result)
+                rows.append({"defects": n, "seed": seed, "mode": mode, "column_claim": claim, "prompt_tokens": usage.prompt_tokens, "cost": usage.cost_yuan or 0,
+                             "rejected": summary["advice_rejected"], "empty": not summary["advice"] and not summary["advice_rejected"],
+                             "priorities": len(pri),
+                             "top_first": round(sum(p in top for p in pri[:k]) / k, 3) if k else None,
+                             "mentions_unverified": bool(re.search(r"未确认|疑似|复查|人工|现场", text)), "advice": text})
+                print(f"缺陷 {n} 种子 {seed} {mode}：输入 {usage.prompt_tokens} Token，拒收 {summary['advice_rejected']}，"
+                      f"优先清单前列命中 {rows[-1]['top_first']}", flush=True)
+    summary = {}
+    for mode in ("full", "compact"):
+        rs = [r for r in rows if r["mode"] == mode]
+        tf = [r["top_first"] for r in rs if r["top_first"] is not None]
+        summary[mode] = {"calls": len(rs), "rejected": sum(r["rejected"] for r in rs), "empty": sum(r["empty"] for r in rs),
+                         "top_first": round(sum(tf) / len(tf), 3) if tf else None,
+                         "mentions_unverified": sum(r["mentions_unverified"] for r in rs),
+                         "column_claims": sum(r["column_claim"] is not None for r in rs),
+                         "column_claims_wrong": sum(r["column_claim"] is False for r in rs),
+                         "prompt_tokens_avg": round(sum(r["prompt_tokens"] for r in rs) / len(rs)),
+                         "cost_yuan": round(sum(r["cost"] for r in rs), 4)}
+    return {"suite": "reporter", "scene": scene, "sizes": sizes, "seeds": seeds, "keep": context.KEEP_ITEMS, "summary": summary, "rows": rows}
+
+
 # ---------- troubleshoot ----------
 
 async def _troubleshoot(faults: list[str]) -> dict:
@@ -684,6 +842,30 @@ def write_report(report: dict) -> Path:
             lines.append(f"| {r['place']} | {c['water']} / {c['building']} / {c['wood']} / {c['solar']} | {r['relief_m']} 米 | {r['naive_arrays_blocked']:.0%} | "
                          f"{r['twin_arrays_blocked']:.0%} | {r['generated']}/{r['seeds']} | {p['none']:.0%} / {p['flagged_and_unsure']:.0%} / {p['all']:.0%} | {r['terrain_violations']} |")
         lines += ["", "说明：高程为 Copernicus DEM GLO-30（地表模型，含树冠与建筑高度）；地物来自 OpenStreetMap，国内覆盖较弱；禁飞区仍为模拟。"]
+    elif report["suite"] == "recheck":
+        lines += [f"场景：{'、'.join(report['scenes'])}；全部近照复核一次，触发再看 {report['triggered']} 块"
+                  f"（复核不确定 {report['by_trigger']['unsure']}，初筛与复核冲突 {report['by_trigger']['conflict']}）。", "",
+                  "| 做法 | 检出率 | 精确率 | 误报 | 触发的板判对 | 仍不确定 | 结论改变 | 改对 | 改错 | 费用 |",
+                  "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
+        for k, v in report["summary"].items():
+            lines.append(f"| {RECHECK_POLICIES[k]} | {v['recall']} | {v['precision']} | {v['false_alarms']} | {v['triggered_right']} / {report['triggered']} | "
+                         f"{v['triggered_unsure']} | {v['changed']} | {v['fixed']} | {v['broke']} | ¥{v['cost_yuan']} |")
+        lines += ["", "## 触发再看的板", ""]
+        for r in report["rows"]:
+            lines.append(f"- {r['scene']} {r['panel']}（答案 {r['truth'] or '正常'}，{ {'unsure': '复核不确定', 'conflict': '冲突'}[r['trigger']] }）："
+                         + "；".join(f"{RECHECK_POLICIES[k]} {r[k]['status']}" + (f"/{r[k]['type']}" if r[k]['type'] else "") for k in RECHECK_POLICIES))
+    elif report["suite"] == "reporter":
+        lines += [f"按 {report['scene']} 的板编号造巡检结果，缺陷数 {'、'.join(map(str, report['sizes']))}，每种 {len(report['seeds'])} 个随机种子；"
+                  f"压缩时缺陷和未确认清单各保留前 {report['keep']} 条。", "",
+                  "| 输入 | 调用 | 建议被拒收 | 建议为空 | 优先清单前列是破碎/缺失 | 交代了未确认疑似 | “某几列最集中”说错 | 平均输入 Token | 费用 |",
+                  "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
+        for k, v in report["summary"].items():
+            lines.append(f"| {'完整清单' if k == 'full' else '压缩后'} | {v['calls']} | {v['rejected']} | {v['empty']} | {v['top_first']} | "
+                         f"{v['mentions_unverified']} / {v['calls']} | {v['column_claims_wrong']} / {v['column_claims']} | {v['prompt_tokens_avg']} | ¥{v['cost_yuan']} |")
+        lines += ["", "## 每次的建议", ""]
+        for r in report["rows"]:
+            lines.append(f"- 缺陷 {r['defects']} 种子 {r['seed']} {'完整' if r['mode'] == 'full' else '压缩'}"
+                         f"{'（被拒收）' if r['rejected'] else ''}{'（列的说法不符）' if r['column_claim'] is False else ''}：{r['advice'] or '（空）'}")
     elif report["suite"] == "real":
         s = report["summary"]
         labels = {"Clean": "干净", "Dusty": "灰尘", "Bird-drop": "鸟粪", "Physical-Damage": "物理损坏", "Electrical-damage": "电气损坏", "Snow-Covered": "积雪"}
@@ -753,9 +935,16 @@ def main() -> None:
     tw.add_argument("--seeds", default="1-10")
     rt = sub.add_parser("routes", help="绕行方法对比：栅格 A* 与可见性图（不起飞、不调用模型）")
     rt.add_argument("--seeds", default="1-100", help="例如 1-100")
+    rc = sub.add_parser("recheck", help="“再看一次”值不值：不再看、同样请求再看、再看时打开推理三种做法对比（调用视觉模型）")
+    rc.add_argument("--scenes", default="solar_46,solar_63,solar_71")
+    rc.add_argument("--provider", choices=["deepseek", "openai"])
+    rp = sub.add_parser("reporter", help="报告员输入压缩前后的建议质量对比（调用文本模型）")
+    rp.add_argument("--sizes", default="20,40,77")
+    rp.add_argument("--seeds", default="1-3")
+    rp.add_argument("--scene", default="solar_103")
     ts = sub.add_parser("troubleshoot", help="排障：注入已知故障，检验诊断员能否找到原因（需要仿真）")
     ts.add_argument("--faults", default="all")
-    for p in (vis, rl, pl):
+    for p in (vis, rl, pl, rc):
         p.add_argument("--thinking", choices=["on", "off", "screen"], help="视觉模型推理过程：on 都开、off 都关、screen 只在初筛开（默认按 VISION_THINKING）")
         p.add_argument("--cache", action="store_true", help="完全相同的请求直接用缓存的结论（重跑评测时省钱）")
     args = parser.parse_args()
@@ -769,7 +958,7 @@ def main() -> None:
         os.environ["LLM_CACHE"] = "1"
     llm.reset_stats()
     period = pricing.period(datetime.now().astimezone())
-    if period == "peak" and args.cmd in ("vision", "real", "planning", "troubleshoot", "triage"):
+    if period == "peak" and args.cmd in ("vision", "real", "planning", "troubleshoot", "triage", "recheck"):
         print("提示：现在是北京时间高峰时段，模型单价是闲时的 2 倍；批量评测建议放在闲时运行。", flush=True)
     if args.cmd == "record":
         print("已录制：", _run_async(_record(args.scene, args.standoff)), flush=True)
@@ -791,6 +980,11 @@ def main() -> None:
     elif args.cmd == "routes":
         lo, _, hi = args.seeds.partition("-")
         report = run_routes(list(range(int(lo), int(hi or lo) + 1)))
+    elif args.cmd == "reporter":
+        lo, _, hi = args.seeds.partition("-")
+        report = run_reporter([int(x) for x in args.sizes.split(",")], list(range(int(lo), int(hi or lo) + 1)), args.scene)
+    elif args.cmd == "recheck":
+        report = run_recheck(args.scenes.split(","), args.provider)
     elif args.cmd == "vision":
         report = run_vision(args.scenes.split(","), args.repeat, args.provider)
     else:

@@ -24,12 +24,44 @@ def test_reporter_input_bounded_and_ids_still_valid():
               "defects": [{"panel_id": f"{'AB'[i % 2]}-R1-C{i:02d}", "label": "裂纹", "confidence": 0.9, "verify_photo": 1} for i in range(80)],
               "unverified": []}
     data = report.for_reporter(result)
-    assert data["defects"]["其余数量"] == 80 - context.KEEP_ITEMS and sum(data["defects"]["其余按列"].values()) == 68
+    assert data["defects"]["其余数量"] == 80 - context.KEEP_ITEMS
+    assert data["defects"]["全部按列和类型"] == {"A": {"裂纹": 40}, "B": {"裂纹": 40}}      # 统计覆盖全部条目，不只是其余
     small = report.for_reporter({**result, "defects": result["defects"][:5]})
     assert isinstance(small["defects"], list)
     assert len(json.dumps(data, ensure_ascii=False)) < 2 * len(json.dumps(report.for_reporter({**result, "defects": result["defects"][:12]}), ensure_ascii=False))
     assert roles.check_advice("先处理 A-R1-C00。", {"A-R1-C00"})
+    assert len(report.for_reporter(result, keep=10 ** 6)["defects"]) == 80      # 评测对比用的完整清单
+
+
+def test_reporter_keeps_confident_items_within_tier():
+    mk = lambda pid, t, c: {"panel_id": pid, "type": t, "label": t, "confidence": c, "verify_photo": 1}   # noqa: E731
+    result = {"inspected_arrays": ["A"], "skipped_arrays": [], "panels_inspected": 50, "cleared": 0, "closeup_policy": "all",
+              "flight_seconds": 1, "battery_used": 1, "error": None, "unverified": [],
+              "defects": [mk("A-R1-C01", "broken", 0.6), mk("A-R1-C02", "crack", 0.99), mk("F-R1-C01", "broken", 0.9)]}
+    assert [d["panel_id"] for d in report.for_reporter(result)["defects"]] == ["F-R1-C01", "A-R1-C01", "A-R1-C02"]
+
+
+def test_synthetic_result_sorted_by_priority():
+    from droneagent import evaluate
+    site = {"arrays": [{"id": "A"}], "panels": [{"id": f"A-R1-C{i:02d}"} for i in range(60)]}
+    r = evaluate._synthetic_result(site, 40, 1)
+    order = [report.PRIORITY[d["type"]] for d in r["defects"]]
+    assert len(r["defects"]) == 40 and len(r["unverified"]) == 8 and order == sorted(order)
 
 
 def test_budget_warning():
     assert context.over_budget("reporter", 3099) and not context.over_budget("reporter", 430)
+
+
+def test_hotspot_arrays_counted_by_program():
+    mk = lambda pid, t: {"panel_id": pid, "type": t}   # noqa: E731
+    ds = [mk("F-R1-C01", "broken")] * 3 + [mk("D-R1-C01", "missing")] * 2 + [mk("C-R1-C01", "broken")] * 2 + [mk("A-R1-C01", "crack")] * 9
+    assert report.hotspot_arrays(ds) == ["C", "D", "F"]          # 第二名并列都算，裂纹不计
+    assert report.hotspot_arrays([mk("A-R1-C01", "broken")]) == []
+
+
+def test_column_count_words_normalized(monkeypatch):
+    from droneagent.llm import Usage
+    monkeypatch.setattr(roles, "chat_json", lambda *a, **k: ({"advice": "先处理 A、D 两列的破碎板，再看 A-R1-C01。", "priorities": []}, Usage("m", 1, 1, 0, 1, 0.0)))
+    out, _ = roles.report_summary({"defects": [{"panel_id": "A-R1-C01"}], "unverified": []})
+    assert out["advice"] == "先处理 A、D 列的破碎板，再看 A-R1-C01。" and not out["advice_rejected"]

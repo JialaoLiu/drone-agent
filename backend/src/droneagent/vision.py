@@ -110,15 +110,16 @@ def screen(tiles: list[Tile], provider: str | None = None) -> tuple[list[dict], 
     return out, usage
 
 
-def verify(tile: Tile, provider: str | None = None, attempt: int = 0) -> tuple[dict, Usage]:
-    """复核：一块板的高清近照，给出最终判断。"""
+def verify(tile: Tile, provider: str | None = None, attempt: int = 0, thinking: bool | None = None) -> tuple[dict, Usage]:
+    """复核：一块板的高清近照，给出最终判断。thinking 不传时按 VISION_THINKING_VERIFY。"""
     buf = io.BytesIO()
     tile.image.resize((CLOSE_W, CLOSE_H)).save(buf, "JPEG", quality=92)
     user = (f"这是光伏板 {tile.panel_id} 的高清近照（已校正为正视图）。判断它是否有缺陷。"
             '只输出 JSON：{"status":"ok|defect","type":"crack|soiling|broken|missing|null","confidence":0到1之间的数,'
             '"evidence":"一句话说明看到了什么、在板的哪个位置"}')
     data, usage = chat_json(GUIDE, user, [buf.getvalue()], model=_model(provider), provider=_provider(provider),
-                            thinking=config.VISION_THINKING_VERIFY, max_tokens=400, attempt=attempt)
+                            thinking=config.VISION_THINKING_VERIFY if thinking is None else thinking,
+                            max_tokens=400, attempt=attempt)
     status = _status(data)
     kind = str(data.get("type") or "").strip().lower()
     return {"id": tile.panel_id, "status": status,

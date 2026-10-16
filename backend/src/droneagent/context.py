@@ -34,10 +34,12 @@ def compact_experiments(experiments: list[dict], keep_last: int = KEEP_EXPERIMEN
 
 
 def compact_items(items: list[dict], key_type: str, keep: int = KEEP_ITEMS) -> dict | list:
-    """缺陷或未确认清单：保留前 keep 条（已按优先级排序），其余按类型和列汇总数量。"""
+    """缺陷或未确认清单：保留前 keep 条（调用方已按优先级排序），另附全部条目按列、类型的数量。
+    只给“其余”的汇总时，模型会从保留的几条里推断“哪几列最集中”，而保留的几条并不代表全体（评测发现过，见工程日志 35）。"""
     if len(items) <= keep:
         return items
-    rest = items[keep:]
-    return {"前若干条（按处理优先级）": items[:keep], "其余数量": len(rest),
-            "其余按类型": dict(Counter(str(i.get(key_type) or "未知") for i in rest)),
-            "其余按列": dict(Counter(str(i.get("panel_id", "?")).split("-")[0] for i in rest))}
+    by_array: dict[str, Counter] = {}
+    for i in items:
+        by_array.setdefault(str(i.get("panel_id", "?")).split("-")[0], Counter())[str(i.get(key_type) or "未知")] += 1
+    return {"前若干条（按处理优先级）": items[:keep], "其余数量": len(items) - keep,
+            "全部按列和类型": {a: dict(c) for a, c in sorted(by_array.items())}}

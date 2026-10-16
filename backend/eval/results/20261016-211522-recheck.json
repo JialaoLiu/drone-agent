@@ -1,0 +1,3042 @@
+{
+ "suite": "recheck",
+ "scenes": [
+  "solar_1",
+  "solar_2",
+  "solar_3",
+  "solar_46",
+  "solar_63",
+  "solar_71",
+  "solar_101",
+  "solar_102",
+  "solar_103",
+  "solar_104",
+  "solar_105",
+  "solar_106"
+ ],
+ "triggered": 110,
+ "by_trigger": {
+  "unsure": 0,
+  "conflict": 110
+ },
+ "summary": {
+  "none": {
+   "recall": 0.974,
+   "precision": 0.974,
+   "false_alarms": 3,
+   "cost_yuan": 0.5968,
+   "triggered_right": 107,
+   "triggered_unsure": 0,
+   "changed": 0,
+   "fixed": 0,
+   "broke": 0
+  },
+  "same": {
+   "recall": 0.983,
+   "precision": 0.974,
+   "false_alarms": 3,
+   "cost_yuan": 0.6356,
+   "triggered_right": 108,
+   "triggered_unsure": 0,
+   "changed": 1,
+   "fixed": 1,
+   "broke": 0
+  },
+  "think": {
+   "recall": 1.0,
+   "precision": 0.975,
+   "false_alarms": 3,
+   "cost_yuan": 0.8112,
+   "triggered_right": 110,
+   "triggered_unsure": 0,
+   "changed": 3,
+   "fixed": 3,
+   "broke": 0
+  }
+ },
+ "rows": [
+  {
+   "scene": "solar_1",
+   "panel": "A-R1-C05",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅上边缘有轻微模糊阴影，不影响电池片纹理。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片完整、网格和栅线清晰，颜色均匀，未见裂纹、污损、玻璃破碎或缺失，仅有轻微边缘阴影/光照不均。"
+   },
+   "cost": {
+    "none": 0.00063612,
+    "same": 0.00096536,
+    "think": 0.00371324
+   }
+  },
+  {
+   "scene": "solar_1",
+   "panel": "A-R1-C10",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线与边框完整，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色基本均匀，未见裂纹、污损、破碎或缺失；画面中央暗区为模糊阴影，下方栅线仍可见。"
+   },
+   "cost": {
+    "none": 0.00057612,
+    "same": 0.00090536,
+    "think": 0.009665239999999999
+   }
+  },
+  {
+   "scene": "solar_1",
+   "panel": "A-R2-C07",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格与栅线完整清晰，中下部有一片边缘模糊的半透明亮区，透过它仍能看到电池片纹理，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格和栅线完整清晰，中下部有一片边缘模糊的半透明亮区，透过它仍能看到电池片纹理，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏下有一条边缘模糊的半透明亮带，透过它仍能看清电池片网格和栅线，符合反光；底部边缘暗带也非缺陷，未见裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00060412,
+    "same": 0.00095736,
+    "think": 0.00316124
+   }
+  },
+  {
+   "scene": "solar_1",
+   "panel": "B-R1-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色不变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏下有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央有一片边缘非常模糊的半透明浅色亮区，透过它仍能看清下方的电池片网格和细栅线，深蓝色电池片本身颜色未变，属于反光而非污损或裂纹。"
+   },
+   "cost": {
+    "none": 0.00061612,
+    "same": 0.00099336,
+    "think": 0.0021692400000000002
+   }
+  },
+  {
+   "scene": "solar_1",
+   "panel": "C-R1-C04",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域，仅有轻微反光。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧有一大片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格与栅线，属反光；整块板电池片深蓝色均匀，未见裂纹、碎纹或不透明污斑。"
+   },
+   "cost": {
+    "none": 0.00056812,
+    "same": 0.00090536,
+    "think": 0.00217324
+   }
+  },
+  {
+   "scene": "solar_1",
+   "panel": "C-R2-C05",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格和栅线完整清晰，中部有一片边缘模糊的半透明亮区，透过它仍能看到下面的电池片纹理，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏右可见大片边缘模糊的半透明亮区，透过它细栅线和电池片网格仍完整可辨（属反光）；下边缘一条贴边深色带为遮挡/阴影，均非缺陷。"
+   },
+   "cost": {
+    "none": 0.00060412,
+    "same": 0.00095336,
+    "think": 0.00303324
+   }
+  },
+  {
+   "scene": "solar_1",
+   "panel": "C-R2-C10",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑或破碎；底部边缘的深色条带是前排板遮挡，不属于缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑或破碎，底部边缘的深色条带为相邻前排板的遮挡，不属于缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面电池片网格完整、颜色均匀，仅底部边缘有一条被前排板遮挡的深色条带，不属于缺陷。"
+   },
+   "cost": {
+    "none": 0.00062412,
+    "same": 0.00100136,
+    "think": 0.00228524
+   }
+  },
+  {
+   "scene": "solar_1",
+   "panel": "D-R1-C04",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中部有一片边缘模糊、半透明的浅色亮晕，透过它仍能看清电池片网格与栅线，深蓝色底基本不变，符合反光特征，未见裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.0009373599999999999,
+    "think": 0.00224124
+   }
+  },
+  {
+   "scene": "solar_1",
+   "panel": "D-R1-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅左侧边缘有正常边框。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅左侧边缘有正常边框。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，仅中右侧有一片边缘模糊的暗区（栅线与电池片纹理仍清晰可见，属阴影/光照不均），未见裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.00095336,
+    "think": 0.00178524
+   }
+  },
+  {
+   "scene": "solar_1",
+   "panel": "D-R2-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷；底部边缘的深色条带为前排板遮挡，也不是缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一大片边缘模糊的半透明亮区，透过它仍能看清纵向栅线和电池片网格，深蓝色底未变，属反光；底部边缘仅有一条贴边的深色条带，其余电池片完整，非缺陷。"
+   },
+   "cost": {
+    "none": 0.00060012,
+    "same": 0.00100536,
+    "think": 0.00278924
+   }
+  },
+  {
+   "scene": "solar_2",
+   "panel": "B-R1-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色网格，栅线与边框完整，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域，仅左侧边缘有正常边框。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线与汇流条清晰完整，边框内无裂纹、污斑、放射状碎纹或缺失区域，仅整体偏暗但网格纹理完好。"
+   },
+   "cost": {
+    "none": 0.00056812,
+    "same": 0.00091336,
+    "think": 0.00180124
+   }
+  },
+  {
+   "scene": "solar_2",
+   "panel": "B-R2-C02",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，栅线清晰，无裂纹、污斑或破碎痕迹，仅见轻微均匀色差。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，栅线清晰，仅中上部有一条边缘模糊的暗色竖带，为阴影或反光，非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中左侧有一条自上而下的深色竖直条带，边缘较模糊，透过它仍能清楚看到电池片网格和栅线，深蓝色电池片本身未变色，符合阴影特征，非缺陷。"
+   },
+   "cost": {
+    "none": 0.00056812,
+    "same": 0.00090536,
+    "think": 0.00390924
+   }
+  },
+  {
+   "scene": "solar_2",
+   "panel": "C-R1-C10",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏下有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏下有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板中部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属反光而非污损。"
+   },
+   "cost": {
+    "none": 0.00060012,
+    "same": 0.00096536,
+    "think": 0.00183724
+   }
+  },
+  {
+   "scene": "solar_2",
+   "panel": "C-R2-C02",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅中部有轻微模糊暗带，属正常成像差异。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线与边框完整清晰，仅中部有一片边缘模糊的轻微偏暗区域，其下网格和栅线仍清晰可辨，属于光照/阴影引起的轻微色差，未见裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00063212,
+    "same": 0.0009613600000000001,
+    "think": 0.00215724
+   }
+  },
+  {
+   "scene": "solar_2",
+   "panel": "C-R2-C10",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，右侧中部有一片边缘模糊的半透明亮区，透过它仍能看到栅线和电池片纹理，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面整体为均匀深蓝色电池片网格，栅线与边框完整；右侧中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整、颜色均匀，右侧中部有一片边缘模糊的半透明亮区，透过它仍能看到栅线，属于反光而非污损。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.00099336,
+    "think": 0.00165724
+   }
+  },
+  {
+   "scene": "solar_2",
+   "panel": "D-R1-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线完整清晰，无裂纹、污斑或破碎痕迹，仅中部有轻微模糊暗影，不影响网格可见性。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整、颜色均匀，仅中左部有边缘模糊的暗色阴影，栅线仍清晰可见，未见裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00060412,
+    "same": 0.00092136,
+    "think": 0.00303724
+   }
+  },
+  {
+   "scene": "solar_2",
+   "panel": "D-R2-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈深蓝色、网格与栅线完整清晰，未见亮白裂纹、白色污斑或放射状碎纹，仅有轻微明暗不匀（疑似反光或阴影），不属于缺陷。"
+   },
+   "cost": {
+    "none": 0.00061212,
+    "same": 0.00094136,
+    "think": 0.00236524
+   }
+  },
+  {
+   "scene": "solar_2",
+   "panel": "D-R2-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格清晰完整，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面电池片网格完整，仅有边缘模糊的竖向暗带（疑似阴影或光照不均），未见裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00061212,
+    "same": 0.00094136,
+    "think": 0.00287324
+   }
+  },
+  {
+   "scene": "solar_3",
+   "panel": "A-R1-C05",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅右下角有轻微模糊阴影，不影响电池片网格可见性。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅底部边缘有轻微阴影，属正常现象。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线与边框完整清晰，未见裂纹、污斑、碎纹或缺失；右下角仅有一处边缘模糊的轻微暗影（阴影），不影响网格纹理。"
+   },
+   "cost": {
+    "none": 0.00064012,
+    "same": 0.00101336,
+    "think": 0.0017052399999999998
+   }
+  },
+  {
+   "scene": "solar_3",
+   "panel": "A-R2-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常栅线与边框。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格和栅线清晰完整，无亮白裂纹、不透明污斑、放射碎纹或缺失区域；中部暗色区域边缘模糊且网格仍可见，属阴影或正常色差。"
+   },
+   "cost": {
+    "none": 0.00060812,
+    "same": 0.00096936,
+    "think": 0.00469724
+   }
+  },
+  {
+   "scene": "solar_3",
+   "panel": "A-R2-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色不变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一条边缘模糊的半透明亮带，透过它仍能清楚看到下面的电池片网格和栅线，深蓝色底色未变，属于反光而非污损或裂纹。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.0009693600000000001,
+    "think": 0.0017412399999999998
+   }
+  },
+  {
+   "scene": "solar_3",
+   "panel": "B-R2-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅上边缘有轻微模糊阴影，属正常成像。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅上边缘有轻微模糊阴影，属正常成像。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，未发现裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00062812,
+    "same": 0.00100536,
+    "think": 0.00198524
+   }
+  },
+  {
+   "scene": "solar_3",
+   "panel": "C-R1-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线完整清晰，无裂纹、污斑或破碎痕迹，仅见轻微反光。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑或破碎痕迹，仅见正常栅线与边框。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧有一条纵向、边缘模糊的暗色条带，其下电池片与栅线网格仍完整可见、颜色只是变暗，符合阴影特征，非缺陷。"
+   },
+   "cost": {
+    "none": 0.00057612,
+    "same": 0.00092136,
+    "think": 0.00411324
+   }
+  },
+  {
+   "scene": "solar_3",
+   "panel": "C-R2-C02",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板中央偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格与栅线，深蓝色未变，属反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.00094136,
+    "think": 0.0015292399999999999
+   }
+  },
+  {
+   "scene": "solar_3",
+   "panel": "D-R1-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中部有一片边缘模糊的半透明亮区，透过它仍能清晰看到下方的电池片栅线和深蓝色网格，属于反光而非污损，无裂纹、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00059212,
+    "same": 0.00093336,
+    "think": 0.00200124
+   }
+  },
+  {
+   "scene": "solar_3",
+   "panel": "D-R2-C10",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中下部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中下部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中部偏上有一片面积较大、边缘模糊的半透明亮区，其下电池片网格与栅线仍连续可见，深蓝色底色基本不变，符合玻璃反光特征，未发现裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00060412,
+    "same": 0.0009693600000000001,
+    "think": 0.0061372399999999995
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "A-R1-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面为中下部一片边缘模糊的暗区，透过它仍能清楚看到完整的电池片网格与栅线，符合阴影特征，未见裂纹、污斑、碎纹或缺失电池片。"
+   },
+   "cost": {
+    "none": 0.00036524,
+    "same": 0.00069448,
+    "think": 0.00131548
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "A-R2-C07",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏下有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏下有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一块边缘模糊的半透明亮区，电池片网格和栅线仍清晰可见，深蓝色未变，属于反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00036524,
+    "same": 0.00073048,
+    "think": 0.00198348
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "A-R3-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面整体呈均匀深蓝色，电池片网格与细栅线清晰完整；右侧中部有一处边缘模糊的半透明亮区，透过它仍能看到下面的电池片纹理，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中部有一处边缘模糊的半透明亮区，透过它仍能看到电池片网格和栅线，属反光，未见裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00034524,
+    "same": 0.00073848,
+    "think": 0.00153148
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "A-R3-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线与边框完整清晰；板面中部偏左仅有边缘模糊的轻微暗区，网格纹理仍完整可见，属阴影/轻微色差，未见裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00032924,
+    "same": 0.00065848,
+    "think": 0.00114348
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "B-R1-C02",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线清晰完整，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线清晰完整，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部及上部可见几条边缘模糊的暗色斜带与竖直暗纹，但透过暗区电池片网格与栅线仍完整可见，属阴影；未发现亮白裂纹、白色/褐色污斑或放射状碎纹，边框内电池片齐全。"
+   },
+   "cost": {
+    "none": 0.00036124,
+    "same": 0.00072248,
+    "think": 0.00183148
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "B-R1-C10",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线与汇流条网格完整连续，边框内无裂纹、白斑、放射状碎纹或缺失区域；仅中下部有一片边缘模糊的略暗区域，属阴影/颜色轻微差异，不构成缺陷。"
+   },
+   "cost": {
+    "none": 0.00036124,
+    "same": 0.00072248,
+    "think": 0.00126348
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "B-R2-C02",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏右有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央有一大片边缘非常模糊的半透明亮区，透过它仍能清楚看到电池片深蓝色底和细栅线/网格，属于反光而非污损或裂纹。"
+   },
+   "cost": {
+    "none": 0.00036124,
+    "same": 0.0007384799999999999,
+    "think": 0.0011674799999999998
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "B-R2-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，仅顶部边缘有一小片模糊暗影，未见裂纹、污斑或破碎痕迹。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，仅顶部边缘有一小片模糊暗影，未见裂纹、污斑或破碎痕迹。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左起约五分之一处有一条自顶部向下延伸的深色条带，边缘模糊半透明，其下的电池片网格与栅线仍清晰可见，符合阴影特征；除此之外电池片深蓝均匀、无裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00033724,
+    "same": 0.00067448,
+    "think": 0.00221148
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "B-R3-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线与主栅网格完整清晰；右侧中下部有一片边缘模糊的暗区，但透过它仍能看到完整的电池片与栅线，属于阴影而非缺陷，未发现裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00036524,
+    "same": 0.00069448,
+    "think": 0.00159948
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "C-R1-C11",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面整体呈均匀深蓝色，电池片网格与细栅线清晰完整，左侧中上部有一片边缘模糊的半透明亮区，透过它仍能看到下面的电池片纹理，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面上部偏左有一片边缘模糊的半透明亮区，透过它仍能清晰看到电池片的深蓝色和栅线网格，属于反光而非污损或裂纹，其余电池片排列整齐、边框完整。"
+   },
+   "cost": {
+    "none": 0.00035324,
+    "same": 0.00075048,
+    "think": 0.00121948
+   }
+  },
+  {
+   "scene": "solar_46",
+   "panel": "D-R2-C12",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一道竖直的、边缘模糊的半透明亮带，透过它仍能清楚看到电池片网格与栅线，深蓝色未变，属反光而非污损，其余区域电池片网格完整均匀。"
+   },
+   "cost": {
+    "none": 0.00036524,
+    "same": 0.00074248,
+    "think": 0.00110748
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "A-R1-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏左有一条边缘非常模糊的半透明纵向亮带，透过它仍能清楚看到下面的栅线和电池片网格，电池片深蓝色未改变，符合反光特征而非污损或裂纹。"
+   },
+   "cost": {
+    "none": 0.00034924,
+    "same": 0.00069848,
+    "think": 0.00160348
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "B-R1-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏下有一片垂直延伸的淡蓝白色模糊亮区，边缘过渡柔和，透过它仍能清晰看到电池片网格与栅线，深蓝色电池片本色未变，属于反光而非污损或裂纹。"
+   },
+   "cost": {
+    "none": 0.00036924,
+    "same": 0.00073848,
+    "think": 0.0015554800000000001
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "B-R2-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑或碎纹；底部边缘的深色条带是前排板遮挡，不属于缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，颜色均匀，底部边缘的深色条带是前排板遮挡，不是缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "底部边缘有一条深色/黑色条带，可能为遮挡或阴影；条带以外的电池片网格完整清晰，未见裂纹、污损、玻璃破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00037724,
+    "same": 0.00068648,
+    "think": 0.00309548
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "C-R1-C12",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中上部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非污损或裂纹。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中上部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非污损或裂纹。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧偏中上部有一片边缘非常模糊的半透明亮斑，透过它电池片网格和栅线仍清晰可见、深蓝色未变，属反光而非污损或裂纹。"
+   },
+   "cost": {
+    "none": 0.00037724,
+    "same": 0.00075448,
+    "think": 0.00209948
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "D-R1-C02",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏下有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非污损或裂纹。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏下有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非污损或裂纹。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏下有一片边缘模糊的半透明亮区，下面的电池片网格和栅线仍清晰可见，符合反光特征，未见裂纹、污损、玻璃破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00037724,
+    "same": 0.00075448,
+    "think": 0.00345948
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "D-R1-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏下有一片边缘模糊的半透明亮区，透过它仍能看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "cost": {
+    "none": 0.00036524,
+    "same": 0.00073048,
+    "think": 0.0029154800000000002
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "D-R1-C07",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中左部有一片边缘非常模糊的半透明淡蓝色亮区，透过它仍能看清电池片网格和细栅线，属反光；无裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00036524,
+    "same": 0.00073048,
+    "think": 0.0013314800000000001
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "D-R1-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，四周银色边框正常。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格整齐完整，边框内无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00033324,
+    "same": 0.00068648,
+    "think": 0.00099148
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "E-R1-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域，仅左侧有边缘模糊的暗色阴影，不影响电池片纹理。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，仅左侧有一条边缘模糊的暗带（阴影），未见裂纹、污斑或破碎痕迹。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面电池片网格完整均匀，仅左侧和底部边缘有边缘模糊的暗色条带（阴影/遮挡），未见裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00037724,
+    "same": 0.00071848,
+    "think": 0.00313148
+   }
+  },
+  {
+   "scene": "solar_63",
+   "panel": "E-R2-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光；底部边缘的深色条带是前排板遮挡，均非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光；底部边缘的深色条带是前排板遮挡，均非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中右侧有一片边缘模糊的半透明亮雾，透过它仍能清晰看到电池片网格与栅线，属反光；下边缘一条深色条带是前排板遮挡，均非缺陷，未见裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00040124,
+    "same": 0.00080248,
+    "think": 0.00197548
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "A-R1-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线清晰完整，无裂纹、污斑、碎纹或缺失区域，仅右上角有轻微模糊暗影，不影响电池片网格可见性。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，未见裂纹、污斑、碎纹或缺失；仅右上角有边缘模糊的暗影，符合阴影/反光，不是缺陷。"
+   },
+   "cost": {
+    "none": 0.00032924,
+    "same": 0.00072248,
+    "think": 0.00219548
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "A-R1-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整板电池片网格完整、颜色基本均匀，深色区域边缘模糊且栅线仍可见，属于阴影，未见裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00032924,
+    "same": 0.00065848,
+    "think": 0.00527548
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "B-R2-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线清晰完整，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线清晰完整，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污损、破碎或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00036124,
+    "same": 0.00072248,
+    "think": 0.00333148
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "D-R1-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏上有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏上有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中上部有一片边缘模糊、半透明的竖向亮带，透过它电池片深蓝色和栅线网格仍清晰完整，符合反光特征而非污损或裂纹。"
+   },
+   "cost": {
+    "none": 0.00037724,
+    "same": 0.00075448,
+    "think": 0.00202348
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "D-R2-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏上有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏上有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光，未见裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00034924,
+    "same": 0.00069848,
+    "think": 0.00181548
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "D-R2-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中上部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非污损或裂纹。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面右侧中上部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非污损或裂纹。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中右侧有一道竖直的、边缘非常模糊的半透明亮带，透过它仍能清楚看到电池片栅线和深蓝色网格，颜色未变浅，属反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00037724,
+    "same": 0.00075448,
+    "think": 0.00157148
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "D-R2-C12",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片深蓝色网格与细栅线完整清晰，右侧边缘有一片边缘模糊、略暗的区域，但下方电池片网格仍完整可见，属于阴影或光照不均，未见裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00036524,
+    "same": 0.00069448,
+    "think": 0.00136348
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "D-R3-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中下部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中下部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一大片边缘非常模糊的半透明亮区，透过它仍能清楚看到电池片栅线和网格，电池片深蓝色未变，符合反光特征，非缺陷。"
+   },
+   "cost": {
+    "none": 0.00036124,
+    "same": 0.0007024799999999999,
+    "think": 0.0017034799999999998
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "D-R3-C04",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅边缘有轻微模糊阴影，属正常成像。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈完整深蓝色网格，左侧及上缘仅见边缘模糊的暗色阴影，未见裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00037324,
+    "same": 0.00070248,
+    "think": 0.00257548
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "D-R3-C05",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整均匀，未发现裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00036124,
+    "same": 0.00072248,
+    "think": 0.00231948
+   }
+  },
+  {
+   "scene": "solar_71",
+   "panel": "D-R3-C09",
+   "truth": "missing",
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板呈均匀的深绿色，未见电池片网格、栅线或边框，也未见裂纹、污斑、碎纹或地面支架，无法确认存在所列缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板呈均匀的深绿色，未见电池片网格、栅线或边框，也未见裂纹、污斑、碎纹或地面支架，无法确认存在所列缺陷。"
+   },
+   "think": {
+    "status": "defect",
+    "type": "missing",
+    "evidence": "整块板面看不到电池片、栅线或边框，仅见绿色地面和暗色区域，符合缺失特征。"
+   },
+   "cost": {
+    "none": 0.00036924,
+    "same": 0.00073848,
+    "think": 0.0051354799999999996
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "A-R1-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部可见两条纵向的深色暗带，但暗带内电池片网格与栅线仍完整可见、无遮挡纹理，属阴影（或电池串间隙阴影），未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.0009093600000000001,
+    "think": 0.00389324
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "A-R2-C05",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线与边框完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整连续；仅右上角有一小片边缘模糊的浅色变亮区域，透过它仍能看清下面的栅线，属反光/阴影而非缺陷，未见裂纹、污斑、放射状碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.00094136,
+    "think": 0.00282524
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R1-C05",
+   "truth": "missing",
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板呈均匀的深绿色，未见电池片网格、栅线或任何裂纹、污斑、碎纹等缺陷特征，也无地面或支架露出。"
+   },
+   "same": {
+    "status": "defect",
+    "type": "missing",
+    "evidence": "边框内没有电池片，上半部分为深色地面/支架，下半部分为绿色地面，整块板缺失电池片。"
+   },
+   "think": {
+    "status": "defect",
+    "type": "missing",
+    "evidence": "边框内几乎看不到电池片网格，上半为深暗色、下半呈绿色地面状区域，疑似整块板缺失电池片。"
+   },
+   "cost": {
+    "none": 0.00060812,
+    "same": 0.00094136,
+    "think": 0.0035892399999999996
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R1-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅上边缘有轻微模糊阴影，属正常成像。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅上边缘有轻微模糊阴影，属正常成像。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，仅右侧和底部有边缘模糊的暗带，栅线仍可见，无裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00062812,
+    "same": 0.00100536,
+    "think": 0.00410924
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R1-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色底色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏左有一片边缘非常模糊的半透明亮区，透过它仍能清楚看到电池片网格与细栅线，深蓝色电池片颜色未变，属于反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.00096536,
+    "think": 0.0016532399999999998
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R2-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，中部有一处边缘模糊的半透明亮区，透过它仍能看到栅线和电池片纹理，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏下有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面电池片网格完整、深蓝色均匀，中下部仅有一片边缘模糊的半透明亮区，透过它仍能清楚看到栅线和电池片纹理，属于反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00059212,
+    "same": 0.00095736,
+    "think": 0.00181724
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板面呈均匀深蓝色，电池片网格与栅线完整清晰，四周边框正常，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.0009093600000000001,
+    "think": 0.00152124
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C02",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，四周银色边框正常，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格清晰完整，边框内无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.00093336,
+    "think": 0.00150124
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，四周银色边框正常。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板面为均匀深蓝色电池片网格，栅线与边框完整，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00058412,
+    "same": 0.00093736,
+    "think": 0.00146124
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C04",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，四周银色边框完好，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.0009093600000000001,
+    "think": 0.00146524
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C05",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，无裂纹、污斑、碎纹或缺失，仅见正常栅线与边框。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线与边框清晰连续，仅中部偏右有一片边缘模糊的浅暗区（属阴影/反光），未见过亮裂纹线条、不透明污斑、放射状碎纹或无电池片的空缺区域。"
+   },
+   "cost": {
+    "none": 0.00058412,
+    "same": 0.00091336,
+    "think": 0.00232124
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，四周银色边框正常，未见到裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.0009093600000000001,
+    "think": 0.00138524
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C07",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，仅中下部有一处边缘模糊的半透明亮区，透过它仍能看到电池片栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，仅中下部有一处边缘模糊的半透明亮区，透过它仍能看到电池片栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面深蓝色电池片网格完整，未见裂纹、污损、破碎或缺失；左下有一处边缘模糊的半透明亮斑，应为反光。"
+   },
+   "cost": {
+    "none": 0.00062012,
+    "same": 0.0009893600000000001,
+    "think": 0.00518124
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，四周银色边框正常。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格与银色边框完整清晰，未发现裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00060012,
+    "same": 0.00092936,
+    "think": 0.00146524
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，四周银色边框正常。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片排布整齐、颜色均匀，无裂纹、污损、破碎或缺失迹象。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.0009293600000000001,
+    "think": 0.00205324
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "B-R3-C10",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，边框内电池片完整。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板面为均匀深蓝色，电池片网格与细栅线完整清晰，四周银色边框正常，未见到裂纹、污斑、放射状碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00060812,
+    "same": 0.00096936,
+    "think": 0.00156924
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "C-R1-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中下部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中下部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中部的纵向浅色雾状亮区边缘非常柔和、呈渐变过渡，其下的电池片与细栅线依然可辨，符合反光特征，未见裂纹、污斑或破碎。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.0009733599999999999,
+    "think": 0.00407724
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "C-R1-C07",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中下部有一片边缘非常模糊、半透明的浅色亮区，透过它仍能清晰看到电池片网格与栅线，电池片深蓝色未改变，属于反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.00094536,
+    "think": 0.00178924
+   }
+  },
+  {
+   "scene": "solar_101",
+   "panel": "E-R1-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏上有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏上有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中上部有一片边缘模糊的半透明亮区，透过它仍能看到电池片网格和栅线，属于反光，未见裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00060012,
+    "same": 0.00095336,
+    "think": 0.0021852399999999998
+   }
+  },
+  {
+   "scene": "solar_102",
+   "panel": "A-R1-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏左有一条纵向的半透明亮带，边缘模糊，透过它仍能清楚看到电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一条纵向的模糊半透明亮带，透过它仍能清楚看到电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏左有一条垂直、边缘模糊的半透明亮带，透过它仍能清楚看到电池片网格和栅线，符合反光特征，不是缺陷。"
+   },
+   "cost": {
+    "none": 0.00060412,
+    "same": 0.0009453599999999999,
+    "think": 0.0028652400000000002
+   }
+  },
+  {
+   "scene": "solar_102",
+   "panel": "B-R1-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色不变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，深蓝色未变，属于反光而非污损或裂纹。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到深蓝色电池片和栅线，属于反光，不是缺陷。"
+   },
+   "cost": {
+    "none": 0.00062412,
+    "same": 0.00100536,
+    "think": 0.0024012400000000002
+   }
+  },
+  {
+   "scene": "solar_102",
+   "panel": "B-R1-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和细栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00060412,
+    "same": 0.0009693600000000001,
+    "think": 0.00233324
+   }
+  },
+  {
+   "scene": "solar_102",
+   "panel": "C-R1-C11",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线网格完整清晰，四周银色边框完好，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.0009093600000000001,
+    "think": 0.00146524
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "A-R1-C04",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，栅线清晰，无裂纹、污斑或破碎痕迹，仅见轻微均匀色差。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色网格，栅线清晰，仅中上部有一条边缘模糊的竖向暗带（疑似阴影/反光），未见裂纹、污斑或破碎痕迹。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面整体均匀，仅中央有一条垂直的模糊暗带，其下的电池片网格和栅线仍清晰可见，属于阴影，非缺陷。"
+   },
+   "cost": {
+    "none": 0.00056812,
+    "same": 0.0009373599999999999,
+    "think": 0.0032932400000000002
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "A-R1-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面电池片网格整齐完整，颜色均匀，无裂纹、污损、破碎或缺失迹象。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.0009093600000000001,
+    "think": 0.00225324
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "A-R1-C12",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面整体呈均匀深蓝色，电池片网格与细栅线清晰完整，左侧中上部有一处边缘模糊的半透明亮区，透过它仍能看到下面的电池片纹理，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左上区域有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左上方（约第1-3行电池片区域）有一片边缘模糊的半透明亮白/淡蓝色晕影，其下的电池片网格与栅线仍清晰可见，属于反光而非污损或裂纹，其余区域网格完整、颜色均匀。"
+   },
+   "cost": {
+    "none": 0.00064812,
+    "same": 0.00100936,
+    "think": 0.00187324
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "B-R1-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域，仅中上部有边缘模糊的暗色阴影，不影响电池片纹理。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整，中右侧有一条边缘模糊的暗色竖带，透过它仍能看到栅线，属于阴影而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00061212,
+    "same": 0.0010053599999999998,
+    "think": 0.0067252399999999995
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "C-R1-C04",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，仅中下部有一处边缘模糊的半透明亮区，透过它仍能看清栅线和电池片纹理，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰；板面中央仅有一条边缘模糊的半透明浅色竖带（反光），透过它仍能看到下面的电池片网格和栅线，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00062812,
+    "same": 0.00095736,
+    "think": 0.00172524
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "C-R3-C04",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，仅左侧中部有一条边缘模糊的轻微暗带（阴影类），无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00061212,
+    "same": 0.00094136,
+    "think": 0.0017052399999999998
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "C-R3-C07",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，边框内电池片完整。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板面呈均匀深蓝色，电池片网格、细栅线与银色汇流条完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00060412,
+    "same": 0.00093336,
+    "think": 0.00154524
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "D-R2-C02",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格和栅线完整清晰，颜色均匀，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线清晰完整，无裂纹、污斑、碎纹或缺失，仅见正常栅线与边框。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失；板面中部的模糊明暗变化为反光/阴影，不影响电池片纹理。"
+   },
+   "cost": {
+    "none": 0.00056412,
+    "same": 0.00091736,
+    "think": 0.00438524
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "D-R2-C10",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.0009373599999999999,
+    "think": 0.00267724
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "D-R3-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片排列整齐，栅线清晰，无明显裂纹、污损、破碎或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.0009093600000000001,
+    "think": 0.00192924
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "D-R3-C02",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，栅线清晰，仅中左部有一处边缘模糊的半透明亮区，透过它仍能看到下面的电池片纹理，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格和栅线完整清晰，颜色均匀，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线与网格完整清晰；板面中部偏左仅有一处边缘非常模糊的半透明亮区，透过它仍能看清下面的电池片纹理，符合反光特征，未见裂纹、污渍、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00061612,
+    "same": 0.00092936,
+    "think": 0.0023412399999999996
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "D-R3-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，栅线清晰，无裂纹、污斑或破碎，仅上边缘有轻微模糊阴影，不构成缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，网格与细栅线完整清晰，未见裂纹、碎纹、污斑或缺失；左侧轻微的浅色区域边缘模糊且纹理仍可见，属反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00058412,
+    "same": 0.00091336,
+    "think": 0.00170524
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "F-R1-C05",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片完整，深蓝色均匀，栅线清晰，未见裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00061212,
+    "same": 0.00094136,
+    "think": 0.00421324
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "F-R2-C07",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板中央偏右有一片边缘模糊的半透明亮区，但下方电池片网格和栅线仍清晰可见，属于反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00062012,
+    "same": 0.00098536,
+    "think": 0.00266124
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "F-R2-C08",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见轻微反光。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色网格，栅线与边框完整，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊、半透明的暗区，透过它仍能看清电池片网格和细栅线，颜色深浅过渡自然，属阴影而非裂纹、污损或破碎。"
+   },
+   "cost": {
+    "none": 0.00059212,
+    "same": 0.00090936,
+    "think": 0.0019932400000000003
+   }
+  },
+  {
+   "scene": "solar_103",
+   "panel": "F-R2-C11",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板面为均匀深蓝色电池片网格，栅线与边框清晰完整，未见裂纹、污斑、放射状碎纹或缺失区域，仅中间偏右有轻微明暗过渡，属正常色差。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.00094136,
+    "think": 0.00196924
+   }
+  },
+  {
+   "scene": "solar_104",
+   "panel": "B-R3-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线与边框完整清晰，中部偏右仅有一片边缘模糊的轻微暗区（阴影/反光性质），下方电池片网格依然完整可见，未见裂纹、污斑、放射状碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00061212,
+    "same": 0.00094136,
+    "think": 0.00200924
+   }
+  },
+  {
+   "scene": "solar_104",
+   "panel": "C-R1-C06",
+   "truth": "missing",
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板呈均匀深绿色，未见裂纹、污斑、碎纹或缺失区域，仅中下部有轻微亮度变化，属正常成像差异。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板呈均匀深绿色，未见裂纹、污斑、碎纹或缺失区域，仅中下部有轻微亮度变化，属正常成像差异。"
+   },
+   "think": {
+    "status": "defect",
+    "type": "missing",
+    "evidence": "银色边框内看不到任何电池片、栅线或网格，整块区域呈均匀的深绿色（下部略亮的绿色似地面/植被），仅有边框而板面电池片缺失。"
+   },
+   "cost": {
+    "none": 0.00060012,
+    "same": 0.00094936,
+    "think": 0.00313324
+   }
+  },
+  {
+   "scene": "solar_104",
+   "panel": "C-R2-C09",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整板电池片网格完整、颜色均匀，未见裂纹、污损斑块、玻璃破碎放射纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00061212,
+    "same": 0.00094136,
+    "think": 0.00234124
+   }
+  },
+  {
+   "scene": "solar_104",
+   "panel": "C-R3-C04",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏左有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中偏左区域有一片边缘非常模糊的半透明亮雾，透过它仍能看清下面的电池片网格与栅线，电池片深蓝色底未变，符合反光特征，未见裂纹、污斑或碎纹。"
+   },
+   "cost": {
+    "none": 0.00062012,
+    "same": 0.00098536,
+    "think": 0.00370124
+   }
+  },
+  {
+   "scene": "solar_104",
+   "panel": "D-R2-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面左侧中部有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面上部偏左有一片边缘非常模糊的半透明白雾状亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色基本不变，属于反光；全板栅线与边框整齐，未见裂纹、污斑、碎纹或缺失。"
+   },
+   "cost": {
+    "none": 0.00059212,
+    "same": 0.00093336,
+    "think": 0.00157724
+   }
+  },
+  {
+   "scene": "solar_104",
+   "panel": "D-R3-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清栅线和电池片纹理，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，板面中部偏右有一片边缘模糊的半透明亮区，透过它仍能看清栅线和电池片纹理，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，中部偏右有一片边缘模糊的半透明亮区，其下栅线与电池片纹理清晰可见，属反光而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00061212,
+    "same": 0.0009733599999999999,
+    "think": 0.00152124
+   }
+  },
+  {
+   "scene": "solar_104",
+   "panel": "D-R3-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏上有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面整体为均匀深蓝色，电池片网格与细栅线清晰完整，中上部仅有一片边缘模糊的半透明亮区，透过它仍能看到下面的电池片纹理，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面上部偏左有一片边缘非常模糊的半透明浅色亮区，透过它仍能清楚看到电池片网格与栅线，深蓝色电池片本身颜色未变，属于反光而非污损或裂纹。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.00099336,
+    "think": 0.0018452400000000002
+   }
+  },
+  {
+   "scene": "solar_104",
+   "panel": "D-R3-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，无裂纹、污斑、碎纹或缺失区域，仅见正常栅线与边框。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格完整、颜色均匀，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央偏左有一片边缘模糊的暗区，但透过它仍能清楚看到完整的电池片网格与细栅线，深蓝色电池片本身颜色不变，属阴影而非缺陷，未见裂纹、污斑、放射状碎纹或缺失区域。"
+   },
+   "cost": {
+    "none": 0.00058812,
+    "same": 0.00089736,
+    "think": 0.00207324
+   }
+  },
+  {
+   "scene": "solar_105",
+   "panel": "A-R1-C03",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，无裂纹、污斑、碎纹或缺失区域。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格和栅线完整清晰，板面中部虽有纵向模糊暗带，但下方纹理仍可见，应属阴影而非裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00058012,
+    "same": 0.0009093600000000001,
+    "think": 0.00279324
+   }
+  },
+  {
+   "scene": "solar_105",
+   "panel": "A-R1-C06",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，细栅线完整清晰，无裂纹、污斑、碎纹或缺失区域，仅见正常边框与栅线。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片呈均匀深蓝色，栅线网格完整清晰，未见裂纹、污斑、碎纹或缺失区域。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片网格与栅线完整，仅在中部偏左有一片边缘模糊的暗区，透过它仍能看清下面的电池片和栅线，属阴影而非缺陷。"
+   },
+   "cost": {
+    "none": 0.00061212,
+    "same": 0.00094136,
+    "think": 0.0019332400000000001
+   }
+  },
+  {
+   "scene": "solar_105",
+   "panel": "A-R2-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片网格完整，栅线清晰，无裂纹、污斑或破碎，仅底部有轻微模糊阴影，非缺陷"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "电池片呈均匀深蓝色，栅线完整清晰，未见裂纹、污斑或破碎痕迹，边缘的模糊暗带为阴影/遮挡，非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "整块板电池片排布成整齐的深蓝色网格，栅线与银色边框完整，未见裂纹、污斑、碎纹或缺失区域，仅有轻微竖向明暗差异（属阴影/反光类正常现象）。"
+   },
+   "cost": {
+    "none": 0.00057212,
+    "same": 0.00092536,
+    "think": 0.0019732400000000002
+   }
+  },
+  {
+   "scene": "solar_105",
+   "panel": "A-R2-C07",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能看清电池片网格和栅线，深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中左部有一条边缘模糊的半透明竖向亮带，透过它仍能看到电池片和栅线，属反光；其余区域颜色均匀、无裂纹、污损、破碎或缺失。"
+   },
+   "cost": {
+    "none": 0.00062012,
+    "same": 0.00098536,
+    "think": 0.00365324
+   }
+  },
+  {
+   "scene": "solar_106",
+   "panel": "A-R2-C01",
+   "truth": null,
+   "screen": "defect",
+   "trigger": "conflict",
+   "none": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，属于反光，不是缺陷。"
+   },
+   "same": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中部偏左有一片边缘模糊的半透明亮区，透过它仍能清楚看到电池片网格和栅线，电池片深蓝色未变，属于反光而非缺陷。"
+   },
+   "think": {
+    "status": "ok",
+    "type": null,
+    "evidence": "板面中央有一条纵向的模糊半透明亮带，透过它仍能清楚看到电池片网格与栅线，深蓝色电池片颜色未变，属反光而非缺陷，其余区域网格整齐、边框完整。"
+   },
+   "cost": {
+    "none": 0.00059612,
+    "same": 0.0009733599999999999,
+    "think": 0.00182124
+   }
+  }
+ ],
+ "tokens": {
+  "calls": 1292,
+  "prompt_tokens": 857362,
+  "completion_tokens": 108787,
+  "cache_hit_tokens": 451584,
+  "reasoning_tokens": 37408,
+  "cached_answers": 0
+ },
+ "thinking": false,
+ "thinking_mode": "off",
+ "price_period": "idle",
+ "cost_at_peak_yuan": 1.6999,
+ "cost_at_idle_yuan": 0.85
+}

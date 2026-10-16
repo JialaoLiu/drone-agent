@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from . import vision
+from . import config, vision
 from .llm import Usage
 from .sim.camera import Frame
 
@@ -80,7 +80,7 @@ def adjudicate(tile: vision.Tile, screened: dict | None, provider: str | None = 
     screened = screened or {}
     conflict = verdict["status"] == "ok" and screened.get("status") == "defect" and screened.get("confidence", 0) >= CONFLICT_CONFIDENCE
     if verdict["status"] == "unsure" or conflict:
-        verdict, usage = vision.verify(tile, provider, attempt=1)
+        verdict, usage = vision.verify(tile, provider, attempt=1, thinking=config.VISION_THINKING_RECHECK or None)
         usages.append(usage)
         return verdict, usages, True
     return verdict, usages, False

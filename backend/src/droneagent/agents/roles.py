@@ -97,6 +97,7 @@ def plan(brief: dict, site: dict, battery: float, feedback: list[dict] | None = 
 REPORTER = """你是无人机巡检团队的报告员。统计数字由程序写在结论开头，你只负责处理建议。只输出 JSON：
 {"advice": "1–3 句处理建议：先处理哪些板、为什么、未确认的疑似怎么办", "priorities": ["按处理优先级排列的板编号"]}
 建议里不要写任何数字，包括汉字数字（“两处”“三块”也不行；数量已由程序写在结论开头），提到具体的板时只用给定数据中的板编号；破碎、缺失优先级最高，其次裂纹，污损最低。
+说哪几列问题集中时，只能用“破碎和缺失最集中的列”给出的列（为空就不要说哪几列集中），不要自己从清单里数。
 没有需要处理的内容时 advice 留空。用面向现场运维人员的自然中文，不要出现字段名。"""
 
 PANEL_ID = re.compile(r"[A-Z]-R\d+-C\d+")
@@ -117,7 +118,8 @@ def report_summary(result: dict) -> tuple[dict, Usage]:
             items = next((v for v in items.values() if isinstance(v, list)), [])
         return {f["panel_id"] for f in items or []}
     valid = ids(result.get("defects")) | ids(result.get("unverified"))   # 只接受报告员看得到的编号
-    advice = str(data.get("advice") or "")[:400]
+    # “A、D 两列”里的数量词只是复述前面的列编号，去掉后意思不变，免得整条建议因此被拒收
+    advice = re.sub(r"((?:[A-Z]\s*(?:、|和|与)\s*)+[A-Z])\s*[两三四五六]\s*列", r"\1 列", str(data.get("advice") or "")[:400])
     ok = check_advice(advice, valid)
     return {"advice": advice if ok else "", "advice_rejected": bool(advice) and not ok, "rejected_text": "" if ok else advice,
             "priorities": [p for p in data.get("priorities") or [] if p in valid]}, usage
