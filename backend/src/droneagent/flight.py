@@ -33,6 +33,17 @@ class FlightError(RuntimeError):
     pass
 
 
+COMMAND_TIMEOUT = 12.0     # 单条飞控指令等待应答的上限（秒）
+
+
+async def _cmd(coro, what: str, timeout: float = COMMAND_TIMEOUT):
+    """飞控指令都要有上限：仿真重启后飞控偶尔对某类指令一直不应答，没有上限时任务会永远卡住（DR-065）。"""
+    try:
+        return await asyncio.wait_for(coro, timeout)
+    except asyncio.TimeoutError as error:
+        raise FlightError(f"{what}没有应答（{timeout:.0f} 秒），请重启仿真后再试") from error
+
+
 GIMBAL_LIST_TIMEOUT = 5.0      # 等待云台列表的上限（秒）
 
 
@@ -100,9 +111,18 @@ class Flight:
 
     _mavsdk: dict[str, Mavsdk] = {}     # 每个连接地址只建一个实例：重复监听同一 UDP 端口会冲突
 
-    async def connect(self, timeout: float = 30.0) -> None:
+    async def connect(self, timeout: float = 30.0, fresh: bool = False) -> None:
+        """fresh 为真时（仿真重启后重连）销毁旧的 MAVSDK 实例再新建：在旧实例上重新发现飞控后，
+        参数与部分指令通道会一直不应答（DR-065），遥测却正常，看起来“已就绪”。"""
         for t in self._tasks:
             t.cancel()
+        if fresh and self.url in Flight._mavsdk:
+            old = Flight._mavsdk.pop(self.url)
+            await asyncio.sleep(0.2)          # 让已取消的订阅先退出
+            try:
+                old.destroy()
+            except Exception:                 # noqa: BLE001  销毁失败不影响新建
+                pass
         if self.url not in Flight._mavsdk:
             m = Mavsdk(Configuration.create_with_component_type(ComponentType.GROUND_STATION))
             await m.add_any_connection(self.url)
@@ -210,11 +230,11 @@ class Flight:
         self.guard()
         await self.wait_ready()
         self.guard()
-        await self.action.set_takeoff_altitude(altitude)
-        await self.action.set_current_speed(CRUISE_SPEED)
+        await _cmd(self.action.set_takeoff_altitude(altitude), "设置起飞高度")
+        await _cmd(self.action.set_current_speed(CRUISE_SPEED), "设置飞行速度")
         try:
-            await self.action.arm()
-            await self.action.takeoff()
+            await _cmd(self.action.arm(), "解锁")
+            await _cmd(self.action.takeoff(), "起飞")
         except Exception as error:
             raise FlightError(f"起飞被拒绝：{error}") from error
         await self._wait(lambda: self.state.z >= altitude - 0.8, timeout, "起飞未在规定时间内到达高度", guarded=True)
@@ -227,7 +247,7 @@ class Flight:
         started = time.time()
         self.guard()
         try:
-            await self.action.goto_location(lat, lon, self._home_amsl + z, yaw)
+            await _cmd(self.action.goto_location(lat, lon, self._home_amsl + z, yaw), "飞往目标点")
         except Exception as error:
             raise FlightError(f"飞往目标点的指令被拒绝：{error}") from error
         dist = math.dist((self.state.x, self.state.y, self.state.z), (x, y, z))
@@ -253,8 +273,8 @@ class Flight:
                 if self._gimbal_id is None or attempt:
                     # 云台列表订阅可能一直不产出：设上限，超时按云台失败处理（深度审查 H04）
                     self._gimbal_id = await asyncio.wait_for(first_gimbal(), GIMBAL_LIST_TIMEOUT)
-                    await self.gimbal.take_control(self._gimbal_id, ControlMode.PRIMARY)
-                await self.gimbal.set_angles(self._gimbal_id, 0.0, pitch, 0.0, GimbalMode.YAW_FOLLOW, SendMode.ONCE)
+                    await _cmd(self.gimbal.take_control(self._gimbal_id, ControlMode.PRIMARY), "云台控制权")
+                await _cmd(self.gimbal.set_angles(self._gimbal_id, 0.0, pitch, 0.0, GimbalMode.YAW_FOLLOW, SendMode.ONCE), "云台转动")
                 break
             except Preempted:
                 raise
@@ -273,38 +293,38 @@ class Flight:
     async def failsafe_return(self) -> None:
         """飞控自带的返航（失联保护同款），用于本程序航线执行失败时。"""
         try:
-            await self.action.return_to_launch()
+            await _cmd(self.action.return_to_launch(), "返航")
         except Exception as error:
             raise FlightError(f"返航指令被拒绝：{error}") from error
         self.preempted = "飞控返航已接管"
 
     async def land(self, timeout: float = 120.0) -> None:
         try:
-            await self.action.land()
+            await _cmd(self.action.land(), "降落")
         except Exception as error:
             raise FlightError(f"降落指令被拒绝：{error}") from error
         # 落地后飞控会自动上锁；以“不在空中”或“已上锁”任一为准，避免某个遥测流延迟导致误判超时
         await self._wait(lambda: not self.state.in_air or not self.state.armed, timeout, "降落超时")
 
     async def hold(self) -> None:
-        await self.action.hold()
+        await _cmd(self.action.hold(), "悬停")
 
     async def set_param(self, name: str, value: float) -> None:
         if isinstance(value, int) or float(value).is_integer() and name.endswith(("_EN", "_MODE", "_N_CELLS")):
-            await self.param.set_param_int(name, int(value))
+            await _cmd(self.param.set_param_int(name, int(value)), f"设置参数 {name}")
         else:
-            await self.param.set_param_float(name, float(value))
+            await _cmd(self.param.set_param_float(name, float(value)), f"设置参数 {name}")
 
     async def get_param(self, name: str) -> float:
         try:
-            return await self.param.get_param_float(name)
+            return await _cmd(self.param.get_param_float(name), f"读取参数 {name}")
         except Exception:
-            return float(await self.param.get_param_int(name))
+            return float(await _cmd(self.param.get_param_int(name), f"读取参数 {name}"))
 
     async def inject_failure(self, unit: str, kind: str = "OFF", instance: int = 0) -> None:
         """故障注入（仅仿真，需 SYS_FAILURE_EN=1）。unit 如 SYSTEM_MOTOR、SENSOR_GPS。"""
-        await self.param.set_param_int("SYS_FAILURE_EN", 1)
-        await self.failure.inject(getattr(FailureUnit, unit), getattr(FailureType, kind), instance)
+        await _cmd(self.param.set_param_int("SYS_FAILURE_EN", 1), "设置参数 SYS_FAILURE_EN")
+        await _cmd(self.failure.inject(getattr(FailureUnit, unit), getattr(FailureType, kind), instance), "故障注入")
 
     async def _wait(self, condition, timeout: float, message: str, guarded: bool = False) -> None:
         """guarded 为真时（普通指令的等待），取消或返航接管会立即结束等待。"""

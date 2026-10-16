@@ -29,18 +29,27 @@ def _wait(client: httpx.Client, check, timeout: float, every: float = 3.0):
 
 
 def run_one(client: httpx.Client, seed: int, location: dict | None) -> dict:
-    scene = client.post("/scenes", json={"seed": seed, "scenario": "rescue", "location": location}).json()["name"]
+    r = client.post("/scenes", json={"seed": seed, "scenario": "rescue", "location": location})
+    r.raise_for_status()
+    scene = r.json()["name"]
     truth = client.get(f"/site/{scene}/truth").json()
     target = next(p for p in truth["people"] if p["role"] == "target")
-    client.post("/sim/start", json={"scene": scene})
+    client.post("/sim/start", json={"scene": scene}).raise_for_status()      # 被拒绝（例如有任务在执行）时直接报错
     _wait(client, lambda: client.get("/sim").json().get("job", {}).get("state") == "idle" and client.get("/sim").json()["px4"], 240)
     _wait(client, lambda: client.get("/sim/health").json().get("ok") is True, 120)
     task = f"公园里有人走失：{truth['brief']['description']}，最后在{truth['brief']['last_seen_label']}附近被看到"
     retried = False
     for attempt in range(2):
-        mid = client.post("/missions", json={"task": task, "auto_approve": True}).json()["id"]
+        r = client.post("/missions", json={"task": task, "auto_approve": True})
+        r.raise_for_status()
+        mid = r.json()["id"]
         started = time.time()
-        status = _wait(client, lambda: (s := client.get(f"/missions/{mid}").json()["status"]) not in ("planning", "awaiting_approval", "running", "queued") and s, 1200, 6)
+        try:
+            status = _wait(client, lambda: (s := client.get(f"/missions/{mid}").json()["status"]) not in ("planning", "awaiting_approval", "running", "queued") and s, 900, 6)
+        except TimeoutError:
+            client.post(f"/missions/{mid}/cancel")        # 卡住的任务主动取消，不拖累后面的场景
+            time.sleep(20)
+            status = "timeout"
         m = client.get(f"/missions/{mid}").json()
         # 飞行前检查因电脑临时忙（仿真速度不足）没有起飞：等 30 秒重试一次，报告中注明
         if status == "failed" and not (m.get("result") or {}).get("searched") and attempt == 0:

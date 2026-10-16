@@ -371,7 +371,7 @@ CANCEL_GRACE = 15.0      # 取消后给任务自行停下的时间（秒）
 
 @app.post("/missions/{mid}/cancel")
 def cancel(mid: str) -> dict:
-    store.update_mission(mid, status="cancelled", only_from=("planning", "awaiting_approval", "running"))
+    store.update_mission(mid, status="cancelled", only_from=("queued", "planning", "awaiting_approval", "running"))
     store.event(mid, "system", "cancel", "用户取消任务；飞行中会立即返航")
 
     def watchdog():

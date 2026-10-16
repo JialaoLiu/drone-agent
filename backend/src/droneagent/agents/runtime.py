@@ -117,7 +117,7 @@ async def flight() -> Flight:
         o = scene_origin()
         f = _flight or Flight(Origin(o["lat"], o["lon"], o.get("alt", 0.0)), config.MAVLINK_URL)
         _sync_origin(f)
-        await f.connect(timeout=20)
+        await f.connect(timeout=20, fresh=_flight is not None)     # 重连（仿真重启后）用全新的 MAVSDK 实例
         if not f.listeners:
             f.listeners.append(lambda s: telemetry.update(s.as_dict()))
         _flight = f
