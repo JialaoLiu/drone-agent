@@ -1,0 +1,58 @@
+{
+ "suite": "rescue",
+ "summary": {
+  "runs": 2,
+  "found": 0,
+  "found_rate": 0.0,
+  "misidentified": 0,
+  "location_error_m_mean": null,
+  "elapsed_s_mean": null,
+  "cost_yuan_mean": 0.006,
+  "by_state": {
+   "walking": {
+    "n": 2,
+    "found": 0
+   }
+  }
+ },
+ "rows": [
+  {
+   "seed": 15,
+   "scene": "rescue_15_6",
+   "mission": "5324f9f7e5",
+   "status": "done",
+   "task": "公园里有人走失：小孩，大约 8 岁，穿绿色上衣、白色裤子，最后在凉亭附近被看到",
+   "target_state": "walking",
+   "bystanders": 9,
+   "decoys": 1,
+   "found": false,
+   "misidentified": false,
+   "location_error_m": null,
+   "elapsed_s": null,
+   "coverage": 1.0,
+   "wall_s": 331,
+   "cost_yuan": 0.0072,
+   "place": null,
+   "retried": false
+  },
+  {
+   "seed": 100,
+   "scene": "rescue_100_6",
+   "mission": "ff2d8e683f",
+   "status": "done",
+   "task": "公园里有人走失：小孩，大约 8 岁，穿黄色上衣、黑色裤子，最后在西门附近被看到",
+   "target_state": "walking",
+   "bystanders": 10,
+   "decoys": 1,
+   "found": false,
+   "misidentified": false,
+   "location_error_m": null,
+   "elapsed_s": null,
+   "coverage": 1.0,
+   "wall_s": 325,
+   "cost_yuan": 0.0048,
+   "place": "文翰湖公园",
+   "retried": false
+  }
+ ]
+}

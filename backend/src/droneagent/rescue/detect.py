@@ -135,13 +135,13 @@ def screen(frame: Frame, cands: list[dict], description: str, provider: str | No
     return out, usage
 
 
-def verify(frame: Frame, description: str, provider: str | None = None) -> tuple[dict, Usage]:
-    """变焦近照确认：画面中央附近有没有人、是否就是要找的人。"""
-    img = frame.image.convert("RGB")
+def verify(frame: Frame | Image.Image, description: str, provider: str | None = None, kind: str = "变焦相机对准可疑位置拍的近照") -> tuple[dict, Usage]:
+    """近照确认：画面中央附近有没有人、是否就是要找的人。frame 可以是照片或裁好的小图。"""
+    img = (frame.image if isinstance(frame, Frame) else frame).convert("RGB")
     img.thumbnail((960, 960))
     buf = io.BytesIO()
     img.save(buf, "JPEG", quality=90)
-    user = (f"这是变焦相机对准可疑位置拍的近照。要找的人：{description}。画面里有没有人？如果有，是不是要找的人？"
+    user = (f"这是{kind}。要找的人：{description}。画面里有没有人？如果有，是不是要找的人？"
             '只输出 JSON：{"person":"yes|no|unsure","match":"yes|partial|no|unsure","top":"颜色或null","bottom":"颜色或null",'
             '"child":"yes|no|unsure","in_water":"yes|no","confidence":0到1之间的数,"evidence":"一句话说明看到了什么"}')
     data, usage = chat_json(GUIDE, user, [buf.getvalue()], model=_model(provider), provider=_provider(provider),

@@ -162,6 +162,15 @@ def _own_shadow(site: dict, frame, c: dict, radius: float = 2.5) -> bool:
     return math.hypot(c["x"] - sx, c["y"] - sy) < radius
 
 
+def _confirm_altitude(site: dict, item: dict, search_alt: float) -> float:
+    """低空确认的高度：尽量低（看得清衣着），但必须通过安全员校验（树高可能超过 10 米、限高下限）。"""
+    for alt in (max(site["min_altitude"], 9.0), 12.0, search_alt):
+        step = survey.Step("confirm", item.get("id", ""), (item["x"], item["y"], alt), 0.0, -90.0, "wide")
+        if not safety.check_plan(site, [step], battery=100.0, reserve=0.0):
+            return alt
+    return search_alt
+
+
 def _classify(item: dict) -> str:
     if item["person"] == "no":
         return "object"
@@ -195,20 +204,32 @@ async def _confirm(state: RescueState, item: dict, index: int) -> tuple[dict | N
             return {"x": round(x, 2), "y": round(y, 2), "in_water": verdict["in_water"] == "yes", "photo": pid,
                     "clothing_unverified": in_water and verdict["match"] not in CONFIRM_MATCH and not attrs,
                     "evidence": verdict["evidence"], "confidence": verdict["confidence"], "found_at": time.time()}, verdict
-        # 初筛明明是人、变焦里却没看到人（或看不清）：多半已经走开了（从发现到对准要十来秒，变焦画面只有约 4 米宽）。
-        # 飞到候选位置正上方，用广角重新找一次附近的人（工程日志 43）
+        # 初筛明明是人、变焦里却没看到人（或看不清）：多半已经走开了（从发现到对准要十来秒，变焦画面只有约 4 米宽，
+        # 远处用变焦追走动的人追不上）。改为飞到候选正上方、降到低空用广角拍：画面约 10 米宽，人再走几步也还在（工程日志 43）
         if verdict["person"] == "yes" or attempt or item.get("person") != "yes":
             return None, verdict
-        _emit(state, "pilot", "retake", f"{item['id']} 的变焦画面里没有看到人，可能已经走开，飞到上方重新寻找")
-        await f.goto(item["x"], item["y"], state["plan"]["altitude_m"], f.state.yaw)
-        wide, _ = await _shoot(state, survey.Step("search", item["id"] + "R", (item["x"], item["y"], state["plan"]["altitude_m"]), 0, -90, "wide", "补搜"), index + 1)
+        low = _confirm_altitude(site, item, state["plan"]["altitude_m"])
+        _emit(state, "pilot", "retake", f"{item['id']} 的变焦画面里没有看到人，可能已经走开，飞到上方降到 {low:.0f} 米用广角重新寻找")
+        step = survey.Step("confirm", item["id"] + "L", (item["x"], item["y"], low), 0.0, -90.0, "wide", "低空确认")
+        wide, pid = await _shoot(state, step, index + 1)
+        # 拍完先原地垂直爬回搜索高度：之后不论继续搜索还是返航都是水平飞行，低空水平飞可能撞到树（树高可达 12 米）
+        await f.goto(item["x"], item["y"], state["plan"]["altitude_m"], f.state.yaw, tolerance=1.0)
         near = [c for c in await asyncio.to_thread(detect.candidates, wide)
-                if math.hypot(c["x"] - item["x"], c["y"] - item["y"]) < 10 and not _own_shadow(site, wide, c)]
+                if math.hypot(c["x"] - item["x"], c["y"] - item["y"]) < 12 and not _own_shadow(site, wide, c)]
         if not near:
             return None, verdict
         best = min(near, key=lambda c: math.hypot(c["x"] - item["x"], c["y"] - item["y"]))     # 离上次位置最近的那个
-        item = {**item, "x": best["x"], "y": best["y"]}
-        await f.point_gimbal(-90, settle=1.0)
+        crop = detect.crop(wide, best, metres=3.0, size=480)
+        verdict, usage = await asyncio.to_thread(detect.verify, crop, desc, None, "无人机低空俯视照片里以可疑位置为中心裁出的局部")
+        _usage(state, "searcher", usage)
+        verdict["photo"] = pid
+        attrs = verdict["person"] == "yes" and roles.attributes_match(state["brief"], verdict)
+        verdict["attributes_match"] = attrs
+        if verdict["person"] == "yes" and (verdict["match"] in CONFIRM_MATCH or attrs or verdict["in_water"] == "yes"):
+            return {"x": best["x"], "y": best["y"], "in_water": verdict["in_water"] == "yes", "photo": pid,
+                    "clothing_unverified": verdict["in_water"] == "yes" and not attrs and verdict["match"] not in CONFIRM_MATCH,
+                    "evidence": verdict["evidence"], "confidence": verdict["confidence"], "found_at": time.time()}, verdict
+        return None, verdict
     return None, verdict
 
 
