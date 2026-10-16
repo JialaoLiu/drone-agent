@@ -86,19 +86,31 @@ onMounted(async () => {
     draw()
     // 卫星图（BMAP_SATELLITE_MAP）：地图第一次加载完成后再切换，初始化过程中切换会抛错并中断绘制
     let switched = false
-    map.addEventListener('tilesloaded', () => {
+    const toSatellite = () => {
       if (switched || !map) return
       switched = true
-      map.setMapType((window as any).BMAP_SATELLITE_MAP)
-      window.setTimeout(() => map?.centerAndZoom(toBd(0, 0), 19), 300)     // 切换类型后缩放级别会被重置
-    })
+      try {
+        map.setMapType((window as any).BMAP_SATELLITE_MAP)
+        window.setTimeout(() => map?.centerAndZoom(toBd(0, 0), 19), 300)     // 切换类型后缩放级别会被重置
+      } catch { /* 百度地图内部会抛 clearLabelOverlayData 之类的错误，但卫星图已经切换成功，忽略 */ }
+    }
+    map.addEventListener('tilesloaded', toSatellite)
+    window.setTimeout(toSatellite, 1500)      // 瓦片已在缓存时，加载完成事件可能在监听之前就触发了
   } catch (e) {
     error.value = (e as Error).message
   }
 })
 watch(() => [props.findings, props.plan], draw, { deep: true })
 watch(() => props.telemetry, updateDrone)
-onBeforeUnmount(() => { if (map) { map.destroy?.(); map = null } })
+onBeforeUnmount(() => {
+  // 百度地图的 destroy 偶尔在内部抛错；不能让它中断页面切换
+  const m = map
+  map = null
+  droneMarker = null
+  overlays.length = 0
+  try { m?.clearOverlays?.() } catch { /* 忽略 */ }
+  try { m?.destroy?.() } catch { /* 忽略 */ }
+})
 </script>
 
 <template>
