@@ -1,6 +1,6 @@
 # 用户操作手册
 
-更新：2026-10-15
+更新：2026-10-16
 
 本手册面向第一次使用本系统的人：怎么启动、每个页面做什么、一次巡检从下达到出报告的完整流程、怎么排障、怎么跑评测、常见问题。全部操作都在仿真中进行，不需要真实无人机。
 
@@ -125,6 +125,11 @@ scripts/start.sh stop
 | 仿真速度 | 仿真时间不到真实时间的 60%，飞控会出错（低于 85% 只提示） |
 | 位置估计 | 飞控估计的位置与仿真中的真实位置相差超过水平 2.5 米或高度 1.5 米 |
 | 电脑负载 | 只提示，不拦截 |
+| 天气 | 场地位置的实时天气（Open-Meteo）：平均风速超过 10 米/秒、阵风超过 12 米/秒、正在降水、雷暴、能见度低于 1500 米时“不宜起飞”。仿真中只提示；真机部署在 `backend/.env` 设 `WEATHER_ENFORCE=1` 后不通过即拒绝起飞 |
+
+网页顶部的“飞行前检查”标签随时显示同一套检查的结果，点开可以看逐项详情（下图：其余项目通过，天气一项提示苏黎世当时有雾）：
+
+![飞行前检查](images/guide/preflight.png)
 
 任何一项不通过，任务直接不执行，并提示“关闭占用资源的程序、在场景库重启场景后再试”；改计划解决不了这类问题，所以不会让规划员反复修改。点“确认起飞”时还会再查一次，飞行中每次拍照也会比较位置，偏差超限立即返航。
 
@@ -140,9 +145,18 @@ scripts/start.sh stop
 - 右侧“团队协作记录”按时间列出各角色的动作：起飞、拍整列照片、初筛结论、飞近复核、绕行、换电池、返航；
 - 下方照片条实时出现新拍的照片，点开可以勾选“标出光伏板”，按相机位姿把每块板的框投影到照片上（红色确认缺陷、橙色疑似、蓝色复核后排除、绿色正常）。
 
-执行中可以随时点“取消任务”（飞机立即返航）或右上角“一键返航”。
+执行中可以随时点“取消任务”或右上角“一键返航”，两者效果不同：
+
+| 操作 | 系统怎么做 |
+| --- | --- |
+| 取消任务 | 立即停止发送任何拍摄、航点、云台指令（正在飞往某点也会马上停），然后由程序沿安全航线返航降落，报告照常生成 |
+| 一键返航 | 交给飞控自带的返航；之后任务不再发送任何指令，只等飞机落地。按钮任何时候都可以按，飞机在地面时会提示“飞机在地面” |
 
 ![执行中](images/guide/flight.png)
+
+下图是一次拍摄中按“一键返航”的记录：飞控接管后，任务只等待降落，没有再发送指令。
+
+![一键返航](images/guide/emergency.png)
 
 ### 4.5 查看结果与报告
 
@@ -180,6 +194,24 @@ scripts/start.sh stop
 
 `solar_1` 到 `solar_4` 是早期固定布局（4 列 × 20 块），保留用于和历史评测对比。
 
+### 6.2 真实场地
+
+场景库顶部的“真实场地”卡片：
+
+1. 输入地名（例如“文翰湖公园”），可选填城市（例如“佛山”），点“查找”；
+2. 列表显示百度地点检索的候选地点、地址和经纬度（已从国测局坐标换算为飞控使用的 WGS-84，误差约 1–2 米）；
+3. 点某个地点右边的“用种子 N 生成”，生成名为 `site_N` 的场景，卡片上会标出地名。
+
+真实场地的效果：
+
+- 场地原点放在该地点的真实经纬度，飞控、报告、起飞天气都按这个位置；
+- 如果 `backend/.env` 里配置了有效的 `MAPBOX_TOKEN`，仿真地面和网页平面图的底图会换成该位置的卫星影像；没有时使用程序生成的草地贴图，生成结果会说明原因；
+- 光伏阵列、禁飞区、树仍按种子随机布置，与卫星影像里的真实地物无关。
+
+![真实场地](images/guide/real-site.png)
+
+国内地点用百度检索；国外地点（例如澳大利亚）百度没有可靠数据，可以在命令行直接指定经纬度生成（见第 8 节）。
+
 ## 7. 用量与成本、评测结果
 
 **用量与成本**：可切换 24 小时、7 天、30 天、90 天。
@@ -196,6 +228,19 @@ scripts/start.sh stop
 
 **评测结果**：展示 `backend/eval/results/` 下每类评测最近一次的结果，以及全部历史记录；点“明细”展开每一轮、每个场景、每道题。
 
+![评测结果](images/guide/evals.png)
+
+各卡片含义：
+
+| 卡片 | 看什么 |
+| --- | --- |
+| 巡检（复核策略对比） | 四种复核策略的检出率、精确率、轻微缺陷检出、估计飞行时间（随机布局场景） |
+| 任务理解与规划 | 20 道题的通过率（含越权请求必须拒绝、编号不存在必须追问） |
+| 飞行排障 | 诊断员准确率与“改得最多的参数就是原因”这条规则的对比 |
+| 随机布局泛化 | 100 个随机场地上三种策略是否都通过安全校验、需要几个架次 |
+| 绕行方法对比 | 栅格 A* 与可见性图在需要绕行的航段上的长度、拐点、耗时 |
+| 本地初筛分类器 | 在没见过的场景上能保留多少缺陷、能少送多少板给视觉模型 |
+
 ## 8. 命令行：评测与测试
 
 在 `backend` 目录下执行。
@@ -206,9 +251,12 @@ scripts/start.sh stop
 | `PYTHONPATH=src uv run python -m droneagent.evaluate routes --seeds 1-100` | 绕行方法对比：栅格 A* 与可见性图的通过率、长度、拐点、耗时 | 否 | 否 |
 | `PYTHONPATH=src uv run python -m droneagent.evaluate planning --repeat 2` | 任务理解与规划：20 道题（含追问、拒绝、注入指令） | 否 | 是 |
 | `PYTHONPATH=src uv run python -m droneagent.evaluate record --scene solar_2` | 录制场景的全部照片，供离线回放 | 是（先停止后端） | 否 |
-| `PYTHONPATH=src uv run python -m droneagent.evaluate vision --scenes solar_1,solar_2,solar_3 --repeat 2` | 巡检：离线回放比较四种复核策略 | 否 | 是 |
+| `PYTHONPATH=src uv run python -m droneagent.evaluate vision --scenes solar_46,solar_63,solar_71 --repeat 1` | 巡检：离线回放比较四种复核策略 | 否 | 是 |
 | `PYTHONPATH=src uv run python -m droneagent.evaluate troubleshoot` | 排障：注入 4 个已知故障，对比诊断员与规则基线 | 是（先停止后端） | 是 |
-| `uv run python -m pytest` | 离线单元测试（40 个） | 否 | 否 |
+| `PYTHONPATH=src uv run python -m droneagent.evaluate triage --replay` | 本地初筛分类器：用录制的场景训练，在没见过的场景上评估；`--replay` 真的调用视觉模型对比费用与结果 | 否 | 加 `--replay` 时是 |
+| `PYTHONPATH=src uv run python -m droneagent.sim.scene --seed 7 --place 文翰湖公园 --city 佛山` | 按真实地点生成场景（百度检索坐标；有 Mapbox Token 时地面为卫星影像） | 否 | 否 |
+| `PYTHONPATH=src uv run python -m droneagent.sim.scene --seed 8 --lat -34.9285 --lon 138.6007 --label "Adelaide 测试场地"` | 直接按经纬度生成场景（国外地点） | 否 | 否 |
+| `uv run python -m pytest` | 离线单元测试（65 个） | 否 | 否 |
 
 结果写入 `backend/eval/results/<时间>-<类型>.md` 和 `.json`，网页“评测结果”页自动读取。
 
@@ -225,6 +273,15 @@ claude mcp add drone-agent -- env PYTHONPATH=<backend 绝对路径>/src uv --dir
 提供的工具：`sim_status`（仿真状态）、`site_info`（场地信息）、`start_inspection`（下达任务，可选自动确认）、`get_mission`（任务详情）、`approve_mission`（确认或拒绝计划）、`cancel_mission`（取消）、`troubleshoot`（排障）。
 
 ## 10. 常见问题
+
+**飞行前检查的“天气”提示不宜起飞，为什么还能飞？**
+仿真里的风场和真实天气无关，所以默认只提示。真机部署时在 `backend/.env` 设 `WEATHER_ENFORCE=1`，不通过就拒绝起飞，取不到天气数据也拒绝。
+
+**真实场地生成后地面还是草地。**
+`MAPBOX_TOKEN` 无效或没有配置。Mapbox 的公开 Token 以 `pk.` 开头、长度通常在 80 个字符以上，在 Mapbox 账户的 Access tokens 页面复制。改好后重新生成场景。
+
+**本地初筛分类器怎么开？**
+先运行 `evaluate triage` 训练（模型保存在 `drone-agent-related/data/models/triage.pkl`），再在 `backend/.env` 设 `TRIAGE_ENABLED=1`。目前实测只省约 19% 的初筛费用，而且被视觉模型自身的判断波动盖住，所以默认关闭。
 
 **网页打不开，或提示连接失败。**
 先确认 `drone-agent-related` 目录在仓库旁边，再执行 `scripts/start.sh stop` 后重新启动。看 `logs/api.log` 是否有报错。

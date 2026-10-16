@@ -471,10 +471,15 @@ def main() -> None:
     parser.add_argument("--defect-rate", type=float, default=0.12)
     parser.add_argument("--place", help="真实地点名称，例如 文翰湖公园（用百度地点检索取坐标）")
     parser.add_argument("--city", default="全国", help="检索范围，例如 佛山")
+    parser.add_argument("--lat", type=float, help="直接指定场地纬度（WGS-84），用于百度没有数据的国外地点")
+    parser.add_argument("--lon", type=float, help="直接指定场地经度（WGS-84）")
+    parser.add_argument("--label", default="自定义地点", help="与 --lat/--lon 一起使用的地点名称")
     args = parser.parse_args()
     config.ensure_dirs()
     location = None
-    if args.place:
+    if args.lat is not None and args.lon is not None:
+        location = {"name": args.label, "address": "", "city": "", "lat": args.lat, "lon": args.lon, "source": "命令行指定（WGS-84）"}
+    elif args.place:
         from .. import maps
         found = maps.search_place(args.place, args.city)
         if not found:
