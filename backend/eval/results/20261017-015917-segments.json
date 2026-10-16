@@ -1,0 +1,93 @@
+{
+ "suite": "segments",
+ "scenes": [
+  "solar_201",
+  "solar_202",
+  "solar_203",
+  "solar_204",
+  "solar_205",
+  "solar_206",
+  "solar_207",
+  "solar_208",
+  "solar_209",
+  "solar_210",
+  "solar_211",
+  "solar_212"
+ ],
+ "defects": 84,
+ "summary": {
+  "overview": {
+   "recall": 0.7381,
+   "precision": 1.0,
+   "false_alarms": 0,
+   "missed": [
+    "solar_201 A-R1-C01",
+    "solar_201 A-R3-C09",
+    "solar_202 C-R3-C07",
+    "solar_203 A-R2-C07",
+    "solar_203 A-R3-C03",
+    "solar_204 A-R1-C04",
+    "solar_204 B-R1-C04",
+    "solar_204 B-R2-C12",
+    "solar_204 C-R1-C05",
+    "solar_204 E-R1-C09",
+    "solar_205 B-R2-C09",
+    "solar_205 C-R2-C03",
+    "solar_206 B-R1-C01",
+    "solar_207 A-R2-C10",
+    "solar_208 A-R1-C11",
+    "solar_208 A-R1-C13",
+    "solar_209 A-R3-C02",
+    "solar_209 A-R3-C05",
+    "solar_211 A-R2-C08",
+    "solar_211 B-R1-C03",
+    "solar_211 C-R3-C04",
+    "solar_212 B-R2-C04"
+   ],
+   "miss_rate_upper95": 0.3524,
+   "screen_photos_per_scene": 2.8,
+   "closeups_per_scene": 10.8,
+   "cost_yuan_per_scene": 0.0144,
+   "est_minutes": 3.3
+  },
+  "segments": {
+   "recall": 0.9643,
+   "precision": 1.0,
+   "false_alarms": 0,
+   "missed": [
+    "solar_203 A-R2-C07",
+    "solar_203 A-R3-C03",
+    "solar_209 A-R3-C02"
+   ],
+   "miss_rate_upper95": 0.0897,
+   "screen_photos_per_scene": 19.0,
+   "closeups_per_scene": 11.6,
+   "cost_yuan_per_scene": 0.0123,
+   "est_minutes": 4.1
+  },
+  "all": {
+   "recall": 1.0,
+   "precision": 1.0,
+   "false_alarms": 0,
+   "missed": [],
+   "miss_rate_upper95": 0.035,
+   "screen_photos_per_scene": 2.8,
+   "closeups_per_scene": 58.9,
+   "cost_yuan_per_scene": 0.0398,
+   "est_minutes": 5.7
+  }
+ },
+ "tokens": {
+  "calls": 1345,
+  "prompt_tokens": 898019,
+  "completion_tokens": 74455,
+  "cache_hit_tokens": 478464,
+  "reasoning_tokens": 0,
+  "cached_answers": 0
+ },
+ "thinking": false,
+ "thinking_mode": "off",
+ "price_period": "idle",
+ "cost_at_peak_yuan": 1.4539,
+ "cost_at_idle_yuan": 0.7269
+}

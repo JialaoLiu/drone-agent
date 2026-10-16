@@ -1,0 +1,60 @@
+{
+ "suite": "zoom",
+ "scenes": [
+  "solar_1",
+  "solar_2",
+  "solar_3",
+  "solar_46",
+  "solar_63",
+  "solar_71",
+  "solar_101",
+  "solar_102",
+  "solar_103",
+  "solar_104",
+  "solar_105",
+  "solar_106"
+ ],
+ "summary": {
+  "52": {
+   "recall": 0.974,
+   "minor_recall": 0.941,
+   "flagged": 226,
+   "flagged_share": 0.235,
+   "cost_yuan": 0.0988,
+   "missed": [
+    "solar_101 B-R1-C07",
+    "solar_103 D-R3-C11",
+    "solar_104 A-R1-C06"
+   ]
+  },
+  "104": {
+   "recall": 1.0,
+   "minor_recall": 1.0,
+   "flagged": 225,
+   "flagged_share": 0.234,
+   "cost_yuan": 0.0992,
+   "missed": []
+  },
+  "156": {
+   "recall": 1.0,
+   "minor_recall": 1.0,
+   "flagged": 221,
+   "flagged_share": 0.23,
+   "cost_yuan": 0.0978,
+   "missed": []
+  }
+ },
+ "tokens": {
+  "calls": 336,
+  "prompt_tokens": 273456,
+  "completion_tokens": 35038,
+  "cache_hit_tokens": 120192,
+  "reasoning_tokens": 0,
+  "cached_answers": 0
+ },
+ "thinking": false,
+ "thinking_mode": "off",
+ "price_period": "idle",
+ "cost_at_peak_yuan": 0.5916,
+ "cost_at_idle_yuan": 0.2958
+}

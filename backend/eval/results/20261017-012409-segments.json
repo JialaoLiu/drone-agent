@@ -1,0 +1,85 @@
+{
+ "suite": "segments",
+ "scenes": [
+  "solar_1",
+  "solar_2",
+  "solar_3",
+  "solar_46",
+  "solar_63",
+  "solar_71",
+  "solar_101",
+  "solar_102",
+  "solar_103",
+  "solar_104",
+  "solar_105",
+  "solar_106"
+ ],
+ "defects": 116,
+ "summary": {
+  "overview": {
+   "recall": 0.8448,
+   "precision": 0.9703,
+   "false_alarms": 3,
+   "missed": [
+    "solar_1 A-R2-C04",
+    "solar_1 C-R2-C06",
+    "solar_1 D-R1-C03",
+    "solar_2 C-R2-C01",
+    "solar_3 B-R1-C05",
+    "solar_3 D-R1-C01",
+    "solar_63 C-R1-C08",
+    "solar_71 C-R1-C03",
+    "solar_101 A-R1-C05",
+    "solar_101 B-R1-C07",
+    "solar_101 D-R2-C10",
+    "solar_101 D-R3-C07",
+    "solar_102 A-R1-C02",
+    "solar_103 D-R3-C11",
+    "solar_104 A-R1-C06",
+    "solar_104 C-R1-C12",
+    "solar_105 B-R3-C03",
+    "solar_106 A-R2-C08"
+   ],
+   "miss_rate_upper95": 0.2214,
+   "screen_photos_per_scene": 3.9,
+   "closeups_per_scene": 16.9,
+   "cost_yuan_per_scene": 0.0,
+   "est_minutes": 4.2
+  },
+  "segments": {
+   "recall": 1.0,
+   "precision": 0.9748,
+   "false_alarms": 3,
+   "missed": [],
+   "miss_rate_upper95": 0.0255,
+   "screen_photos_per_scene": 25.2,
+   "closeups_per_scene": 17.4,
+   "cost_yuan_per_scene": 0.009,
+   "est_minutes": 5.3
+  },
+  "all": {
+   "recall": 1.0,
+   "precision": 0.9748,
+   "false_alarms": 3,
+   "missed": [],
+   "miss_rate_upper95": 0.0255,
+   "screen_photos_per_scene": 3.9,
+   "closeups_per_scene": 78.5,
+   "cost_yuan_per_scene": 0.0,
+   "est_minutes": 7.3
+  }
+ },
+ "tokens": {
+  "calls": 138,
+  "prompt_tokens": 107974,
+  "completion_tokens": 13073,
+  "cache_hit_tokens": 53376,
+  "reasoning_tokens": 0,
+  "cached_answers": 1757
+ },
+ "thinking": false,
+ "thinking_mode": "off",
+ "price_period": "idle",
+ "cost_at_peak_yuan": 0.2159,
+ "cost_at_idle_yuan": 0.108
+}

@@ -1,0 +1,2341 @@
+{
+ "suite": "layouts",
+ "seeds": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19,
+  20,
+  21,
+  22,
+  23,
+  24,
+  25,
+  26,
+  27,
+  28,
+  29,
+  30,
+  31,
+  32,
+  33,
+  34,
+  35,
+  36,
+  37,
+  38,
+  39,
+  40,
+  41,
+  42,
+  43,
+  44,
+  45,
+  46,
+  47,
+  48,
+  49,
+  50,
+  51,
+  52,
+  53,
+  54,
+  55,
+  56,
+  57,
+  58,
+  59,
+  60,
+  61,
+  62,
+  63,
+  64,
+  65,
+  66,
+  67,
+  68,
+  69,
+  70,
+  71,
+  72,
+  73,
+  74,
+  75,
+  76,
+  77,
+  78,
+  79,
+  80,
+  81,
+  82,
+  83,
+  84,
+  85,
+  86,
+  87,
+  88,
+  89,
+  90,
+  91,
+  92,
+  93,
+  94,
+  95,
+  96,
+  97,
+  98,
+  99,
+  100
+ ],
+ "summary": {
+  "none": {
+   "pass_rate": 1.0,
+   "sorties": {
+    "1": 72,
+    "2": 28,
+    "3": 0
+   }
+  },
+  "flagged_and_unsure": {
+   "pass_rate": 1.0,
+   "sorties": {
+    "1": 50,
+    "2": 50,
+    "3": 0
+   }
+  },
+  "all": {
+   "pass_rate": 1.0,
+   "sorties": {
+    "1": 34,
+    "2": 61,
+    "3": 5
+   }
+  },
+  "arrays_range": [
+   2,
+   6
+  ],
+  "panels_range": [
+   20,
+   120
+  ]
+ },
+ "rows": [
+  {
+   "seed": 1,
+   "arrays": 2,
+   "panels": 35,
+   "no_fly_zones": 1,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 2,
+   "arrays": 5,
+   "panels": 94,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 3,
+   "arrays": 3,
+   "panels": 54,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 4,
+   "arrays": 3,
+   "panels": 51,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 5,
+   "arrays": 3,
+   "panels": 62,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 6,
+   "arrays": 4,
+   "panels": 65,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 7,
+   "arrays": 5,
+   "panels": 97,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 8,
+   "arrays": 6,
+   "panels": 93,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 9,
+   "arrays": 4,
+   "panels": 83,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 10,
+   "arrays": 6,
+   "panels": 105,
+   "no_fly_zones": 2,
+   "trees": 6,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 11,
+   "arrays": 6,
+   "panels": 99,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 12,
+   "arrays": 3,
+   "panels": 49,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 13,
+   "arrays": 5,
+   "panels": 117,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 14,
+   "arrays": 2,
+   "panels": 20,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 15,
+   "arrays": 6,
+   "panels": 120,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 16,
+   "arrays": 5,
+   "panels": 88,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 17,
+   "arrays": 4,
+   "panels": 101,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 18,
+   "arrays": 5,
+   "panels": 108,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 19,
+   "arrays": 5,
+   "panels": 107,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 20,
+   "arrays": 5,
+   "panels": 100,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 21,
+   "arrays": 3,
+   "panels": 60,
+   "no_fly_zones": 2,
+   "trees": 6,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 22,
+   "arrays": 4,
+   "panels": 83,
+   "no_fly_zones": 2,
+   "trees": 6,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 23,
+   "arrays": 2,
+   "panels": 34,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 24,
+   "arrays": 4,
+   "panels": 79,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 25,
+   "arrays": 6,
+   "panels": 110,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 26,
+   "arrays": 5,
+   "panels": 120,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 3,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 27,
+   "arrays": 4,
+   "panels": 85,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 28,
+   "arrays": 6,
+   "panels": 117,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 29,
+   "arrays": 5,
+   "panels": 59,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 30,
+   "arrays": 4,
+   "panels": 72,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 31,
+   "arrays": 2,
+   "panels": 28,
+   "no_fly_zones": 1,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 32,
+   "arrays": 3,
+   "panels": 83,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 33,
+   "arrays": 2,
+   "panels": 28,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 34,
+   "arrays": 5,
+   "panels": 94,
+   "no_fly_zones": 1,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 35,
+   "arrays": 2,
+   "panels": 36,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 36,
+   "arrays": 5,
+   "panels": 48,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 37,
+   "arrays": 6,
+   "panels": 118,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 38,
+   "arrays": 5,
+   "panels": 86,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 39,
+   "arrays": 6,
+   "panels": 119,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 3,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 40,
+   "arrays": 3,
+   "panels": 77,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 41,
+   "arrays": 5,
+   "panels": 95,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 42,
+   "arrays": 2,
+   "panels": 36,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 43,
+   "arrays": 4,
+   "panels": 96,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 44,
+   "arrays": 3,
+   "panels": 52,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 45,
+   "arrays": 6,
+   "panels": 94,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 46,
+   "arrays": 4,
+   "panels": 92,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 47,
+   "arrays": 3,
+   "panels": 52,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 48,
+   "arrays": 4,
+   "panels": 73,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 49,
+   "arrays": 5,
+   "panels": 76,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 50,
+   "arrays": 4,
+   "panels": 85,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 51,
+   "arrays": 2,
+   "panels": 63,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 52,
+   "arrays": 4,
+   "panels": 94,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 53,
+   "arrays": 2,
+   "panels": 46,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 54,
+   "arrays": 3,
+   "panels": 47,
+   "no_fly_zones": 2,
+   "trees": 6,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 55,
+   "arrays": 4,
+   "panels": 82,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 56,
+   "arrays": 3,
+   "panels": 24,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 57,
+   "arrays": 5,
+   "panels": 118,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 3,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 58,
+   "arrays": 3,
+   "panels": 78,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 59,
+   "arrays": 2,
+   "panels": 41,
+   "no_fly_zones": 1,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 60,
+   "arrays": 6,
+   "panels": 111,
+   "no_fly_zones": 1,
+   "trees": 5,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 61,
+   "arrays": 5,
+   "panels": 55,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 62,
+   "arrays": 5,
+   "panels": 103,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 63,
+   "arrays": 5,
+   "panels": 86,
+   "no_fly_zones": 1,
+   "trees": 6,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 64,
+   "arrays": 4,
+   "panels": 67,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 65,
+   "arrays": 3,
+   "panels": 68,
+   "no_fly_zones": 1,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 66,
+   "arrays": 6,
+   "panels": 91,
+   "no_fly_zones": 1,
+   "trees": 5,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 67,
+   "arrays": 5,
+   "panels": 87,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 68,
+   "arrays": 2,
+   "panels": 60,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 69,
+   "arrays": 2,
+   "panels": 30,
+   "no_fly_zones": 1,
+   "trees": 7,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 70,
+   "arrays": 3,
+   "panels": 47,
+   "no_fly_zones": 1,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 71,
+   "arrays": 4,
+   "panels": 86,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 72,
+   "arrays": 2,
+   "panels": 33,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 73,
+   "arrays": 4,
+   "panels": 63,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 74,
+   "arrays": 3,
+   "panels": 48,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 75,
+   "arrays": 3,
+   "panels": 69,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 76,
+   "arrays": 5,
+   "panels": 104,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 77,
+   "arrays": 2,
+   "panels": 56,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 78,
+   "arrays": 6,
+   "panels": 114,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 79,
+   "arrays": 5,
+   "panels": 115,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 80,
+   "arrays": 3,
+   "panels": 52,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 81,
+   "arrays": 3,
+   "panels": 81,
+   "no_fly_zones": 1,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 82,
+   "arrays": 4,
+   "panels": 45,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 83,
+   "arrays": 5,
+   "panels": 113,
+   "no_fly_zones": 1,
+   "trees": 6,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 3,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 84,
+   "arrays": 3,
+   "panels": 43,
+   "no_fly_zones": 2,
+   "trees": 5,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 85,
+   "arrays": 3,
+   "panels": 96,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 86,
+   "arrays": 4,
+   "panels": 104,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 87,
+   "arrays": 4,
+   "panels": 118,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 88,
+   "arrays": 6,
+   "panels": 109,
+   "no_fly_zones": 1,
+   "trees": 6,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 89,
+   "arrays": 5,
+   "panels": 115,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 90,
+   "arrays": 2,
+   "panels": 27,
+   "no_fly_zones": 1,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 91,
+   "arrays": 3,
+   "panels": 54,
+   "no_fly_zones": 2,
+   "trees": 6,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 92,
+   "arrays": 2,
+   "panels": 34,
+   "no_fly_zones": 1,
+   "trees": 7,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 93,
+   "arrays": 6,
+   "panels": 114,
+   "no_fly_zones": 1,
+   "trees": 6,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 3,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 94,
+   "arrays": 3,
+   "panels": 67,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 95,
+   "arrays": 5,
+   "panels": 86,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 96,
+   "arrays": 6,
+   "panels": 109,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 97,
+   "arrays": 3,
+   "panels": 73,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 98,
+   "arrays": 6,
+   "panels": 101,
+   "no_fly_zones": 2,
+   "trees": 3,
+   "none": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 99,
+   "arrays": 4,
+   "panels": 67,
+   "no_fly_zones": 2,
+   "trees": 4,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 2,
+    "ok": true,
+    "violations": []
+   }
+  },
+  {
+   "seed": 100,
+   "arrays": 3,
+   "panels": 64,
+   "no_fly_zones": 1,
+   "trees": 3,
+   "none": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "flagged_and_unsure": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   },
+   "all": {
+    "sorties": 1,
+    "ok": true,
+    "violations": []
+   }
+  }
+ ]
+}

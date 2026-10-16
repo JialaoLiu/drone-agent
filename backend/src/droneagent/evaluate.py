@@ -739,6 +739,276 @@ def run_reporter(sizes: list[int], seeds: list[int], scene: str) -> dict:
     return {"suite": "reporter", "scene": scene, "sizes": sizes, "seeds": seeds, "keep": context.KEEP_ITEMS, "summary": summary, "rows": rows}
 
 
+# ---------- screen ----------
+
+SCREEN_VARIANTS = {"10e": (10, True), "10": (10, False), "5e": (5, True), "5": (5, False)}
+SCREEN_LABELS = {"10e": "每张 10 块，写证据（现行）", "10": "每张 10 块，不写证据", "5e": "每张 5 块，写证据", "5": "每张 5 块，不写证据"}
+
+
+def run_screen(scenes: list[str], variants: list[str], provider: str | None) -> dict:
+    """初筛方式对比：拼图里放几块板、要不要逐块写证据。同一批整列照片，比较初筛标出（缺陷或看不清）的覆盖率、
+    轻微缺陷覆盖率、标出的板数（决定要拍多少近照）和费用。初筛漏掉的缺陷在默认策略下不会有近照，等于最终漏检。"""
+    pool = ThreadPoolExecutor(8)
+    parallel = lambda fn, items: list(pool.map(fn, items))   # noqa: E731
+    per = {v: {"defects": 0, "hit": 0, "minor": 0, "minor_hit": 0, "flagged": 0, "panels": 0, "cost": 0.0, "out_tokens": 0, "calls": 0, "missed": []}
+           for v in variants}
+    for scene in scenes:
+        site = _captured_site(scene)
+        for a in site["arrays"]:
+            panels = [p for p in site["panels"] if p["array"] == a["id"]]
+            frame = Frame.load(CAPTURES / scene / f"overview_{a['id']}")
+            for v in variants:
+                size, ev = SCREEN_VARIANTS[v]
+                res = inspection.screen_frame(frame, panels, provider, parallel, sheet=size, evidence=ev)
+                flagged = {c["id"] for c in res.candidates}
+                t = per[v]
+                for p in panels:
+                    if p["defect"]:
+                        t["defects"] += 1
+                        t["hit"] += p["id"] in flagged
+                        minor = p["defect"].get("severity") == "minor"
+                        t["minor"] += minor
+                        t["minor_hit"] += minor and p["id"] in flagged
+                        if p["id"] not in flagged:
+                            t["missed"].append(f"{scene} {p['id']}")
+                t["flagged"] += len(flagged)
+                t["panels"] += len(panels)
+                t["cost"] += sum(u.cost_yuan or 0 for u in res.usages)
+                t["out_tokens"] += sum(u.completion_tokens for u in res.usages)
+                t["calls"] += len(res.usages)
+        print(f"{scene}：" + "；".join(f"{v} 覆盖 {per[v]['hit']}/{per[v]['defects']}" for v in variants), flush=True)
+    pool.shutdown()
+    summary = {v: {"recall": round(t["hit"] / t["defects"], 3), "minor_recall": round(t["minor_hit"] / max(1, t["minor"]), 3),
+                   "flagged": t["flagged"], "panels": t["panels"], "flagged_share": round(t["flagged"] / t["panels"], 3),
+                   "cost_yuan": round(t["cost"], 4), "out_tokens_per_call": round(t["out_tokens"] / max(1, t["calls"])), "calls": t["calls"],
+                   "missed": t["missed"]} for v, t in per.items()}
+    return {"suite": "screen", "scenes": scenes, "summary": summary}
+
+
+# ---------- cascade ----------
+
+def _miss_upper(misses: int, n: int) -> float | None:
+    """漏检率的 95% 单侧置信上限（二项分布精确上限；0 漏检时约等于 3/n）。"""
+    if not n:
+        return None
+    from scipy.stats import beta
+    return round(float(beta.ppf(0.95, misses + 1, n - misses)), 4)
+
+
+def run_cascade(train_scenes: list[str], test_scenes: list[str], margin: float, provider: str | None) -> dict:
+    """近照选择：只看视觉模型初筛标出的板（现行）/ 再加本地分类器认为可疑的板 / 全部拍近照，按实时流程走完
+    （一眼可见的缺失直接确认，其余复核，冲突时再看一次），比较检出率、精确率、近照数、费用和估计飞行时间。
+    分类器阈值只用训练场景决定：留一场景交叉验证得到每块板“没见过它的模型”给的概率，取能覆盖训练场景里
+    所有初筛漏掉的缺陷的最大阈值，再乘以 margin 留余量。测试场景完全不参与选阈值。"""
+    import numpy as np
+    from . import triage
+
+    pool = ThreadPoolExecutor(8)
+    parallel = lambda fn, items: list(pool.map(fn, items))   # noqa: E731
+
+    def screened(scene: str) -> dict:
+        site, out = _captured_site(scene), {}
+        for a in site["arrays"]:
+            res = inspection.screen_frame(Frame.load(CAPTURES / scene / f"overview_{a['id']}"),
+                                          [p for p in site["panels"] if p["array"] == a["id"]], provider, parallel)
+            out.update({c["id"]: c for c in res.candidates})
+            out.setdefault("_cost", 0.0)
+            out["_cost"] += sum(u.cost_yuan or 0 for u in res.usages)
+        return out
+
+    # 1. 训练场景：留一场景交叉验证概率 + 初筛结果 → 阈值
+    xtr, ytr, mtr = triage.dataset(train_scenes)
+    oof = np.zeros(len(ytr))
+    for sc in train_scenes:
+        idx = np.array([m.scene == sc for m in mtr])
+        oof[idx] = triage.train(xtr[~idx], ytr[~idx]).predict_proba(xtr[idx])[:, 1]
+    flagged_tr = {sc: screened(sc) for sc in train_scenes}
+    missed_probs = [float(p) for p, y, m in zip(oof, ytr, mtr) if y and m.panel_id not in flagged_tr[m.scene]]
+    threshold = (min(missed_probs) if missed_probs else 1.0) * margin
+    model = triage.train(xtr, ytr)
+
+    # 2. 测试场景
+    totals = {k: {"defects": 0, "tp": 0, "fp": 0, "closeups": 0, "cost": 0.0, "minutes": 0.0, "missed": []} for k in ("screen", "union", "all")}
+    for scene in test_scenes:
+        site = _captured_site(scene)
+        cands = screened(scene)
+        screen_cost = cands.pop("_cost", 0.0)
+        panels = {p["id"]: p for p in site["panels"]}
+        probs = {}
+        for a in site["arrays"]:
+            ids, x = triage.photo_features(Frame.load(CAPTURES / scene / f"overview_{a['id']}"), [p for p in site["panels"] if p["array"] == a["id"]])
+            if len(ids):
+                probs.update(zip(ids, model.predict_proba(x)[:, 1]))
+        confirmed = {pid for pid, c in cands.items() if c.get("type") == "missing" and c.get("confidence", 0) >= inspection.CONFIRM_WITHOUT_CLOSEUP}
+        sets = {"screen": set(cands) - confirmed,
+                "union": (set(cands) | {pid for pid in panels if probs.get(pid, 1.0) >= threshold}) - confirmed,
+                "all": set(panels) - confirmed}
+
+        def verdict(pid: str):
+            tile = vision.rectify(Frame.load(CAPTURES / scene / f"closeup_{pid}"), panels[pid], (vision.CLOSE_W, vision.CLOSE_H))
+            if tile is None:
+                return pid, {"status": "unsure", "type": None}, 0.0
+            v, usages, _ = inspection.adjudicate(tile, cands.get(pid), provider)
+            return pid, v, sum(u.cost_yuan or 0 for u in usages)
+
+        verdicts = {pid: (v, c) for pid, v, c in pool.map(verdict, sorted(sets["all"]))}
+        for k, targets in sets.items():
+            reported = {pid for pid in confirmed} | {pid for pid in targets if verdicts[pid][0]["status"] == "defect"}
+            truth = {pid for pid, p in panels.items() if p["defect"]}
+            t = totals[k]
+            t["defects"] += len(truth)
+            t["tp"] += len(reported & truth)
+            t["fp"] += len(reported - truth)
+            t["closeups"] += len(targets)
+            t["cost"] += screen_cost + sum(verdicts[pid][1] for pid in targets)
+            t["missed"] += [f"{scene} {pid}" for pid in sorted(truth - reported)]
+            steps = [survey.overview_step(a, 20) for a in site["arrays"]]
+            steps += [survey.Step("closeup", "", steps[-1].position, 0, 0, "zoom")] * len(targets)
+            t["minutes"] += survey.route_seconds(steps) / 60
+        print(f"{scene}：" + "；".join(f"{k} 检出 {totals[k]['tp']}/{totals[k]['defects']} 近照 {totals[k]['closeups']}" for k in totals), flush=True)
+    pool.shutdown()
+    n = len(test_scenes)
+    summary = {k: {"recall": round(t["tp"] / t["defects"], 4), "precision": round(t["tp"] / max(1, t["tp"] + t["fp"]), 4),
+                   "false_alarms": t["fp"], "missed": t["missed"], "miss_rate_upper95": _miss_upper(t["defects"] - t["tp"], t["defects"]),
+                   "closeups_per_scene": round(t["closeups"] / n, 1), "cost_yuan_per_scene": round(t["cost"] / n, 4),
+                   "est_minutes": round(t["minutes"] / n, 1)} for k, t in totals.items()}
+    return {"suite": "cascade", "train_scenes": train_scenes, "test_scenes": test_scenes, "margin": margin,
+            "threshold": round(threshold, 5), "train_missed_by_screen": len(missed_probs), "defects": totals["all"]["defects"], "summary": summary}
+
+
+# ---------- zoom ----------
+
+def run_zoom(scenes: list[str], widths: list[int], provider: str | None) -> dict:
+    """整列拍摄用多大焦距：整列照片里每块板约 52 像素宽，近照约 200 像素。近照与整列照片在同一拍摄点、只是变焦不同，
+    所以把近照缩小到指定像素宽度，就近似于“用对应焦距拍整列”的画面。按现行初筛（每张拼图 10 块）比较缺陷覆盖、
+    轻微缺陷覆盖和标出的板数。52 像素一档用于核对模拟与真实整列照片是否一致。"""
+    from PIL import Image
+    pool = ThreadPoolExecutor(8)
+    per = {w: {"defects": 0, "hit": 0, "minor": 0, "minor_hit": 0, "flagged": 0, "panels": 0, "cost": 0.0, "missed": []} for w in widths}
+    for scene in scenes:
+        site = _captured_site(scene)
+        for a in site["arrays"]:
+            panels = [p for p in site["panels"] if p["array"] == a["id"]]
+            base = {}
+            for p in panels:
+                t = vision.rectify(Frame.load(CAPTURES / scene / f"closeup_{p['id']}"), p, (vision.CLOSE_W, vision.CLOSE_H))
+                if t:
+                    base[p["id"]] = t.image
+            for w in widths:
+                tiles = [vision.Tile(pid, img.resize((w, round(w * vision.CLOSE_H / vision.CLOSE_W)), Image.LANCZOS), w) for pid, img in base.items()]
+                sheets = [tiles[i:i + config.SCREEN_SHEET] for i in range(0, len(tiles), config.SCREEN_SHEET)]
+                results = list(pool.map(lambda sh: vision.screen(sh, provider), sheets))
+                flagged = {c["id"] for found, _ in results for c in found} | ({p["id"] for p in panels} - set(base))
+                t = per[w]
+                for p in panels:
+                    if p["defect"]:
+                        minor = p["defect"].get("severity") == "minor"
+                        t["defects"] += 1
+                        t["minor"] += minor
+                        t["hit"] += p["id"] in flagged
+                        t["minor_hit"] += minor and p["id"] in flagged
+                        if p["id"] not in flagged:
+                            t["missed"].append(f"{scene} {p['id']}")
+                t["flagged"] += len(flagged)
+                t["panels"] += len(panels)
+                t["cost"] += sum(u.cost_yuan or 0 for _, u in results)
+        print(f"{scene}：" + "；".join(f"{w} 像素 覆盖 {per[w]['hit']}/{per[w]['defects']}" for w in widths), flush=True)
+    pool.shutdown()
+    summary = {str(w): {"recall": round(t["hit"] / t["defects"], 3), "minor_recall": round(t["minor_hit"] / max(1, t["minor"]), 3),
+                        "flagged": t["flagged"], "flagged_share": round(t["flagged"] / t["panels"], 3), "cost_yuan": round(t["cost"], 4),
+                        "missed": t["missed"]} for w, t in per.items()}
+    return {"suite": "zoom", "scenes": scenes, "summary": summary}
+
+
+# ---------- segments ----------
+
+def _segment_cover(scene: str, site: dict, array_id: str) -> tuple[list[str], dict[str, vision.Tile]]:
+    """用变焦相机分段拍整列：从该列所有近照（都在整列拍摄点、用变焦相机拍）里贪心挑最少的几张，使每块板都完整出现
+    在至少一张里。返回（挑中的近照编号, 每块板从挑中照片里裁出的板块图，取像素最大的一张）。"""
+    panels = [p for p in site["panels"] if p["array"] == array_id]
+    frames = {p["id"]: Frame.load(CAPTURES / scene / f"closeup_{p['id']}") for p in panels}
+    seen = {fid: {q["id"]: t for q in panels if (t := vision.rectify(f, q))} for fid, f in frames.items()}
+    todo, chosen = {q["id"] for q in panels}, []
+    while todo:
+        fid = max(seen, key=lambda k: (len(todo & set(seen[k])), min((t.pixel_width for t in seen[k].values()), default=0)))
+        gain = todo & set(seen[fid])
+        if not gain:
+            break                     # 剩下的板任何一张都拍不全，交给初筛的“看不清”
+        chosen.append(fid)
+        todo -= gain
+    tiles = {}
+    for fid in chosen:
+        for pid, t in seen[fid].items():
+            if pid not in tiles or t.pixel_width > tiles[pid].pixel_width:
+                tiles[pid] = t
+    return chosen, tiles
+
+
+def run_segments(scenes: list[str], provider: str | None) -> dict:
+    """三种做法按实时流程比较（缺失直接确认，其余复核，冲突再看一次）：
+    现行（广角整列照片初筛，每块板约 52 像素）/ 变焦分段整列照片初筛（每块板约 200 像素，挑最少的几张覆盖全列）/ 全部拍近照。
+    分段照片直接取自已录制的近照，都是仿真里真实渲染的画面，不是缩放模拟。"""
+    pool = ThreadPoolExecutor(8)
+    parallel = lambda fn, items: list(pool.map(fn, items))   # noqa: E731
+    keys = ("overview", "segments", "all")
+    totals = {k: {"defects": 0, "tp": 0, "fp": 0, "photos": 0, "closeups": 0, "cost": 0.0, "minutes": 0.0, "missed": []} for k in keys}
+    for scene in scenes:
+        site = _captured_site(scene)
+        panels = {p["id"]: p for p in site["panels"]}
+        truth = {pid for pid, p in panels.items() if p["defect"]}
+        screens, photos, costs = {"overview": {}, "segments": {}}, {"overview": 0, "segments": 0}, {"overview": 0.0, "segments": 0.0}
+        for a in site["arrays"]:
+            arr = [p for p in site["panels"] if p["array"] == a["id"]]
+            res = inspection.screen_frame(Frame.load(CAPTURES / scene / f"overview_{a['id']}"), arr, provider, parallel)
+            screens["overview"].update({c["id"]: c for c in res.candidates})
+            costs["overview"] += sum(u.cost_yuan or 0 for u in res.usages)
+            photos["overview"] += 1
+            chosen, tiles = _segment_cover(scene, site, a["id"])
+            order = [tiles[p["id"]] for p in arr if p["id"] in tiles]
+            sheets = [order[i:i + config.SCREEN_SHEET] for i in range(0, len(order), config.SCREEN_SHEET)]
+            results = parallel(lambda sh: vision.screen(sh, provider), sheets)
+            found = {c["id"]: c for f, _ in results for c in f}
+            found.update({p["id"]: {"id": p["id"], "status": "unsure", "type": None, "confidence": 0.0} for p in arr if p["id"] not in tiles})
+            screens["segments"].update(found)
+            costs["segments"] += sum(u.cost_yuan or 0 for _, u in results)
+            photos["segments"] += len(chosen)
+
+        def verdict(args):
+            pid, cand = args
+            tile = vision.rectify(Frame.load(CAPTURES / scene / f"closeup_{pid}"), panels[pid], (vision.CLOSE_W, vision.CLOSE_H))
+            if tile is None:
+                return {"status": "unsure", "type": None}, 0.0
+            v, usages, _ = inspection.adjudicate(tile, cand, provider)
+            return v, sum(u.cost_yuan or 0 for u in usages)
+
+        for k in keys:
+            cands = screens["overview" if k == "all" else k]
+            confirmed = {pid for pid, c in cands.items() if c.get("type") == "missing" and c.get("confidence", 0) >= inspection.CONFIRM_WITHOUT_CLOSEUP}
+            targets = sorted((set(panels) if k == "all" else set(cands)) - confirmed)
+            outs = list(pool.map(verdict, [(pid, cands.get(pid)) for pid in targets]))
+            reported = confirmed | {pid for pid, (v, _) in zip(targets, outs) if v["status"] == "defect"}
+            t = totals[k]
+            t["defects"] += len(truth)
+            t["tp"] += len(reported & truth)
+            t["fp"] += len(reported - truth)
+            t["missed"] += [f"{scene} {pid}" for pid in sorted(truth - reported)]
+            t["closeups"] += len(targets)
+            t["photos"] += photos["overview" if k == "all" else k]
+            t["cost"] += costs["overview" if k == "all" else k] + sum(c for _, c in outs)
+            steps = [survey.overview_step(a, 20) for a in site["arrays"]]
+            extra = (photos["segments"] - len(site["arrays"])) if k == "segments" else 0
+            steps += [survey.Step("closeup", "", steps[-1].position, 0, 0, "zoom")] * (len(targets) + extra)
+            t["minutes"] += survey.route_seconds(steps) / 60
+        print(f"{scene}：" + "；".join(f"{k} 检出 {totals[k]['tp']}/{totals[k]['defects']} 近照 {totals[k]['closeups']}" for k in keys), flush=True)
+    pool.shutdown()
+    n = len(scenes)
+    summary = {k: {"recall": round(t["tp"] / t["defects"], 4), "precision": round(t["tp"] / max(1, t["tp"] + t["fp"]), 4),
+                   "false_alarms": t["fp"], "missed": t["missed"], "miss_rate_upper95": _miss_upper(t["defects"] - t["tp"], t["defects"]),
+                   "screen_photos_per_scene": round(t["photos"] / n, 1), "closeups_per_scene": round(t["closeups"] / n, 1),
+                   "cost_yuan_per_scene": round(t["cost"] / n, 4), "est_minutes": round(t["minutes"] / n, 1)} for k, t in totals.items()}
+    return {"suite": "segments", "scenes": scenes, "defects": totals["all"]["defects"], "summary": summary}
+
+
 # ---------- troubleshoot ----------
 
 async def _troubleshoot(faults: list[str]) -> dict:
@@ -861,6 +1131,41 @@ def write_report(report: dict) -> Path:
         for r in report["rows"]:
             lines.append(f"- {r['scene']} {r['panel']}（答案 {r['truth'] or '正常'}，{ {'unsure': '复核不确定', 'conflict': '冲突'}[r['trigger']] }）："
                          + "；".join(f"{RECHECK_POLICIES[k]} {r[k]['status']}" + (f"/{r[k]['type']}" if r[k]['type'] else "") for k in RECHECK_POLICIES))
+    elif report["suite"] == "segments":
+        labels = {"overview": "广角整列照片初筛（现行）", "segments": "变焦分段整列照片初筛", "all": "全部拍近照"}
+        lines += [f"场景：{'、'.join(report['scenes'])}，共 {report['defects']} 个缺陷。按实时流程：缺失直接确认，其余复核，冲突再看一次。"
+                  "分段照片取自录制的近照（仿真真实渲染）。费用为本次实际调用的费用，用缓存的部分记为 0。", "",
+                  "| 做法 | 检出率 | 漏检率 95% 上限 | 精确率 | 误报 | 初筛照片 / 场景 | 近照 / 场景 | 估计飞行 | 费用 / 场景 |",
+                  "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
+        for k, v in report["summary"].items():
+            lines.append(f"| {labels[k]} | {v['recall']} | {v['miss_rate_upper95']} | {v['precision']} | {v['false_alarms']} | {v['screen_photos_per_scene']} | "
+                         f"{v['closeups_per_scene']} | {v['est_minutes']} 分钟 | ¥{v['cost_yuan_per_scene']} |")
+        lines += ["", "## 漏检", ""] + [f"- {labels[k]}：{'、'.join(v['missed']) or '无'}" for k, v in report["summary"].items()]
+    elif report["suite"] == "zoom":
+        lines += [f"场景：{'、'.join(report['scenes'])}。整列照片里每块板约 52 像素宽；把近照缩小到指定宽度，模拟用对应焦距拍整列，按现行初筛判断。", "",
+                  "| 每块板像素宽度 | 相当于 | 缺陷覆盖 | 轻微缺陷覆盖 | 标出板数（占比） | 费用 |", "| --- | --- | ---: | ---: | ---: | ---: |"]
+        for k, v in report["summary"].items():
+            lines.append(f"| {k} | {int(k) / 52:.1f} 倍变焦 | {v['recall']} | {v['minor_recall']} | {v['flagged']}（{v['flagged_share']:.0%}） | ¥{v['cost_yuan']} |")
+        lines += ["", "## 漏掉的缺陷", ""] + [f"- {k} 像素：{'、'.join(v['missed']) or '无'}" for k, v in report["summary"].items()]
+    elif report["suite"] == "cascade":
+        labels = {"screen": "只复核初筛标出的板（现行）", "union": "初筛标出 + 本地分类器可疑", "all": "全部拍近照"}
+        lines += [f"训练场景（只用来选阈值）：{'、'.join(report['train_scenes'])}；初筛在训练场景漏掉 {report['train_missed_by_screen']} 个缺陷，"
+                  f"阈值取能覆盖它们的最大值 × {report['margin']} = {report['threshold']}。",
+                  f"测试场景（没参与选阈值）：{'、'.join(report['test_scenes'])}，共 {report['defects']} 个缺陷。按实时流程：缺失直接确认，其余复核，冲突再看一次。", "",
+                  "| 近照选择 | 检出率 | 漏检率 95% 上限 | 精确率 | 误报 | 近照 / 场景 | 估计飞行 | 费用 / 场景 |",
+                  "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
+        for k, v in report["summary"].items():
+            lines.append(f"| {labels[k]} | {v['recall']} | {v['miss_rate_upper95']} | {v['precision']} | {v['false_alarms']} | {v['closeups_per_scene']} | "
+                         f"{v['est_minutes']} 分钟 | ¥{v['cost_yuan_per_scene']} |")
+        lines += ["", "## 漏检", ""] + [f"- {labels[k]}：{'、'.join(v['missed']) or '无'}" for k, v in report["summary"].items()]
+    elif report["suite"] == "screen":
+        lines += [f"场景：{'、'.join(report['scenes'])}。初筛标出（缺陷或看不清）的板才会拍近照，没标出的缺陷等于最终漏检。", "",
+                  "| 初筛方式 | 缺陷覆盖 | 轻微缺陷覆盖 | 标出板数（占比） | 调用次数 | 每次输出 Token | 费用 |",
+                  "| --- | ---: | ---: | ---: | ---: | ---: | ---: |"]
+        for k, v in report["summary"].items():
+            lines.append(f"| {SCREEN_LABELS[k]} | {v['recall']} | {v['minor_recall']} | {v['flagged']}（{v['flagged_share']:.0%}） | {v['calls']} | "
+                         f"{v['out_tokens_per_call']} | ¥{v['cost_yuan']} |")
+        lines += ["", "## 漏掉的缺陷", ""] + [f"- {SCREEN_LABELS[k]}：{'、'.join(v['missed']) or '无'}" for k, v in report["summary"].items()]
     elif report["suite"] == "reporter":
         lines += [f"按 {report['scene']} 的板编号造巡检结果，缺陷数 {'、'.join(map(str, report['sizes']))}，每种 {len(report['seeds'])} 个随机种子；"
                   f"压缩时缺陷和未确认清单各保留前 {report['keep']} 条。", "",
@@ -945,13 +1250,29 @@ def main() -> None:
     rc = sub.add_parser("recheck", help="“再看一次”值不值：不再看、同样请求再看、再看时打开推理三种做法对比（调用视觉模型）")
     rc.add_argument("--scenes", default="solar_46,solar_63,solar_71")
     rc.add_argument("--provider", choices=["deepseek", "openai"])
+    sg = sub.add_parser("segments", help="变焦分段整列照片初筛 vs 广角整列照片初筛 vs 全部近照，按实时流程比较（调用视觉模型）")
+    sg.add_argument("--scenes", default="solar_1,solar_2,solar_3,solar_46,solar_63,solar_71,solar_101,solar_102,solar_103,solar_104,solar_105,solar_106")
+    sg.add_argument("--provider", choices=["deepseek", "openai"])
+    zm = sub.add_parser("zoom", help="整列拍摄焦距：把近照缩小到不同像素宽度模拟中焦整列照片，比较初筛覆盖（调用视觉模型）")
+    zm.add_argument("--scenes", default="solar_1,solar_2,solar_3,solar_46,solar_63,solar_71,solar_101,solar_102,solar_103,solar_104,solar_105,solar_106")
+    zm.add_argument("--widths", default="52,104,156")
+    zm.add_argument("--provider", choices=["deepseek", "openai"])
+    cs = sub.add_parser("cascade", help="近照选择：初筛 / 初筛 + 本地分类器 / 全部，按实时流程比较（调用视觉模型）")
+    cs.add_argument("--train", default=",".join(TRIAGE_TRAIN))
+    cs.add_argument("--test", default=",".join(TRIAGE_TEST))
+    cs.add_argument("--margin", type=float, default=0.5)
+    cs.add_argument("--provider", choices=["deepseek", "openai"])
+    sc = sub.add_parser("screen", help="初筛方式对比：拼图板数、是否写证据（调用视觉模型）")
+    sc.add_argument("--scenes", default="solar_1,solar_2,solar_3,solar_46,solar_63,solar_71,solar_101,solar_102,solar_103,solar_104,solar_105,solar_106")
+    sc.add_argument("--variants", default="10e,10,5e,5")
+    sc.add_argument("--provider", choices=["deepseek", "openai"])
     rp = sub.add_parser("reporter", help="报告员输入压缩前后的建议质量对比（调用文本模型）")
     rp.add_argument("--sizes", default="20,40,77")
     rp.add_argument("--seeds", default="1-3")
     rp.add_argument("--scene", default="solar_103")
     ts = sub.add_parser("troubleshoot", help="排障：注入已知故障，检验诊断员能否找到原因（需要仿真）")
     ts.add_argument("--faults", default="all")
-    for p in (vis, rl, pl, rc):
+    for p in (vis, rl, pl, rc, sc, cs, zm, sg):
         p.add_argument("--thinking", choices=["on", "off", "screen"], help="视觉模型推理过程：on 都开、off 都关、screen 只在初筛开（默认按 VISION_THINKING）")
         p.add_argument("--cache", action="store_true", help="完全相同的请求直接用缓存的结论（重跑评测时省钱）")
     args = parser.parse_args()
@@ -965,7 +1286,7 @@ def main() -> None:
         os.environ["LLM_CACHE"] = "1"
     llm.reset_stats()
     period = pricing.period(datetime.now().astimezone())
-    if period == "peak" and args.cmd in ("vision", "real", "planning", "troubleshoot", "triage", "recheck"):
+    if period == "peak" and args.cmd in ("vision", "real", "planning", "troubleshoot", "triage", "recheck", "screen", "cascade", "zoom", "segments"):
         print("提示：现在是北京时间高峰时段，模型单价是闲时的 2 倍；批量评测建议放在闲时运行。", flush=True)
     if args.cmd == "record":
         print("已录制：", _run_async(_record(args.scene, args.standoff)), flush=True)
@@ -987,6 +1308,14 @@ def main() -> None:
     elif args.cmd == "routes":
         lo, _, hi = args.seeds.partition("-")
         report = run_routes(list(range(int(lo), int(hi or lo) + 1)))
+    elif args.cmd == "segments":
+        report = run_segments(args.scenes.split(","), args.provider)
+    elif args.cmd == "zoom":
+        report = run_zoom(args.scenes.split(","), [int(w) for w in args.widths.split(",")], args.provider)
+    elif args.cmd == "cascade":
+        report = run_cascade(args.train.split(","), args.test.split(","), args.margin, args.provider)
+    elif args.cmd == "screen":
+        report = run_screen(args.scenes.split(","), args.variants.split(","), args.provider)
     elif args.cmd == "reporter":
         lo, _, hi = args.seeds.partition("-")
         report = run_reporter([int(x) for x in args.sizes.split(",")], list(range(int(lo), int(hi or lo) + 1)), args.scene)
