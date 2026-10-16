@@ -49,6 +49,10 @@ LLM_API_KEY = env("LLM_API_KEY")
 LLM_BASE_URL = env("LLM_BASE_URL", "https://api.deepseek.com")
 LLM_MODEL = env("LLM_MODEL", "deepseek-chat")
 VISION_PROVIDER = env("VISION_PROVIDER", "deepseek")          # deepseek | openai
+# 视觉模型的推理过程：on 初筛与复核都开；off 都关；screen 只在初筛开（复核关）。关闭可大幅减少输出 Token
+VISION_THINKING_MODE = env("VISION_THINKING", "off")         # 2026-10-16 对比实验：关闭后费用省 75%–86%，复核后的检出率、精确率不变
+VISION_THINKING = VISION_THINKING_MODE != "off"                 # 初筛是否开启推理
+VISION_THINKING_VERIFY = VISION_THINKING_MODE == "on"           # 复核是否开启推理
 TRIAGE_ENABLED = env("TRIAGE_ENABLED", "0") == "1"             # 初筛前用本地分类器过滤明显正常的板（需先运行 evaluate triage 训练）
 VISION_MODEL = env("VISION_MODEL", "deepseek-v4-flash-vision-exp")
 OPENAI_API_KEY = env("OPENAI_API_KEY")

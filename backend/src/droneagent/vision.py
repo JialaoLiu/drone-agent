@@ -90,7 +90,8 @@ def screen(tiles: list[Tile], provider: str | None = None) -> tuple[list[dict], 
             "只列出有缺陷（defect）或看不清无法判断（unsure）的板，正常的不要列出。"
             '只输出 JSON：{"panels":[{"id":"编号","status":"defect|unsure","type":"crack|soiling|broken|missing|null",'
             '"confidence":0到1之间的数,"evidence":"一句话说明看到了什么"}]}')
-    data, usage = chat_json(GUIDE, user, [contact_sheet(tiles)], model=_model(provider), provider=_provider(provider))
+    data, usage = chat_json(GUIDE, user, [contact_sheet(tiles)], model=_model(provider), provider=_provider(provider),
+                            thinking=config.VISION_THINKING, max_tokens=1500)
     panels = data.get("panels") if isinstance(data, dict) else None
     if not isinstance(panels, list):
         # 输出结构不对：整张拼图的板都按“看不清”处理，交给复核，不能当成“没有可疑板”（深度审查 H06）
@@ -116,7 +117,8 @@ def verify(tile: Tile, provider: str | None = None) -> tuple[dict, Usage]:
     user = (f"这是光伏板 {tile.panel_id} 的高清近照（已校正为正视图）。判断它是否有缺陷。"
             '只输出 JSON：{"status":"ok|defect","type":"crack|soiling|broken|missing|null","confidence":0到1之间的数,'
             '"evidence":"一句话说明看到了什么、在板的哪个位置"}')
-    data, usage = chat_json(GUIDE, user, [buf.getvalue()], model=_model(provider), provider=_provider(provider))
+    data, usage = chat_json(GUIDE, user, [buf.getvalue()], model=_model(provider), provider=_provider(provider),
+                            thinking=config.VISION_THINKING_VERIFY, max_tokens=400)
     status = _status(data)
     kind = str(data.get("type") or "").strip().lower()
     return {"id": tile.panel_id, "status": status,
@@ -134,7 +136,8 @@ def verify_photo(image: Image.Image, provider: str | None = None) -> tuple[dict,
     user = ("这是一张光伏板的现场照片（没有经过裁切校正，可能有多块板、拍摄角度不正）。判断画面中的光伏板是否有缺陷。"
             '只输出 JSON：{"status":"ok|defect","type":"crack|soiling|broken|missing|null","confidence":0到1之间的数,'
             '"evidence":"一句话说明看到了什么、在哪个位置"}')
-    data, usage = chat_json(GUIDE, user, [buf.getvalue()], model=_model(provider), provider=_provider(provider))
+    data, usage = chat_json(GUIDE, user, [buf.getvalue()], model=_model(provider), provider=_provider(provider),
+                            thinking=config.VISION_THINKING_VERIFY, max_tokens=400)
     status = _status(data)
     kind = str(data.get("type") or "").strip().lower()
     return {"status": status, "type": kind if status == "defect" and kind in DEFECT_TYPES else None,

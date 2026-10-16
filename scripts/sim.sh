@@ -38,6 +38,14 @@ if [ ! -f "$WORLD_FILE" ]; then
 	exit 1
 fi
 
+# 贴图缺失时 Gazebo 不报错，光伏板会渲染成一片灰色（DR-054）：启动前检查
+for tex in $(grep -o '<albedo_map>[^<]*' "$WORLD_FILE" | sed 's/<albedo_map>//' | sort -u); do
+	if [ ! -f "$tex" ]; then
+		echo "场景 $WORLD 的贴图不存在：$tex（目录迁移过？请重新生成该场景）" >&2
+		exit 1
+	fi
+done
+
 mkdir -p "$LOG_DIR"
 ulimit -S -n 4096
 # shellcheck disable=SC1091

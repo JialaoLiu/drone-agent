@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 import subprocess
 import time
 
@@ -53,6 +54,14 @@ def stop() -> None:
     time.sleep(2)
 
 
+def missing_textures(name: str) -> list[str]:
+    """场景文件引用、但磁盘上不存在的贴图（例如迁移目录后仍指向旧位置）。"""
+    sdf = config.WORLDS_DIR / name / f"{name}.sdf"
+    if not sdf.exists():
+        return []
+    return [p for p in re.findall(r"<albedo_map>([^<]+)</albedo_map>", sdf.read_text(encoding="utf-8")) if not Path(p).exists()]
+
+
 def start(name: str, wait: float = 120.0) -> dict:
     """启动指定场景（先停止正在运行的仿真）。场景不存在时按名称中的种子生成。"""
     if not (config.WORLDS_DIR / name / "site.json").exists():
@@ -60,6 +69,10 @@ def start(name: str, wait: float = 120.0) -> dict:
         if not m:
             raise ValueError(f"场景 {name} 不存在")
         scene.generate(int(m.group(1)), name)
+    missing = missing_textures(name)
+    if missing:
+        # 贴图缺失时 Gazebo 不报错，光伏板会渲染成一片灰色，视觉判断全部失真（DR-054），所以启动前拦下
+        raise RuntimeError(f"场景 {name} 引用的 {len(missing)} 个贴图文件不存在（例如 {missing[0]}），请重新生成该场景")
     stop()
     log = config.DATA_DIR / "logs" / "px4.log"
     log.unlink(missing_ok=True)

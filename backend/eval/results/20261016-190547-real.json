@@ -1,0 +1,1057 @@
+{
+ "suite": "real",
+ "summary": {
+  "images": 95,
+  "splits": [
+   "test"
+  ],
+  "per_class": {
+   "Clean": {
+    "n": 18,
+    "expected": "ok",
+    "correct_status": 0.944,
+    "unsure": 0.0,
+    "type_correct": null,
+    "types": {
+     "crack": 0,
+     "soiling": 1,
+     "broken": 0,
+     "missing": 0
+    }
+   },
+   "Dusty": {
+    "n": 16,
+    "expected": "defect",
+    "correct_status": 0.375,
+    "unsure": 0.0,
+    "type_correct": 1.0,
+    "types": {
+     "crack": 0,
+     "soiling": 6,
+     "broken": 0,
+     "missing": 0
+    }
+   },
+   "Bird-drop": {
+    "n": 17,
+    "expected": "defect",
+    "correct_status": 1.0,
+    "unsure": 0.0,
+    "type_correct": 1.0,
+    "types": {
+     "crack": 0,
+     "soiling": 17,
+     "broken": 0,
+     "missing": 0
+    }
+   },
+   "Physical-Damage": {
+    "n": 15,
+    "expected": "defect",
+    "correct_status": 1.0,
+    "unsure": 0.0,
+    "type_correct": 0.733,
+    "types": {
+     "crack": 0,
+     "soiling": 4,
+     "broken": 11,
+     "missing": 0
+    }
+   },
+   "Electrical-damage": {
+    "n": 13,
+    "expected": "defect",
+    "correct_status": 1.0,
+    "unsure": 0.0,
+    "type_correct": null,
+    "types": {
+     "crack": 2,
+     "soiling": 6,
+     "broken": 5,
+     "missing": 0
+    }
+   },
+   "Snow-Covered": {
+    "n": 16,
+    "expected": "defect",
+    "correct_status": 0.688,
+    "unsure": 0.0,
+    "type_correct": null,
+    "types": {
+     "crack": 0,
+     "soiling": 11,
+     "broken": 0,
+     "missing": 0
+    }
+   }
+  },
+  "core_recall": 0.792,
+  "core_precision": 0.974,
+  "clean_false_alarm": 0.056,
+  "cost_yuan": 0.122
+ },
+ "rows": [
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (1).jpeg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板电池片网格完整、颜色均匀，表面亮暗变化为树木和天空的反光与阴影，未见裂纹、污斑、碎纹或缺失区域。",
+   "cost": 0.00124824
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (130).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "整排光伏板表面呈均匀深蓝色，电池片网格与栅线清晰完整，未见裂纹、污斑、破碎或缺失，画面中的浅色区域为天空反光。",
+   "cost": 0.00144424
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (142).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.85,
+   "evidence": "画面中多块光伏板电池片网格完整、栅线清晰，未见裂纹、污斑、碎纹或缺失区域，左上角亮区为反光，非缺陷。",
+   "cost": 0.00143624
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (150).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.85,
+   "evidence": "画面中光伏板电池片网格完整、栅线清晰，右下角亮斑为反光（透过仍可见栅线），左上角暗区为阴影，均非缺陷。",
+   "cost": 0.00125024
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (152).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板电池片网格完整、颜色均匀，未见裂纹、污斑、碎纹或缺失区域。",
+   "cost": 0.00115424
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (165).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.85,
+   "evidence": "画面中光伏板电池片网格完整、栅线清晰，未见裂纹、污斑、碎纹或缺失区域，仅有正常反光。",
+   "cost": 0.00138224
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (167).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板电池片网格完整、栅线清晰、颜色均匀，未见裂纹、污斑、碎纹或缺失区域。",
+   "cost": 0.00119624
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (175).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板电池片网格完整、颜色均匀，未见裂纹、污斑、碎纹或缺失，仅有正常反光与边框。",
+   "cost": 0.00126024
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (191).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中所有光伏板电池片网格完整、颜色均匀，未见裂纹、污斑、碎纹或缺失区域。",
+   "cost": 0.00115624
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (26).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "电池片网格完整，栅线清晰，未见裂纹、污斑或破碎，底部亮斑为反光。",
+   "cost": 0.00133424
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (30).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板电池片网格完整、颜色均匀，未见裂纹、污斑、碎纹或缺失区域。",
+   "cost": 0.00130024
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (52).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中光伏板电池片网格完整、颜色均匀，未见裂纹、污斑、碎纹或缺失区域，仅有正常的边框与栅线。",
+   "cost": 0.00150024
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (62).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板表面呈均匀深蓝色，电池片网格和栅线清晰完整，未见裂纹、污斑、碎纹或缺失区域。",
+   "cost": 0.00140624
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (63).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板表面呈均匀深蓝色，电池片网格与细栅线清晰完整，未见裂纹、污斑、碎纹或缺失区域，仅有正常反光。",
+   "cost": 0.00145424
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (68).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板电池片网格完整、栅线清晰，颜色均匀，未见裂纹、污斑、碎纹或缺失区域。",
+   "cost": 0.00137224
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (76).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.6,
+   "evidence": "画面中央偏右的电池片上有一处明显的褐色小斑点（疑似鸟粪/污渍），其余区域网格完整、无裂纹或破碎。",
+   "cost": 0.00139624
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (83).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中光伏板表面为均匀深蓝色，电池片网格和栅线清晰完整，未见裂纹、污斑、碎纹或缺失区域；下方大片暗区为拍摄者阴影，边缘模糊且网格仍可见，不属于缺陷。",
+   "cost": 0.00154224
+  },
+  {
+   "split": "test",
+   "class": "Clean",
+   "file": "Clean (92).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板电池片网格完整、颜色均匀，未见裂纹、污斑、碎纹或缺失区域，仅右侧边缘有轻微反光，不构成缺陷。",
+   "cost": 0.00143624
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (106).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板表面呈均匀深蓝色，电池片网格与细栅线清晰完整，未见裂纹、污斑、碎纹或缺失区域，仅存在正常的边框与轻微色差。",
+   "cost": 0.00147624
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (122).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.6,
+   "evidence": "画面为多块光伏板斜视拍摄，板面呈均匀深蓝色，可见细密栅线，未见裂纹、污斑、碎纹或缺失区域；右侧亮区为反光，非缺陷。",
+   "cost": 0.00150224
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (126).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.85,
+   "evidence": "画面右侧及中部多块光伏板表面覆盖有灰白色灰尘，电池片颜色变浅、网格模糊，呈均匀积灰状。",
+   "cost": 0.00138824
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (134).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中光伏板电池片网格完整、栅线清晰，表面仅有均匀的细小颗粒感，未见裂纹、污斑、碎纹或缺失区域。",
+   "cost": 0.00140624
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (155).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板电池片网格完整、颜色均匀，未见裂纹、污斑、碎纹或缺失，仅存在正常的反光与边框差异。",
+   "cost": 0.00141424
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (159).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "光伏板表面大面积覆盖褐色泥污，并可见鸟粪等不透明斑点，遮挡了电池片纹理，位于画面中央及左侧区域。",
+   "cost": 0.00140624
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (16).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.6,
+   "evidence": "画面右侧中部有一处明显的白色小斑块（鸟粪/污渍），盖住了下方电池片纹理，其余区域网格完整。",
+   "cost": 0.00134024
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (169).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.6,
+   "evidence": "画面为屋顶光伏电站远景，右侧大面积光伏板呈均匀深蓝色网格，未见裂纹、污斑、破碎或缺失等明显缺陷。",
+   "cost": 0.00118624
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (181).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.8,
+   "evidence": "整块板面覆盖大量白色细小斑点与灰尘，电池片颜色发灰、网格变模糊，属于均匀灰尘污损。",
+   "cost": 0.00120224
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (186).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.6,
+   "evidence": "画面中光伏板表面呈均匀深蓝色，栅线清晰完整，未见裂纹、污斑、碎纹或缺失区域，整体外观正常。",
+   "cost": 0.00121024
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (36).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "整块板面均匀覆盖灰白色灰尘，电池片颜色变浅、网格变模糊，属于灰尘污损。",
+   "cost": 0.00117824
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (46).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.6,
+   "evidence": "画面中多块光伏板表面颜色均匀，未见裂纹、污斑、碎纹或缺失，仅存在整体反光与阴影，不构成缺陷。",
+   "cost": 0.00140624
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (68).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中可见多块光伏板，电池片网格完整，表面仅有轻微反光和阴影，未见裂纹、污损、玻璃破碎或缺失等缺陷。",
+   "cost": 0.00140624
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (93).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板电池片网格完整、颜色均匀，未见裂纹、污斑、碎纹或缺失，仅有正常反光与阴影。",
+   "cost": 0.00120624
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (96).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.85,
+   "evidence": "画面中多块光伏板表面呈均匀深蓝色，电池片网格与细栅线清晰完整，未见裂纹、污斑、玻璃破碎或整块缺失电池片的区域；板面暗色条带为相邻板件或边框的阴影，不属于缺陷。",
+   "cost": 0.00146024
+  },
+  {
+   "split": "test",
+   "class": "Dusty",
+   "file": "Dust (99).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.7,
+   "evidence": "多块板表面均匀覆盖灰白色灰尘，电池片颜色变浅、网格模糊，呈整体发灰状态。",
+   "cost": 0.00116624
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (137).JPG",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "光伏板表面分布大量不透明的黄褐色斑块和污渍，覆盖了电池片纹理，集中在画面中部和右侧区域。",
+   "cost": 0.00120824
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (14).JPG",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "前景多块光伏板表面分布有白色条状和斑块状污渍（鸟粪/泥灰），边缘清晰并遮盖了下方电池片纹理，集中在画面中下部。",
+   "cost": 0.00129624
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (140).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "多块光伏板表面散布大量白色、褐色不透明斑块和污渍（鸟粪、泥灰），覆盖电池片纹理，集中在画面中部和下部。",
+   "cost": 0.00142824
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (146).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "多块光伏板表面覆盖大量白色、褐色斑块和泥灰，尤其板面中下部及边缘处污渍明显，遮挡了电池片纹理。",
+   "cost": 0.00123424
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (148).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "多块光伏板表面散布着多个白色/灰褐色不透明斑点（鸟粪或泥灰），边缘较清楚，盖住了电池片纹理，位于画面中部及右下区域。",
+   "cost": 0.00127424
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (16).JPG",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "光伏板表面（尤其上半部及中部）有大量白色、褐色斑块和条状污渍，覆盖电池片纹理，为鸟粪等污损。",
+   "cost": 0.00123224
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (164).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "多块光伏板表面分布大量白色、褐色不透明斑块和条状污渍（鸟粪/泥灰），覆盖在电池片纹理之上，位于画面中部及右侧多块板面。",
+   "cost": 0.00134024
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (196).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "整块板面覆盖大量白色、褐色不透明斑块和污渍，电池片网格被明显遮盖，属于严重污损。",
+   "cost": 0.00120424
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (211).JPG",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "多块光伏板表面散布大量枯枝、落叶及白色鸟粪等不透明污物，覆盖电池片纹理，属污损。",
+   "cost": 0.00122424
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (33).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "多块光伏板表面分布有褐色、白色的鸟粪斑块及向下流淌的污渍痕迹，位于画面中部及右侧区域。",
+   "cost": 0.00138024
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (54).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "画面中多块光伏板表面覆盖大量白色、不透明的斑块和污渍，遮挡了电池片纹理，属于污损。",
+   "cost": 0.00121224
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (55).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "画面中央及右侧的光伏板表面覆盖大量褐色落叶、泥灰和白色污渍，电池片网格被明显遮挡，属于污损。",
+   "cost": 0.00139624
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (58).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "多块光伏板表面分布大量白色、褐色不透明斑块和条状污渍（鸟粪/泥灰），覆盖在电池片纹理之上，位于画面中部及右侧多块板面。",
+   "cost": 0.00083848
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (71).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "画面中部偏上位置有一块明显的白色不透明斑块，边缘清晰，盖住了下方电池片纹理，属于污损。",
+   "cost": 0.00122824
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (79).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "光伏板表面分布大量白色、褐色鸟粪和泥灰斑块，底部边缘有连片积灰，遮挡了电池片纹理。",
+   "cost": 0.00138824
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (81).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "整块板面覆盖大量白色、褐色不透明斑块和污渍，电池片网格被明显遮盖，属于严重污损。",
+   "cost": 0.00138024
+  },
+  {
+   "split": "test",
+   "class": "Bird-drop",
+   "file": "Bird (87).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "整块板面覆盖大量白色、褐色不透明斑块和污渍，电池片网格被明显遮盖，属于严重污损。",
+   "cost": 0.00138024
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (10).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "右侧光伏板表面覆盖大量白色、不透明的斑块和污渍，呈条带状分布，遮挡了电池片纹理，属于污损。",
+   "cost": 0.00135624
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (106).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "画面中央偏下的一块光伏板表面出现明显的放射状碎裂纹路，中心有亮斑，玻璃已破碎。",
+   "cost": 0.00116024
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (108).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "画面右下方一块光伏板表面出现明显的放射状碎裂纹路，中心有亮斑，玻璃已碎裂。",
+   "cost": 0.00114624
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (109).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "画面右下角一块光伏板表面出现明显的放射状碎裂纹路，中心有亮斑，符合玻璃破碎特征。",
+   "cost": 0.00115424
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (115).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.98,
+   "evidence": "画面中央偏下的一块光伏板中部出现明显破洞，玻璃碎裂缺失，露出下方深色背板/支架，周围有放射状碎纹和亮斑，属于玻璃破碎。",
+   "cost": 0.00127424
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (122).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "画面中央偏左的电池片上有一个明显的亮白色中心点，并向外放射出多条细碎裂纹，呈典型玻璃破碎的放射状图案。",
+   "cost": 0.00127624
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (146).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "前景光伏板的上半部分大面积覆盖灰白色灰尘污渍，电池片网格模糊，属于污损。",
+   "cost": 0.00124024
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (149).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "上方光伏板中央偏左位置有一个明显的破洞，玻璃碎裂缺失，周围有放射状裂纹和白色碎屑，属于玻璃破碎缺陷。",
+   "cost": 0.00120824
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (18).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.97,
+   "evidence": "画面中央偏右一块光伏板表面出现从中心亮斑向外放射的密集碎裂纹路，呈典型玻璃破碎形态。",
+   "cost": 0.00119624
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (20).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.98,
+   "evidence": "画面中央的光伏板玻璃出现大面积放射状碎纹，有两个明显的撞击中心（亮斑），裂纹向四周扩散，属于玻璃破碎。",
+   "cost": 0.00122024
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (30).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "多块板表面散布白色不透明斑点（鸟粪/污渍），如中间偏左板中部及右上板边缘，盖住电池片纹理。",
+   "cost": 0.00141224
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (36).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.9,
+   "evidence": "画面中下部有一处从中心亮点向外放射的碎裂纹路，呈星状扩散，符合玻璃破碎特征。",
+   "cost": 0.00135024
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (49).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.98,
+   "evidence": "画面中央有一处明显的玻璃破碎，呈放射状裂纹，中心有亮斑，周围电池片被碎纹覆盖。",
+   "cost": 0.00116224
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (58).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "画面中央的光伏板表面覆盖大面积灰白色污渍，电池片网格被明显遮盖，颜色发灰，属于整片均匀灰尘污损。",
+   "cost": 0.00128424
+  },
+  {
+   "split": "test",
+   "class": "Physical-Damage",
+   "file": "Physical (82).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.98,
+   "evidence": "画面中央偏右的光伏板玻璃从一点向外放射出密集的碎裂纹路，中心有亮斑，属于玻璃破碎。",
+   "cost": 0.00116424
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (103).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "画面中部偏上有一处明显的玻璃破碎，中心有亮斑并向外放射出密集的碎裂纹，周围电池片网格被破坏。",
+   "cost": 0.00126024
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (132).jpg",
+   "status": "defect",
+   "type": "crack",
+   "confidence": 0.9,
+   "evidence": "画面中部偏右有一条从右上向左下延伸的细长弯折亮线，贯穿多个电池片，符合裂纹特征。",
+   "cost": 0.00144424
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (18).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "画面中下部多块光伏板玻璃严重碎裂，出现大面积放射状碎纹和破洞，部分区域电池片缺失露出下方结构。",
+   "cost": 0.00118424
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (19).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.8,
+   "evidence": "画面中上部偏左位置有一个明显的亮白色不透明斑点，边缘相对清晰，盖住了下方的电池片纹理，属于污损（鸟粪/泥灰）。",
+   "cost": 0.00126824
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (28).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "画面中央偏下位置有一块光伏板出现明显的玻璃破碎，中心有亮白色破洞，周围呈放射状裂纹并伴有褐色污渍。",
+   "cost": 0.00121424
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (3).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "光伏板表面出现大面积放射状碎裂纹，中心有亮斑，玻璃已破碎，位于画面中部及右侧区域。",
+   "cost": 0.00135824
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (31).jpg",
+   "status": "defect",
+   "type": "crack",
+   "confidence": 0.95,
+   "evidence": "画面中央偏下的一块电池片上可见多条细长、弯折的亮白色裂纹，呈放射状分布，符合裂纹特征。",
+   "cost": 0.00122824
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (44).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.7,
+   "evidence": "画面中上部偏左有一块边缘较清楚的褐色/橙黄色斑块，覆盖在电池片表面，遮挡了下方部分栅线纹理，属于污损。",
+   "cost": 0.00126424
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (50).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "画面中央有一块不透明的褐色污渍（疑似鸟粪或泥灰），覆盖在电池片表面并遮挡了部分栅线纹理。",
+   "cost": 0.00121224
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (66).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "画面中央一块电池片表面覆盖大片深褐色不透明污渍，边缘较清楚，遮住了下方电池片纹理，属于污损。",
+   "cost": 0.00121224
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (73).jpg",
+   "status": "defect",
+   "type": "broken",
+   "confidence": 0.95,
+   "evidence": "光伏板玻璃表面布满从右上角一点向外放射的密集碎裂纹路，中心有亮斑，属于典型的玻璃破碎。",
+   "cost": 0.00117024
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (84).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.8,
+   "evidence": "电池片表面有多处白色、褐色不透明斑块和污渍，分布在板面中部及左侧，盖住了部分栅线纹理。",
+   "cost": 0.00118824
+  },
+  {
+   "split": "test",
+   "class": "Electrical-damage",
+   "file": "Electrical (88).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "板面右上区域（红圈内）有数块不透明的深色斑块，盖住了下方电池片纹理，属于污损。",
+   "cost": 0.00127624
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (109).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "画面中多块光伏板表面覆盖着不透明的白色积雪/冰霜，完全遮挡了电池片纹理，属于污损。",
+   "cost": 0.00133224
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (12).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "光伏板表面覆盖积雪，属于自然积雪遮挡，未发现裂纹、污损、玻璃破碎或缺失等缺陷。",
+   "cost": 0.00129224
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (121).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "光伏板中上部有一大片不透明的白色积雪/污渍覆盖，遮住了下方电池片纹理，属于污损。",
+   "cost": 0.00119624
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (122).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "多排光伏板表面覆盖大面积不透明的白色积雪/冰霜斑块，遮挡了电池片纹理，属于污损。",
+   "cost": 0.00118424
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (134).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.6,
+   "evidence": "画面为雪地中多块光伏板，板面深色且网格可见，未见裂纹、污损、破碎或缺失等明显缺陷。",
+   "cost": 0.00120424
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (138).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "光伏板表面被大面积白色积雪覆盖，遮挡了大部分电池片区域，属于不透明的污损覆盖。",
+   "cost": 0.00114624
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (159).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.95,
+   "evidence": "光伏板表面覆盖大面积白色积雪，遮挡了电池片，属于污损。",
+   "cost": 0.00110824
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (16).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "光伏板表面覆盖着大片不透明的白色积雪，遮挡了电池片纹理，属于污损。",
+   "cost": 0.00115224
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (164).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "画面右侧多块光伏板表面覆盖有白色积雪/冰霜斑块，遮挡了电池片纹理，属于污损。",
+   "cost": 0.00118424
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (38).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "光伏板表面覆盖积雪，未发现裂纹、污损、玻璃破碎或缺失等缺陷。",
+   "cost": 0.00118824
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (5).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "光伏板右侧大面积被积雪覆盖，遮挡了电池片，属于不透明污损。",
+   "cost": 0.00131624
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (69).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "光伏板表面覆盖积雪，电池片网格完整可见，无裂纹、污损、破碎或缺失等缺陷。",
+   "cost": 0.00113824
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (7).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "多块光伏板表面覆盖着不透明的积雪斑块，遮挡了电池片纹理，属于污损。",
+   "cost": 0.00133224
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (75).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "光伏板表面覆盖大量积雪，形成不透明白色斑块，遮挡电池片纹理，属于污损。",
+   "cost": 0.00114624
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (79).jpg",
+   "status": "ok",
+   "type": null,
+   "confidence": 0.9,
+   "evidence": "光伏板表面被积雪覆盖，可见部分电池片网格完整、颜色均匀，未见裂纹、污损、玻璃破碎或缺失等缺陷。",
+   "cost": 0.00133224
+  },
+  {
+   "split": "test",
+   "class": "Snow-Covered",
+   "file": "Snow (81).jpg",
+   "status": "defect",
+   "type": "soiling",
+   "confidence": 0.9,
+   "evidence": "多块光伏板表面被积雪覆盖，形成不透明的白色斑块，遮挡了电池片纹理，属于污损。",
+   "cost": 0.00115624
+  }
+ ],
+ "tokens": {
+  "calls": 95,
+  "prompt_tokens": 65953,
+  "completion_tokens": 4729,
+  "cache_hit_tokens": 24576,
+  "reasoning_tokens": 0,
+  "cached_answers": 0
+ },
+ "thinking": false,
+ "price_period": "peak",
+ "cost_at_peak_yuan": 0.1216,
+ "cost_at_idle_yuan": 0.0608
+}

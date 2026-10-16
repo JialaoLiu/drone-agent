@@ -708,6 +708,12 @@ def write_report(report: dict) -> Path:
                   f"不稳定的题：{s['unstable'] or '无'}；每轮都失败：{s['always_failed'] or '无'}", "", "## 失败明细", ""]
         for i, rs in enumerate(report["runs"]):
             lines += [f"- 第 {i + 1} 轮 {x['task']}：{x['reason']}" for x in rs if not x["passed"]]
+    if report.get("tokens"):
+        t = report["tokens"]
+        mode = {"on": "初筛与复核都开启", "off": "全部关闭", "screen": "只在初筛开启"}.get(report.get("thinking_mode"), "开启")
+        lines += ["", f"模型用量：推理过程 {mode}；调用 {t['calls']} 次（另有 {t['cached_answers']} 次直接用缓存），"
+                  f"输入 {t['prompt_tokens']} Token（缓存命中 {t['cache_hit_tokens']}），输出 {t['completion_tokens']} Token（其中推理 {t['reasoning_tokens']}）；"
+                  f"按高峰单价折算 ¥{report['cost_at_peak_yuan']}，按闲时单价折算 ¥{report['cost_at_idle_yuan']}；运行时段：{'高峰' if report.get('price_period') == 'peak' else '闲时'}。"]
     path = out / f"{stamp}.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
@@ -749,8 +755,22 @@ def main() -> None:
     rt.add_argument("--seeds", default="1-100", help="例如 1-100")
     ts = sub.add_parser("troubleshoot", help="排障：注入已知故障，检验诊断员能否找到原因（需要仿真）")
     ts.add_argument("--faults", default="all")
+    for p in (vis, rl, pl):
+        p.add_argument("--thinking", choices=["on", "off", "screen"], help="视觉模型推理过程：on 都开、off 都关、screen 只在初筛开（默认按 VISION_THINKING）")
+        p.add_argument("--cache", action="store_true", help="完全相同的请求直接用缓存的结论（重跑评测时省钱）")
     args = parser.parse_args()
     config.ensure_dirs()
+    from . import llm, pricing
+    if getattr(args, "thinking", None):
+        config.VISION_THINKING_MODE = args.thinking
+        config.VISION_THINKING = args.thinking != "off"
+        config.VISION_THINKING_VERIFY = args.thinking == "on"
+    if getattr(args, "cache", False):
+        os.environ["LLM_CACHE"] = "1"
+    llm.reset_stats()
+    period = pricing.period(datetime.now().astimezone())
+    if period == "peak" and args.cmd in ("vision", "real", "planning", "troubleshoot", "triage"):
+        print("提示：现在是北京时间高峰时段，模型单价是闲时的 2 倍；批量评测建议放在闲时运行。", flush=True)
     if args.cmd == "record":
         print("已录制：", _run_async(_record(args.scene, args.standoff)), flush=True)
         os._exit(0)   # MAVSDK 的后台线程会阻止进程正常退出
@@ -775,6 +795,16 @@ def main() -> None:
         report = run_vision(args.scenes.split(","), args.repeat, args.provider)
     else:
         report = run_planning(args.repeat)
+    if llm.STATS["calls"] or llm.STATS["cached_answers"]:
+        t = dict(llm.STATS)
+        prices = pricing.model_prices(config.VISION_MODEL) or {}
+        def at(slot):
+            p = prices.get(slot)
+            if not p:
+                return None
+            return round(((t["prompt_tokens"] - t["cache_hit_tokens"]) * p["input_cache_miss"] + t["cache_hit_tokens"] * p["input_cache_hit"]
+                          + t["completion_tokens"] * p["output"]) / 1_000_000, 4)
+        report.update(tokens=t, thinking=config.VISION_THINKING, thinking_mode=config.VISION_THINKING_MODE, price_period=period, cost_at_peak_yuan=at("peak"), cost_at_idle_yuan=at("idle"))
     print("报告：", write_report(report), flush=True)
     if args.cmd == "troubleshoot":
         os._exit(0)

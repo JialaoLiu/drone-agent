@@ -87,3 +87,13 @@ def test_terrain_clearance_uses_height_above_ground():
     assert not safety.check_point(site, (-99, -99, 20))
     # 没有高程数据的场地不受影响
     assert not safety.check_point({**site, "terrain": None}, (0, 99, 20))
+
+
+def test_missing_textures_are_detected(tmp_path, monkeypatch):
+    from droneagent import config, simctl
+    monkeypatch.setattr(config, "WORLDS_DIR", tmp_path)
+    (tmp_path / "w").mkdir()
+    ok = tmp_path / "w" / "a.png"
+    ok.write_bytes(b"x")
+    (tmp_path / "w" / "w.sdf").write_text(f"<albedo_map>{ok}</albedo_map><albedo_map>/nowhere/b.png</albedo_map>")
+    assert simctl.missing_textures("w") == ["/nowhere/b.png"]
