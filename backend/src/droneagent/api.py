@@ -200,6 +200,23 @@ def get_site(name: str) -> dict:
     return site
 
 
+@app.get("/site/{name}/basemap")
+def get_basemap(name: str) -> dict:
+    """网页百度卫星底图的参数：只对国内的真实场地提供。百度浏览器端 AK 由后端运行时下发（受百度 Referer 白名单保护），
+    不写进前端代码与仓库。所有要素的 BD-09 换算都用这里返回的同一组参数。"""
+    from . import maps
+    site = _site(name)
+    ak = config.env("BAIDU_MAP_BROWSER_AK")
+    if not site.get("location"):
+        return {"available": False, "reason": "不是真实场地（使用 PX4 默认坐标）"}
+    frame = maps.baidu_frame(site["origin"])
+    if not frame["in_china"]:
+        return {"available": False, "reason": "境外场地：百度底图数据不可靠，不提供"}
+    if not ak:
+        return {"available": False, "reason": "没有配置 BAIDU_MAP_BROWSER_AK"}
+    return {"available": True, "ak": ak, **frame}
+
+
 @app.get("/site/{name}/ground")
 def get_ground(name: str):
     """真实场地的卫星影像（用作网页底图）；程序生成的贴图不提供。"""

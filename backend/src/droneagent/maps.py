@@ -69,6 +69,65 @@ def gcj02_to_wgs84(lat: float, lon: float) -> tuple[float, float]:
     return wlat, wlon
 
 
+_X_PI = math.pi * 3000.0 / 180.0
+
+
+def gcj02_to_bd09(lat: float, lon: float) -> tuple[float, float]:
+    z = math.sqrt(lon * lon + lat * lat) + 0.00002 * math.sin(lat * _X_PI)
+    theta = math.atan2(lat, lon) + 0.000003 * math.cos(lon * _X_PI)
+    return z * math.sin(theta) + 0.006, z * math.cos(theta) + 0.0065
+
+
+def bd09_to_gcj02(lat: float, lon: float) -> tuple[float, float]:
+    x, y = lon - 0.0065, lat - 0.006
+    z = math.sqrt(x * x + y * y) - 0.00002 * math.sin(y * _X_PI)
+    theta = math.atan2(y, x) - 0.000003 * math.cos(x * _X_PI)
+    return z * math.sin(theta), z * math.cos(theta)
+
+
+def wgs84_to_bd09(lat: float, lon: float) -> tuple[float, float]:
+    """WGS-84 → GCJ-02 → BD-09。境外不做偏移（GCJ-02 只在中国境内生效）。"""
+    if _out_of_china(lat, lon):
+        return lat, lon
+    return gcj02_to_bd09(*wgs84_to_gcj02(lat, lon))
+
+
+def in_china(lat: float, lon: float) -> bool:
+    return not _out_of_china(lat, lon)
+
+
+def baidu_frame(origin: dict, half_extent: float = 150.0) -> dict:
+    """场地本地坐标（米，x 东、y 北）→ 百度 BD-09 经纬度的线性换算参数。
+
+    场地只有几百米，这个范围内 WGS-84 到 BD-09 的偏移变化很小（±150 米内与逐点精确换算相差约 0.1 米，
+    远小于换算公式本身约 1–2 米的误差），所以用精确公式换算原点和东、北各一个点，
+    得到“每米对应多少度”，网页上所有要素（边界、阵列、禁飞区、树、航线、绕行点、飞机位置）都用同一组参数换算，
+    不会出现有的转了、有的没转。max_error_m 是这组参数在 ±half_extent 范围内相对逐点精确换算的最大误差。"""
+    from .geo import Origin
+
+    o = Origin(origin["lat"], origin["lon"], origin.get("alt", 0.0))
+
+    def exact(x: float, y: float) -> tuple[float, float]:
+        lat, lon, _ = o.to_global(x, y)
+        return wgs84_to_bd09(lat, lon)
+
+    b0 = exact(0, 0)
+    be, bn = exact(100, 0), exact(0, 100)
+    # 线性部分：东向与北向各自对经、纬度的影响（偏移随位置有极小的变化，也包含进来）
+    m = {"lat_per_e": (be[0] - b0[0]) / 100, "lon_per_e": (be[1] - b0[1]) / 100,
+         "lat_per_n": (bn[0] - b0[0]) / 100, "lon_per_n": (bn[1] - b0[1]) / 100}
+
+    def linear(x: float, y: float) -> tuple[float, float]:
+        return b0[0] + m["lat_per_e"] * x + m["lat_per_n"] * y, b0[1] + m["lon_per_e"] * x + m["lon_per_n"] * y
+
+    err = 0.0
+    for x in (-half_extent, 0, half_extent):
+        for y in (-half_extent, 0, half_extent):
+            (la, lo), (lb, lb2) = exact(x, y), linear(x, y)
+            err = max(err, math.hypot((la - lb) * 111320, (lo - lb2) * 111320 * math.cos(math.radians(la))))
+    return {"origin_bd09": [b0[0], b0[1]], **m, "max_error_m": round(err, 4), "in_china": in_china(origin["lat"], origin["lon"])}
+
+
 # ---------- 百度地点检索 ----------
 
 def _baidu_get(path: str, params: dict) -> dict:

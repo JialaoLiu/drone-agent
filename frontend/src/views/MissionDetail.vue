@@ -6,7 +6,7 @@ import DiagnosisPanel from '../components/DiagnosisPanel.vue'
 import FindingCards from '../components/FindingCards.vue'
 import PhotoStrip from '../components/PhotoStrip.vue'
 import PlanCard from '../components/PlanCard.vue'
-import SiteMap from '../components/SiteMap.vue'
+import MapView from '../components/MapView.vue'
 import Timeline from '../components/Timeline.vue'
 import { useSim } from '../composables/sim'
 import type { Mission, MissionEvent, Site, Telemetry, Truth } from '../types'
@@ -181,7 +181,7 @@ async function cancel() {
             <h2>场地 {{ site?.name ?? '' }}</h2>
             <label class="small"><input v-model="showTruth" type="checkbox" /> 显示标准答案（虚线框）</label>
           </div>
-          <SiteMap v-if="site" :site="site" :findings="mission.findings" :plan="mission.plan" :telemetry="mapTelemetry"
+          <MapView v-if="site" :site="site" :findings="mission.findings" :plan="mission.plan" :telemetry="mapTelemetry"
                    :truth="truth" :selected="selectedPanel" @select="selectedPanel = $event" />
           <p class="small muted legend">
             <span class="dot" style="background: var(--map-panel)" />光伏板

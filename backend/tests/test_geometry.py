@@ -81,3 +81,26 @@ def test_visibility_edges_keep_segment_clearance():
     route = [a] + survey.detour_visibility(a, b, site) + [b]
     gap = min(math.dist(survey._segment_closest((0, 0), p, q), (0, 0)) - 8 for p, q in zip(route, route[1:]))
     assert gap >= survey.CLEAR - 1e-6
+
+
+def test_baidu_frame_matches_exact_conversion():
+    from droneagent import maps
+    from droneagent.geo import Origin
+    origin = {"lat": 23.0172979, "lon": 113.232189, "alt": 10.0}          # 佛山文翰湖公园
+    f = maps.baidu_frame(origin)
+    assert f["in_china"] and f["max_error_m"] < 0.2          # 实测约 0.12 米，远小于换算本身约 1–2 米的误差
+    o = Origin(origin["lat"], origin["lon"], 10.0)
+    for x, y in ((0, 0), (120, -80), (-150, 150)):
+        lat, lon, _ = o.to_global(x, y)
+        ex = maps.wgs84_to_bd09(lat, lon)
+        li = (f["origin_bd09"][0] + f["lat_per_e"] * x + f["lat_per_n"] * y, f["origin_bd09"][1] + f["lon_per_e"] * x + f["lon_per_n"] * y)
+        assert math.dist(ex, li) * 111320 < 0.2
+    # 偏移量级：国内 WGS-84 与 BD-09 相差几百米；往返换算误差在厘米级
+    b = maps.wgs84_to_bd09(origin["lat"], origin["lon"])
+    assert 100 < math.dist(b, (origin["lat"], origin["lon"])) * 111320 < 1500
+    g = maps.bd09_to_gcj02(*b)
+    w = maps.gcj02_to_wgs84(*g)
+    assert math.dist(w, (origin["lat"], origin["lon"])) * 111320 < 0.5
+    # 境外不偏移
+    assert maps.wgs84_to_bd09(-34.9285, 138.6007) == (-34.9285, 138.6007)
+    assert not maps.baidu_frame({"lat": -34.9285, "lon": 138.6007})["in_china"]

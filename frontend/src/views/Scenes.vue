@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { createScene, getSite, getTruth, listScenes, searchPlaces, startSim, stopSim } from '../api'
 import SceneThumb from '../components/SceneThumb.vue'
-import SiteMap from '../components/SiteMap.vue'
+import MapView from '../components/MapView.vue'
 import { useSim } from '../composables/sim'
 import type { Place, SceneInfo, Site, Truth } from '../types'
 
@@ -132,7 +132,7 @@ onMounted(load)
       <h2>{{ previewSite.name }} 平面图</h2>
       <button class="small" @click="showTruth(previewSite.name)">{{ truth ? '隐藏标准答案' : '显示标准答案' }}</button>
     </div>
-    <SiteMap :site="previewSite" :findings="[]" :plan="null" :telemetry="{}" :truth="truth" :selected="null" />
+    <MapView :site="previewSite" :findings="[]" :plan="null" :telemetry="{}" :truth="truth" :selected="null" />
     <p v-if="truth" class="small muted">标准答案：{{ truth.defects.map((d) => `${d.panel_id} ${d.label}`).join('；') }}</p>
   </section>
 </template>

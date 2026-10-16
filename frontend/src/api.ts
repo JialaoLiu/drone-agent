@@ -38,6 +38,7 @@ export const listScenes = () => json<SceneInfo[]>('/scenes')
 export const createScene = (seed: number, location: Place | null = null) =>
   json<{ name: string; ground?: Site['ground'] }>('/scenes', { method: 'POST', body: JSON.stringify({ seed, location }) })
 export const searchPlaces = (q: string, city: string) => json<Place[]>(`/places?${new URLSearchParams({ q, city })}`)
+export const getBasemap = (scene: string) => json<{ available: boolean; reason?: string } & Record<string, any>>(`/site/${encodeURIComponent(scene)}/basemap`)
 export const groundUrl = (scene: string) => `/api/site/${encodeURIComponent(scene)}/ground`
 export const getSite = (name: string) => json<Site>(`/site/${encodeURIComponent(name)}`)
 export const getTruth = (name: string) => json<Truth>(`/site/${encodeURIComponent(name)}/truth`)
