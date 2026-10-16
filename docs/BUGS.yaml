@@ -305,3 +305,27 @@ bugs:
     found_by: 随机布局视觉评测（solar_46 A-R3-C01）与 2026-10-16 实时任务，同一块板两次被复核排除
     cause: 判断说明没有明确“不透明的小斑点也算污损”；模型把小面积不透明污损当成可以忽略的细节。
     fix: 待定。候选：判断说明写明不透明斑点无论大小都按污损（低优先级）上报，需重跑视觉评测确认阴影、反光干扰的误报不上升。
+  - id: DR-045
+    title: 录制入口在仿真刚启动时做飞行前检查，必然不通过
+    status: verified
+    found_by: 2026-10-16 录制分类器训练场景（solar_101 第一次录制失败）
+    cause: 给录制加安全检查（DR-033）时，没有先等待飞控定位与自检就绪。
+    fix: 录制先等待飞控就绪，再做飞行前检查。
+    verification: 之后 6 个场景全部录制成功。
+  - id: DR-046
+    title: PX4 进程偶尔不响应停止信号，下一次启动报 “PX4 server already running”
+    status: verified
+    found_by: 2026-10-16 连续录制场景（solar_103、104 启动超时）
+    fix: 停止仿真时等待最多 10 秒，仍在运行就强制结束；同时结束挂住的 px4-mavlink 客户端。
+    verification: 重新录制 4 个场景全部成功。
+  - id: DR-047
+    title: 一键启动脚本不先停掉残留的仿真，两个 Gazebo 同时运行
+    status: verified
+    found_by: 2026-10-16 录制结束后用 start.sh 启动
+    fix: start.sh 启动前先停止后端、网页和仿真。
+    verification: 重新启动后飞行前检查通过。
+  - id: DR-048
+    title: 飞行前检查的弹出框切换页面后不关闭，挡住页面按钮
+    status: fixed
+    found_by: 2026-10-16 制作使用说明截图
+    fix: 切换页面时自动收起。

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { emergencyReturn } from './api'
 import PreflightList from './components/PreflightList.vue'
@@ -16,6 +16,7 @@ const healthLabel = computed(() => {
   return h.items.some((i) => i.ok === null) ? { text: '飞行前检查：有提示', cls: 'warn' } : { text: '飞行前检查通过', cls: 'ok' }
 })
 const route = useRoute()
+watch(() => route.fullPath, () => { showHealth.value = false })   // 切换页面时收起弹出框，避免挡住页面内容
 const menu = ref(false)
 const notice = ref('')
 

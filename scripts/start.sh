@@ -25,6 +25,10 @@ if [ ! -f "$DATA_DIR/worlds/$SCENE/site.json" ]; then
 	seed="${SCENE#solar_}"
 	PYTHONPATH=src uv run python -m droneagent.sim.scene --seed "$seed" --name "$SCENE"
 fi
+# 先停掉可能残留的仿真与服务（例如录制结束后仍在运行的仿真），否则两个 Gazebo 会抢同一个 PX4 实例
+pkill -f "uvicorn droneagent.api" || true
+pkill -f "vite --host 0.0.0.0 --port 4790" || true
+"$PROJECT_DIR/scripts/sim.sh" stop
 "$PROJECT_DIR/scripts/sim.sh" "$SCENE"
 PYTHONPATH=src nohup uv run uvicorn droneagent.api:app --host 127.0.0.1 --port 8881 > "$LOG_DIR/api.log" 2>&1 &
 cd "$PROJECT_DIR/frontend"
