@@ -97,6 +97,7 @@ class NewScene(BaseModel):
     defect_rate: float = Field(0.12, ge=0.02, le=0.4)
     location: Place | None = None         # 真实场地（来自 /places 的检索结果）
     scenario: str = Field("solar", pattern="^(solar|rescue)$")
+    environment: str | None = Field(None, pattern="^(park|forest|riverside|plaza)$")   # 救援随机场景的环境类型；不给时按布局编号选
 
 
 @app.get("/scenes")
@@ -118,7 +119,8 @@ def create_scene(body: NewScene) -> dict:
     seed = body.seed or random.randint(1, 100000)
     if body.scenario == "rescue":
         from .rescue import scene as rescue_scene
-        out = rescue_scene.generate(seed, _unique_name(f"rescue_{seed}"), body.location.model_dump() if body.location else None)
+        out = rescue_scene.generate(seed, _unique_name(f"rescue_{seed}"), body.location.model_dump() if body.location else None,
+                                    environment=body.environment)
         return {"name": out.name, "seed": seed, "ground": scene.load_site(out.name).get("ground")}
     if body.location:
         out = scene.generate(seed, _unique_name(f"site_{seed}"), body.defect_rate, location=body.location.model_dump())

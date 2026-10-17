@@ -89,8 +89,9 @@ async def planner(state: RescueState) -> dict:
     _usage(state, "planner", usage)
     if state.get("violations") and any(v["code"] == "battery" for v in state["violations"]) and params["radius_m"] >= (state.get("plan") or {}).get("radius_m", 99):
         params["radius_m"] = round(state["plan"]["radius_m"] * 0.75, 1)        # 规划员没有缩小时，程序按电量缩小半径
-    steps = search_plan.search_steps(site, params["center"], params["radius_m"], params["altitude_m"], params["pattern"])
-    route = survey.with_detours(steps, site)
+    routing = search_plan.route_site(site, params["altitude_m"])          # 高楼当绕行区（城市广场等）
+    steps = search_plan.search_steps(routing, params["center"], params["radius_m"], params["altitude_m"], params["pattern"])
+    route = survey.with_detours(steps, routing)
     minutes = round(survey.route_seconds(route) / 60, 1)
     params.update(sorties=[["搜索"]], targets=["搜索"], closeup_policy="search", standoff_m=params["altitude_m"], max_sorties=1,
                   estimated_minutes=minutes, estimated_battery=[round(safety.battery_needed(route), 1)], photos=len(steps),
@@ -165,11 +166,37 @@ def _own_shadow(site: dict, frame, c: dict) -> bool:
     return math.hypot(c["x"] - sx, c["y"] - sy) < radius and c.get("area_m2", 0) < 1.0
 
 
+LOW_PASS_CHECKS = 3
+
+
+def _already_seen(detections: list[dict], it: dict, pid: int) -> bool:
+    """同一个人在相邻照片里会重复出现：之前照片里 3 米内已明确排除、且衣着看起来一样的不再确认；
+    同一位置确认过 2 次的不再确认。只和之前的照片比——同一张照片里的候选本来就是不同的人；
+    上衣颜色明显不同的是另一个人（目标坐在穿粉衣的路人旁边 1.8 米，曾被当成同一个人跳过）。"""
+    from ..rescue.roles import color_key
+    top = color_key(it.get("top"))
+    near = [d for d in detections if d.get("photo") != pid and math.hypot(it["x"] - d["x"], it["y"] - d["y"]) < 3]
+    same = [d for d in near if not (top and color_key(d.get("top")) and color_key(d.get("top")) != top)]
+    return any(d["kind"] in ("bystander", "rejected") for d in same) or sum(1 for d in near if d.get("confirm")) >= 2
+
+
+def _needs_low_pass(brief: dict, item: dict, decision: str) -> bool:
+    """变焦确认没成功时是否去低空重找。初筛必须看到了人；变焦里没人或看不清时去；
+    变焦看到的人衣着冲突时，只有初筛衣着明确相符才去（说明目标就在附近、变焦拍到了别人）。"""
+    if item.get("person") != "yes":
+        return False
+    if decision in ("no_person", "unsure"):
+        return True
+    return decision == "rejected" and not brief.get("search_all") and roles.compare_attributes(brief, item) == "match"
+
+
 def _low_pass(site: dict, here: tuple, item: dict, search_alt: float, battery: float) -> tuple[float, list] | None:
     """低空补拍的完整动作（从当前位置平移到候选上方 → 下降 → 爬回搜索高度 → 返航）先交给安全员；
-    选能通过的最低高度，都不通过时返回 None，不执行补拍（审查二 H01）。"""
-    for alt in (max(site["min_altitude"], 9.0), 12.0):
-        if alt >= search_alt:
+    高度从高到低试（比搜索高度低 2 米、12 米、9 米），用第一个能通过的：走动的人从被发现到补拍要二十秒左右，
+    能走出 5–10 米，9 米高的广角只覆盖约 12×7 米会把人漏在画外（文翰湖实测）；13–16 米覆盖约 18×10 米，
+    3 米见方的裁图仍有约 200 像素，看得清衣着。都不通过时返回 None，不执行补拍（审查二 H01）。"""
+    for alt in sorted({search_alt - 2.0, 12.0, max(site["min_altitude"], 9.0)}, reverse=True):
+        if alt >= search_alt or alt < site["min_altitude"]:
             continue
         above = (item["x"], item["y"], here[2])
         low = (item["x"], item["y"], alt)
@@ -231,8 +258,9 @@ async def _confirm(state: RescueState, item: dict, index: int) -> tuple[dict | N
         pos = await asyncio.to_thread(detect.locate_in_zoom, frame)
         x, y = pos if pos else (item["x"], item["y"])
         return _hit(verdict, decision, x, y, pid), verdict, decision
-    # 初筛是人、变焦里没有人：多半走开了（从发现到对准十来秒，变焦画面只有约 4 米宽）。其他裁决直接返回
-    if decision != "no_person" or item.get("person") != "yes":
+    # 初筛是人，但变焦里没有人、看不清，或看到的人对不上而初筛明明衣着相符：多半是目标走开了
+    # （从发现到对准十来秒，变焦画面只有 4–7 米宽），变焦拍到的是旁边的路人。这些情况都去低空重找；其他裁决直接返回
+    if not _needs_low_pass(brief, item, decision):
         return None, verdict, decision
     search_alt = state["plan"]["altitude_m"]
     plan = _low_pass(site, (f.state.x, f.state.y, f.state.z), item, search_alt, f.state.battery)
@@ -240,7 +268,8 @@ async def _confirm(state: RescueState, item: dict, index: int) -> tuple[dict | N
         _emit(state, "safety", "skip_low_pass", f"{item['id']} 可能已经走开，但低空补拍的航段或电量未通过安全员校验，不补拍")
         return None, verdict, "unsure"
     low, (above, lowpt, up) = plan
-    _emit(state, "pilot", "retake", f"{item['id']} 的变焦画面里没有看到人，可能已经走开，飞到上方降到 {low:.0f} 米用广角重新寻找（已通过安全员校验）")
+    why = {"no_person": "变焦画面里没有看到人", "unsure": "变焦画面里看不清", "rejected": "变焦拍到的人与初筛看到的衣着不一样"}[decision]
+    _emit(state, "pilot", "retake", f"{item['id']} {why}，可能已经走开，飞到上方降到 {low:.0f} 米用广角重新寻找（已通过安全员校验）")
     await f.goto(*above, f.state.yaw)                     # 先在当前高度平移到候选上方，再垂直下降
     wide, pid = await _shoot(state, survey.Step("confirm", item["id"] + "L", lowpt, 0.0, -90.0, "wide", "低空确认"), index + 1)
     await f.goto(*up, f.state.yaw, tolerance=1.0)          # 垂直爬回搜索高度后才允许水平飞行（树高可达 12 米）
@@ -248,16 +277,22 @@ async def _confirm(state: RescueState, item: dict, index: int) -> tuple[dict | N
             if math.hypot(c["x"] - item["x"], c["y"] - item["y"]) < 12 and not _own_shadow(site, wide, c)]
     if not near:
         return None, {**verdict, "photo": pid, "evidence": "低空补拍附近没有找到人"}, "unsure"
-    best = min(near, key=lambda c: math.hypot(c["x"] - item["x"], c["y"] - item["y"]))     # 离上次位置最近的那个
-    crop = detect.crop(wide, best, metres=3.0, size=480)
-    verdict, usage = await asyncio.to_thread(detect.verify, crop, desc, None, "无人机低空俯视照片里以可疑位置为中心裁出的局部")
-    _usage(state, "searcher", usage)
-    verdict["photo"] = pid
-    decision = roles.identity(brief, verdict)
-    verdict["decision"] = decision
-    if decision in ("confirmed", "water"):
-        return _hit(verdict, decision, best["x"], best["y"], pid), verdict, decision
-    return None, verdict, "unsure" if decision == "no_person" else decision
+    seen = []
+    for best in sorted(near, key=lambda c: math.hypot(c["x"] - item["x"], c["y"] - item["y"]))[:LOW_PASS_CHECKS]:   # 由近到远，最多看 3 个
+        crop = detect.crop(wide, best, metres=3.0, size=480)
+        verdict, usage = await asyncio.to_thread(detect.verify, crop, desc, None, "无人机低空俯视照片里以可疑位置为中心裁出的局部")
+        _usage(state, "searcher", usage)
+        verdict["photo"] = pid
+        decision = roles.identity(brief, verdict)
+        verdict["decision"] = decision
+        if decision in ("confirmed", "water"):
+            return _hit(verdict, decision, best["x"], best["y"], pid), verdict, decision
+        seen.append((decision, verdict))
+    # 都没确认：有看不清的就记为待确认（不当成排除），否则按最近那个的裁决
+    unsure = [v for d, v in seen if d in ("unsure", "no_person")]
+    if unsure:
+        return None, unsure[0], "unsure"
+    return None, seen[0][1], seen[0][0]
 
 
 async def search(state: RescueState) -> dict:
@@ -289,9 +324,7 @@ async def search(state: RescueState) -> dict:
             _usage(state, "searcher", usage)
         found, new, stop = None, [], False
         for it in items:
-            # 同一个人在相邻照片里会重复出现：3 米内已明确排除的不再确认；看不清的允许再确认（最多 2 次）
-            near = [d for d in detections if math.hypot(it["x"] - d["x"], it["y"] - d["y"]) < 3]
-            if any(d["kind"] in ("bystander", "rejected") for d in near) or sum(1 for d in near if d.get("confirm")) >= 2:
+            if _already_seen(detections, it, pid):
                 continue
             det = {"id": f"P{len(detections) + 1}", "x": it["x"], "y": it["y"], "kind": _classify(it, state["brief"].get("search_all", False)), "photo": pid, "person": it["person"],
                    "top": it.get("top"), "bottom": it.get("bottom"), "child": it.get("child"), "in_water": it.get("in_water") == "yes",

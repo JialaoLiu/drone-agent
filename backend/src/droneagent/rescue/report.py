@@ -12,7 +12,8 @@ KIND_LABELS = {"target": "确认目标", "person": "待人工辨认的人员", "
 
 
 def near_misses(brief: dict, dets: list[dict]) -> list[dict]:
-    """没找到时：衣着部分对得上的人（上衣或裤子一致），报案描述可能有误。"""
+    """没找到时：衣着对得上的人。full 为真表示初筛看到的衣着与描述全部一致、只是没能近距离确认（疑似目标，优先看）；
+    否则只是部分一致（上衣或裤子），报案描述可能有误。全部一致的排在前面。"""
     from .roles import color_key
     out = []
     for d in dets:
@@ -22,8 +23,11 @@ def near_misses(brief: dict, dets: list[dict]) -> list[dict]:
         bottom_ok = brief.get("bottom") and color_key(d.get("bottom")) == brief["bottom"]
         if top_ok or bottom_ok:
             seen = "、".join(x for x in [f"{d.get('top') or '?'}上衣", f"{d.get('bottom') or '?'}裤子"])
-            out.append({"id": d["id"], "x": d["x"], "y": d["y"], "photo": (d.get("confirm") or {}).get("photo") or d["photo"],
-                        "text": f"{d['id']}：{seen}（{'上衣' if top_ok else '裤子'}与描述一致）"})
+            full = bool(top_ok and (bottom_ok or not brief.get("bottom")) and d["kind"] == "unsure")
+            which = "衣着与描述一致，没能近距离确认" if full else ("上衣与裤子都与描述一致" if top_ok and bottom_ok else f"{'上衣' if top_ok else '裤子'}与描述一致")
+            out.append({"id": d["id"], "x": d["x"], "y": d["y"], "photo": (d.get("confirm") or {}).get("photo") or d["photo"], "full": full,
+                        "text": f"{d['id']}：{seen}（{which}）"})
+    out.sort(key=lambda m: not m["full"])
     return out[:5]
 
 
@@ -58,7 +62,11 @@ def collect(state: dict, site: dict, battery_end: float) -> dict:
         where = "、".join(dict.fromkeys((["水边"] if has_water else []) + spots[:3]))     # 只提场地里真有的地方
         advice = "建议扩大搜索半径或改为平行扫描再飞一次，并组织地面人员" + (f"在{where}重点排查。" if where else "沿场地边界与通道排查。")
     misses = [] if found else near_misses(state.get("brief") or {}, dets)
-    if misses:
+    likely = [m for m in misses if m["full"]]
+    if likely:      # 初筛衣着全对、只是没能确认（多半走开了或被挡住）：不是描述有误，是疑似目标
+        facts += "有衣着与描述一致、但没能近距离确认的人（可能已走开或被遮挡），疑似目标：" + "；".join(m["text"] for m in likely) + "。"
+        advice = f"请先查看 {'、'.join(m['id'] for m in likely)} 的照片，并派地面人员到这些位置附近寻找。" + advice
+    elif misses:
         facts += "没有完全符合描述的人，但有衣着部分一致的人，报案描述可能有误：" + "；".join(m["text"] for m in misses) + "。"
         advice = "请向报案人核实衣着（特别是裤子颜色）和最后出现的位置，并查看这些人的近照。" + advice
     facts += f"发现路人 {counts['bystander']} 人，确认后排除 {counts['rejected']} 人，非人物体 {counts['object']} 处，看不清 {counts['unsure']} 处。"

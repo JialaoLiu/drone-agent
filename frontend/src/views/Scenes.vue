@@ -21,6 +21,8 @@ const selected = ref<string | null>(null)
 const place = ref<Place | null>(null)
 const seed = ref<number | null>(null)
 const kind = ref<'solar' | 'rescue'>('solar')
+const environment = ref('')            // 救援随机场景的环境类型；空为按布局编号随机
+const ENVIRONMENTS = { park: '公园湖泊', forest: '山林', riverside: '河岸', plaza: '城市广场' }
 const advanced = ref(false)
 const generating = ref(false)
 const filter = ref<'all' | 'real' | 'random' | 'solar' | 'rescue'>('all')
@@ -46,7 +48,7 @@ async function refresh() {
 async function generate() {
   generating.value = true
   try {
-    const { name } = await createScene(advanced.value ? seed.value : null, place.value, kind.value)
+    const { name } = await createScene(advanced.value ? seed.value : null, place.value, kind.value, kind.value === 'rescue' && !place.value ? environment.value || null : null)
     show(`已生成场景 ${name}${place.value ? `（${place.value.name}）` : ''}`, 'ok')
     filter.value = 'all'; page.value = 1
     await refresh()
@@ -56,7 +58,7 @@ async function generate() {
 async function setPage(p: number) { page.value = p; await Promise.all(shown.value.map((s) => load(s.name))) }
 async function openPreview(name: string) { preview.value = name; truth.value = null; await load(name) }
 async function toggleTruth() { truth.value = truth.value ? null : await getTruth(preview.value!).catch(() => null) }
-const info = (s: SceneInfo) => `${scenarioOf(s.scenario).label} · ${scenarioOf(s.scenario).summary(null, { arrays: s.arrays, panels: s.panels })}`
+const info = (s: SceneInfo) => `${scenarioOf(s.scenario).label}${s.environment ? `（${s.environment}）` : ''} · ${scenarioOf(s.scenario).summary(null, { arrays: s.arrays, panels: s.panels })}`
 const time = (t?: number) => (t ? new Date(t * 1000).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
 onMounted(refresh)
 </script>
@@ -66,6 +68,10 @@ onMounted(refresh)
     <div class="gen">
       <select v-model="kind" title="应用场景">
         <option v-for="sc in allScenarios()" :key="sc.id" :value="sc.id">{{ sc.label }}</option>
+      </select>
+      <select v-if="kind === 'rescue' && !place" v-model="environment" title="环境类型（真实场地按当地实际）">
+        <option value="">环境随机</option>
+        <option v-for="(l, k) in ENVIRONMENTS" :key="k" :value="k">{{ l }}</option>
       </select>
       <PlaceSearch v-model="place" />
       <button class="primary" :disabled="generating" @click="generate"><Spinner v-if="generating" :size="12" /> {{ place ? '在这里生成场景' : '随机生成场景' }}</button>

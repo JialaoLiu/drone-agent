@@ -15,6 +15,7 @@ import TruthComparison from '../components/task/TruthComparison.vue'
 import RescueResult from '../components/task/RescueResult.vue'
 import ClarifyReply from '../components/task/ClarifyReply.vue'
 import MapView from '../components/map/MapView.vue'
+import Tabs from '../components/common/Tabs.vue'
 import { DIAGNOSIS_STAGES, scenarioOf } from '../scenarios'
 import { useMissions } from '../stores/missions'
 import { useSim } from '../stores/sim'
@@ -77,8 +78,32 @@ async function doCancel() {
 }
 function select(pid: string) {
   selected.value = pid
-  document.querySelector('.map-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  pick('map')
 }
+
+// 页签（第三轮反馈：一屏堆叠太多）：默认跟随任务状态——待确认看概览、飞行中看地图与画面、结束后看结果；
+// 用户手动点过页签后不再自动切换，换任务时恢复自动
+const tab = ref('overview')
+const manual = ref(false)
+const autoTab = computed(() => {
+  const st = mission.value?.status
+  if (st === 'running') return 'map'
+  if (['done', 'failed', 'cancelled'].includes(st ?? '') && result.value) return 'result'
+  return 'overview'
+})
+watch(autoTab, (t) => { if (!manual.value) tab.value = t }, { immediate: true })
+watch(id, () => { manual.value = false; tab.value = autoTab.value })
+function pick(t: string) { tab.value = t; manual.value = true }
+const tabs = computed(() => {
+  const r = result.value
+  const found = scenario.value.usesPanels ? mission.value?.findings.length : (r?.persons?.length ?? r?.detections?.filter((d: any) => ['target', 'person', 'water'].includes(d.kind)).length)
+  return [
+    { key: 'overview', label: '概览' },
+    { key: 'map', label: flying.value ? '地图与实时画面' : '地图' },
+    { key: 'process', label: '过程', badge: events.value.length || null },
+    { key: 'result', label: '结果', badge: found || null },
+  ]
+})
 </script>
 
 <template>
@@ -87,9 +112,11 @@ function select(pid: string) {
   <template v-if="mission">
     <section class="head">
       <div class="title">
-        <span class="tag" :class="mission.status">{{ STATUS_LABELS[mission.status] ?? mission.status }}</span>
         <b>{{ mission.task }}</b>
-        <span class="muted small">{{ isTroubleshoot ? '飞控诊断' : scenario.label }} · {{ mission.id }} · 场景 {{ mission.scene }} · 模型费用 ¥{{ (mission.usage?.total?.cost_yuan ?? 0).toFixed(4) }}</span>
+        <div class="meta">
+          <span class="tag" :class="mission.status">{{ STATUS_LABELS[mission.status] ?? mission.status }}</span>
+          <span class="muted small">{{ isTroubleshoot ? '飞控诊断' : scenario.label }} · 场景 {{ mission.scene }} · 编号 {{ mission.id }} · 模型费用 ¥{{ (mission.usage?.total?.cost_yuan ?? 0).toFixed(4) }}</span>
+        </div>
       </div>
       <div class="actions">
         <a v-if="result?.report_path" class="button-link" :href="reportUrl(mission.id)" target="_blank" rel="noopener">查看报告</a>
@@ -108,47 +135,61 @@ function select(pid: string) {
 
     <template v-else>
       <TaskVerdict :score="score" :result="result" :unverified="unverified" :status="mission.status" :scenario="scenario" />
-      <div class="layout">
-        <div class="col">
-          <LiveView :active="flying" />
-          <div class="card map-card">
-            <div class="map-head">
-              <h2>场地 {{ site?.name ?? '' }}</h2>
-              <label v-if="!score || !scenario.usesPanels" class="small"><input v-model="showTruth" type="checkbox" /> 显示标准答案</label>
-            </div>
-            <MapView v-if="site" :site="site" :findings="mission.findings" :plan="mission.plan" :telemetry="mapTelemetry"
-                     :truth="showTruth || (score && scenario.usesPanels) ? truth : null" :score="scenario.usesPanels ? score : null" :selected="selected"
-                     :markers="markers" @select="selected = $event" />
+      <Tabs :items="tabs" :model-value="tab" @update:model-value="pick" />
+
+      <div v-show="tab === 'overview'" class="pane overview">
+        <PlanCard v-if="mission.plan?.sorties" :plan="mission.plan" :awaiting="mission.status === 'awaiting_approval'" :busy="busy" :scenario="scenario" @decide="decide" />
+        <div v-if="result?.summary" class="card summary"><h2>报告员结论</h2><p>{{ result.summary }}</p></div>
+        <div v-if="!mission.plan?.sorties && !result?.summary" class="card muted small">调度员正在理解任务，计划出来后会显示在这里。</div>
+      </div>
+
+      <div v-show="tab === 'map'" class="pane" :class="{ split: flying }">
+        <LiveView :active="flying && tab === 'map'" />
+        <div class="card map-card">
+          <div class="map-head">
+            <h2>场地 {{ site?.name ?? '' }}</h2>
+            <label v-if="!score || !scenario.usesPanels" class="small"><input v-model="showTruth" type="checkbox" /> 显示标准答案</label>
           </div>
-        </div>
-        <div class="col">
-          <PlanCard v-if="mission.plan?.sorties" :plan="mission.plan" :awaiting="mission.status === 'awaiting_approval'" :busy="busy" :scenario="scenario" @decide="decide" />
-          <TruthComparison v-if="scenario.usesPanels && score && score.defects != null" :score="score" :truth="truth" :scenario="scenario" @select="select" />
-          <RescueResult v-if="!scenario.usesPanels && result" :result="result" :scenario="scenario" @photo="openPhoto = $event" />
-          <div class="card"><h2>团队协作记录</h2><Timeline :events="events" /></div>
+          <MapView v-if="site" :site="site" :findings="mission.findings" :plan="mission.plan" :telemetry="mapTelemetry"
+                   :truth="showTruth || (score && scenario.usesPanels) ? truth : null" :score="scenario.usesPanels ? score : null" :selected="selected"
+                   :markers="markers" @select="selected = $event" />
         </div>
       </div>
-      <div v-if="result?.summary" class="card summary"><h2>报告员结论</h2><p>{{ result.summary }}</p></div>
-      <FindingCards v-if="scenario.usesPanels" :findings="mission.findings" :selected="selected" :types="scenario.findingTypes" @select="selected = $event" @photo="openPhoto = $event" />
-      <PhotoStrip :photos="mission.photos" :open="openPhoto" @open="openPhoto = $event" />
+
+      <div v-show="tab === 'process'" class="pane">
+        <div class="card"><h2>团队协作记录</h2><Timeline :events="events" /></div>
+      </div>
+
+      <div v-show="tab === 'result'" class="pane">
+        <TruthComparison v-if="scenario.usesPanels && score && score.defects != null" :score="score" :truth="truth" :scenario="scenario" @select="select" />
+        <RescueResult v-if="!scenario.usesPanels && result" :result="result" :scenario="scenario" @photo="openPhoto = $event" />
+        <FindingCards v-if="scenario.usesPanels" :findings="mission.findings" :selected="selected" :types="scenario.findingTypes" @select="select" @photo="openPhoto = $event" />
+        <PhotoStrip :photos="mission.photos" :open="openPhoto" @open="openPhoto = $event" />
+        <p v-if="!result && !mission.photos.length" class="muted small">任务结束后在这里查看发现、照片与标准答案对照。</p>
+      </div>
     </template>
   </template>
 </template>
 
 <style scoped>
-.head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.title { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.title { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.title b { font-size: 18px; font-weight: 600; line-height: 1.4; }
+.meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.button-link { border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 6px 14px; text-decoration: none; font-size: 14px; }
-.layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 14px; align-items: start; margin-bottom: 14px; }
-.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.col :deep(.card) { margin-bottom: 0; }
-.map-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.button-link { border: 1px solid var(--line); color: var(--text); border-radius: var(--radius-sm); padding: 7px 14px; text-decoration: none; font-size: 14px; background: var(--panel); }
+.button-link:hover { border-color: var(--accent); color: var(--accent); }
+.pane { display: flex; flex-direction: column; gap: 16px; }
+.pane :deep(.card) { margin-bottom: 0; }
+.pane.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+.overview { max-width: 860px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 16px; align-items: start; margin-bottom: 16px; }
+.map-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .map-head h2 { margin: 0; }
-.summary { margin-bottom: 14px; }
-.summary p { margin: 0; line-height: 1.7; }
-.notice { padding: 8px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
+.summary p { margin: 0; line-height: 1.8; }
+.notice { padding: 10px 14px; border-radius: var(--radius-sm); background: var(--warn-bg); color: var(--warn); }
 .back { display: none; }
+@media (max-width: 1200px) { .pane.split { grid-template-columns: 1fr; } }
 @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
 @media (max-width: 960px) { .back { display: inline-block; } }
 </style>

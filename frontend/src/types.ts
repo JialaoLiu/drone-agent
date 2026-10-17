@@ -7,7 +7,7 @@ export interface SimStatus {
   scene: string | null; camera: boolean; px4: boolean; telemetry: Partial<Telemetry>; active_mission: string | null; job?: SimJob
 }
 export interface SceneInfo {
-  name: string; seed: number; panels: number; arrays: number; scenario?: string; location?: string | null; ground?: string; created_at?: number
+  name: string; seed: number; panels: number; arrays: number; scenario?: string; environment?: string | null; location?: string | null; ground?: string; created_at?: number
 }
 export interface Place { name: string; address: string; city: string; lat: number; lon: number; source: string }
 export interface Settings {
@@ -28,6 +28,7 @@ export interface Site {
   ground?: { source: 'procedural'; extent_m: number; note: string } | null
   features?: { kind: 'water' | 'building' | 'wood' | 'solar' | 'aeroway'; polygon: number[][]; height?: number }[] | null
   twin?: Record<string, any> | null
+  environment?: { type: string; label: string; note: string }
   terrain?: { relief: number; origin_elevation: number } | null
 }
 export interface TruthPerson { id: string; role: 'target' | 'bystander'; state: string; start: number[]; top: string; bottom: string; child: boolean }

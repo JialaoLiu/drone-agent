@@ -117,6 +117,12 @@ def plan(brief: dict, site: dict, battery: float, feedback: list[dict] | None = 
     lm = lms.get(brief["last_seen"]) or {"label": "场地中心（最后位置不明）", "center": site_center(site)}
     user = (f"任务：{json.dumps(brief, ensure_ascii=False)}\n最后出现：{lm['label']}" + ("（位置不明，宜平行扫描、半径取大）" if brief["last_seen"] == "unknown" else "") + "\n" + f"场地约 {int(2 * max(abs(v) for p in site['geofence'] for v in p))} 米见方，"
             f"有水面：{'是' if any(f['kind'] == 'water' for f in site.get('features') or []) else '否'}；当前电量 {battery:.0f}%")
+    env = site.get("environment") or {}
+    if env.get("note"):
+        user += f"\n环境：{env.get('label')}（{env['note']}）"
+    tall = max((o["height"] for o in site.get("obstacles", [])), default=0)
+    if tall:
+        user += f"\n场地内最高障碍物约 {tall:.0f} 米（安全员要求航线高于障碍物并留余量）"
     if feedback:
         user += f"\n上一版计划：{json.dumps(previous, ensure_ascii=False)}\n安全员拒绝原因：" + "；".join(f"{v['message']}（建议：{v['suggestion']}）" for v in feedback)
     data, usage = chat_json(PLANNER, user)

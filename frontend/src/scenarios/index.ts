@@ -125,7 +125,10 @@ const rescue: Scenario = {
     { label: '搜索半径', value: `${p.radius_m} 米` }, { label: '飞行高度', value: `${p.altitude_m} 米` },
     { label: '拍摄点', value: `${p.photos} 个` }, { label: '预计', value: `${p.estimated_minutes} 分钟，耗电约 ${p.estimated_battery?.[0]?.toFixed(0)}%` },
   ],
-  summary: (site) => (site?.landmarks ? `${site.landmarks.length} 个地标 · 有走动的人和路人` : '湖面、步道、走动的人和路人'),
+  summary: (site) => {
+    const env = (site as { environment?: { label: string } } | null)?.environment?.label
+    return [env, site?.landmarks ? `${site.landmarks.length} 个地标` : '', '有走动的人和路人'].filter(Boolean).join(' · ')
+  },
   verdict: (s, result) => {
     if (!result) return null
     const found = result.found

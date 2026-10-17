@@ -7,8 +7,8 @@ from droneagent.agents.rescue import _classify
 from droneagent.rescue import plan, scene, scoring
 
 
-def _site(seed=3):
-    out = scene.generate(seed, f"rescue_t{seed}")
+def _site(seed=3, environment="park"):
+    out = scene.generate(seed, f"rescue_t{seed}", environment=environment)
     return json.loads((out / "site.json").read_text(encoding="utf-8")), out
 
 
@@ -23,7 +23,7 @@ def test_scene_has_target_bystanders_and_crowd_file():
         assert not (p["top"] == t["top"] and p["bottom"] == t["bottom"] and p["child"] == t["child"])
     crowd = json.loads((out / "crowd.json").read_text(encoding="utf-8"))
     assert all(c["speed"] > 0 for c in crowd)
-    assert scene.generate(3, "rescue_t3b") and json.loads((config.WORLDS_DIR / "rescue_t3b" / "site.json").read_text())["people"] == site["people"]   # 同一种子可复现
+    assert scene.generate(3, "rescue_t3b", environment="park") and json.loads((config.WORLDS_DIR / "rescue_t3b" / "site.json").read_text())["people"] == site["people"]   # 同一种子可复现
 
 
 def test_water_target_last_seen_at_pier():
@@ -43,7 +43,7 @@ def test_search_steps_inside_fence_and_start_near_last_seen():
     d = [math.hypot(s.position[0] - center[0], s.position[1] - center[1]) for s in steps]
     assert d[0] <= min(d) + 15          # 扩展方形：从最后出现的位置附近开始
     codes = {v.code for v in safety.check_plan(site, survey.with_detours(steps, site), battery=100.0, reserve=25.0)}
-    assert not codes & {"geofence", "no_fly", "altitude", "obstacle"}     # 航线本身合规（电量是否够由规划员按半径调整）
+    assert not codes & {"geofence", "no_fly_zone", "altitude", "obstacle", "terrain"}     # 航线本身合规（电量是否够由规划员按半径调整）
 
 
 def test_classify_people_in_water_always_followed():
@@ -196,3 +196,87 @@ def test_buildings_are_extruded_footprints():
                       "polygon": [[0, 0], [10, 0], [10, 8], [0, 8], [0, 0]]})
     assert "<polyline>" in b and b.count("<point>") == 4 and "<height>12.0</height>" in b
     assert "<sphere>" in obstacle_sdf({"id": "T1", "label": "树", "center": [0, 0], "radius": 2, "height": 8})
+
+
+def test_environments_are_valid_layouts():
+    """山林、河岸、城市广场：起飞点离水和障碍物足够远，地标在围栏内，人站在可走区域，落水者在水里，广场没有落水。"""
+    import math
+    import random
+    from droneagent.rescue import scene
+    from droneagent.sim.scene import _inside
+    from droneagent.twin import _edge_dist
+    for env in ("forest", "riverside", "plaza"):
+        for sd in range(1, 31):
+            lay = scene._layout(random.Random(sd), None, env)
+            for w in lay["water"]:
+                assert not _inside(w, 0, 0) and _edge_dist(w, 0, 0) >= 10, (env, sd)
+            for o in lay["obstacles"]:
+                d = _edge_dist(o["polygon"], 0, 0) if o.get("polygon") else math.hypot(*o["center"]) - o["radius"]
+                assert d >= 6, (env, sd, o["id"])
+            assert len(lay["landmarks"]) >= 4 and all(abs(v) < scene.HALF for l in lay["landmarks"] for v in l["center"])
+            people, _, brief = scene._people(random.Random(sd), lay)
+            for p in people:
+                assert lay["in_water"](*p["start"]) if p["state"] == "water" else lay["walkable"](*p["start"]), (env, sd, p["id"])
+            if env == "plaza":
+                assert people[0]["state"] != "water" and any(o.get("polygon") for o in lay["obstacles"])
+
+
+def test_environment_choice_keeps_park_seeds_and_is_recorded(tmp_path):
+    from droneagent.rescue import scene
+    out = scene.generate(5, "rescue_env_t", out_dir=tmp_path, environment="forest")
+    site = json.loads((out / "site.json").read_text())
+    assert site["environment"]["type"] == "forest" and "不含坡度" in site["ground"]["note"]
+    assert "ranger_hut" in (out / "rescue_env_t.sdf").read_text()
+    assert scene.pick_environment(5) == scene.pick_environment(5)
+
+
+def test_plaza_search_routes_around_tall_buildings():
+    """城市广场：高于航线的楼当绕行区，拍摄点不在楼上，整条航线通过安全员（含真实轮廓的净空检查）。"""
+    from droneagent.rescue import plan as search_plan
+    for seed in (1, 2, 3, 4):
+        site, _ = _site(seed, "plaza")
+        routing = search_plan.route_site(site, 18)
+        center = next(l for l in site["landmarks"] if l["id"] == site["brief"]["last_seen"])["center"]
+        steps = search_plan.search_steps(routing, center, 30, 18)
+        route = survey.with_detours(steps, routing)
+        codes = {v.code for v in safety.check_plan(site, route)}
+        assert steps and not codes & {"geofence", "no_fly_zone", "altitude", "obstacle", "terrain"}, (seed, codes)
+
+
+def test_world_model_names_unique(tmp_path):
+    """Gazebo 遇到重名模型会拒绝加载整个世界（河岸环境曾因两个 pier 启动超时）。"""
+    import re
+    from collections import Counter
+    for env in ("park", "forest", "riverside", "plaza"):
+        for sd in (1, 2, 3):
+            out = scene.generate(sd, f"w_{env}_{sd}", out_dir=tmp_path, environment=env)
+            names = re.findall(r'<model name="([^"]+)"', (out / f"w_{env}_{sd}.sdf").read_text())
+            dup = [n for n, c in Counter(names).items() if c > 1]
+            assert not dup, (env, sd, dup)
+
+
+def test_low_pass_triggers_and_likely_target_report():
+    """变焦拍到旁边的路人（目标走开了）：初筛衣着全对时也去低空重找；没确认的全对者报告为疑似目标，而不是“描述有误”。"""
+    from droneagent.agents.rescue import _needs_low_pass
+    from droneagent.rescue.report import near_misses
+    brief = {"top": "绿", "bottom": "蓝", "age": "child"}
+    seen = {"person": "yes", "top": "绿", "bottom": "蓝", "child": "yes"}
+    assert _needs_low_pass(brief, seen, "no_person") and _needs_low_pass(brief, seen, "unsure")
+    assert _needs_low_pass(brief, seen, "rejected")                                   # 初筛全对，变焦拍到的人不对
+    assert _needs_low_pass(brief, {**seen, "bottom": None}, "rejected")               # 上衣对上、裤子看不到也算初筛相符
+    assert not _needs_low_pass(brief, {**seen, "top": None}, "rejected")              # 初筛没看清上衣：变焦冲突就是排除
+    assert not _needs_low_pass(brief, {**seen, "person": "unsure"}, "unsure")
+    m = near_misses(brief, [{"id": "P7", "kind": "unsure", "x": 0, "y": 0, "photo": 1, "top": "绿", "bottom": "蓝"},
+                            {"id": "P2", "kind": "rejected", "x": 0, "y": 0, "photo": 2, "top": "绿", "bottom": "黑"}])
+    assert m[0]["id"] == "P7" and m[0]["full"] and "没能近距离确认" in m[0]["text"] and not m[1]["full"]
+
+
+def test_already_seen_does_not_hide_a_different_person():
+    """目标坐在路人旁边：同一张照片里的不算重复；之前照片里 3 米内的路人衣着不同也不算重复。"""
+    from droneagent.agents.rescue import _already_seen
+    pink = {"id": "P1", "x": 0, "y": 0, "kind": "bystander", "photo": 7, "top": "粉"}
+    target = {"x": 0.7, "y": -1.6, "top": "白"}
+    assert not _already_seen([pink], target, 7)                         # 同一张照片
+    assert not _already_seen([pink], target, 8)                         # 上衣不同，是另一个人
+    assert _already_seen([pink], {"x": 1, "y": 1, "top": "粉色"}, 8)     # 同一个路人出现在下一张照片
+    assert _already_seen([pink], {"x": 1, "y": 1, "top": None}, 8)      # 看不清衣着时按同一个人处理

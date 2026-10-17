@@ -28,20 +28,28 @@ def _wait(client: httpx.Client, check, timeout: float, every: float = 3.0):
     raise TimeoutError("等待超时")
 
 
-def run_one(client: httpx.Client, seed: int, location: dict | None) -> dict:
-    r = client.post("/scenes", json={"seed": seed, "scenario": "rescue", "location": location})
+def run_one(client: httpx.Client, seed: int, location: dict | None, environment: str | None = None) -> dict:
+    r = client.post("/scenes", json={"seed": seed, "scenario": "rescue", "location": location, "environment": None if location else environment})
     r.raise_for_status()
     scene = r.json()["name"]
     truth = client.get(f"/site/{scene}/truth").json()
+    env = (client.get(f"/site/{scene}").json().get("environment") or {}).get("label", "")
     target = next(p for p in truth["people"] if p["role"] == "target")
-    client.post("/sim/start", json={"scene": scene}).raise_for_status()      # 被拒绝（例如有任务在执行）时直接报错
-    _wait(client, lambda: client.get("/sim").json().get("job", {}).get("state") == "idle" and client.get("/sim").json()["px4"], 240)
+    for attempt in range(2):            # 仿真偶尔启动卡住（同一场景手动重启 20 秒就绪）：重试一次，报告中注明
+        client.post("/sim/start", json={"scene": scene}).raise_for_status()      # 被拒绝（例如有任务在执行）时直接报错
+        try:
+            _wait(client, lambda: client.get("/sim").json().get("job", {}).get("state") == "idle" and client.get("/sim").json()["px4"], 240)
+            break
+        except TimeoutError:
+            if attempt:
+                raise TimeoutError("仿真两次启动都没有在 4 分钟内就绪") from None
+            print(f"{scene} 启动超时，重试一次", flush=True)
     last = {}
     try:
         _wait(client, lambda: (last.update(client.get("/sim/health").json()) or last.get("ok") is True), 180)
     except TimeoutError:
         raise TimeoutError(f"飞行前检查 3 分钟内没有通过：{last.get('advice') or [i['label'] + ' ' + i['detail'] for i in last.get('items', []) if i.get('ok') is False]}")
-    task = f"公园里有人走失：{truth['brief']['description']}，最后在{truth['brief']['last_seen_label']}附近被看到"
+    task = f"有人走失：{truth['brief']['description']}，最后在{truth['brief']['last_seen_label']}附近被看到"
     retried = False
     for attempt in range(2):
         r = client.post("/missions", json={"task": task, "auto_approve": True})
@@ -62,7 +70,7 @@ def run_one(client: httpx.Client, seed: int, location: dict | None) -> dict:
             continue
         break
     score = client.get(f"/missions/{mid}/score").json() if m.get("result") else {}
-    row = {"seed": seed, "scene": scene, "mission": mid, "status": status, "task": task, "target_state": target["state"],
+    row = {"seed": seed, "scene": scene, "environment": env, "mission": mid, "status": status, "task": task, "target_state": target["state"],
            "bystanders": sum(1 for p in truth["people"] if p["role"] == "bystander"), "decoys": len(truth.get("decoys", [])),
            "found": score.get("found", False), "misidentified": score.get("misidentified", False), "location_error_m": score.get("location_error_m"),
            "elapsed_s": score.get("elapsed_s"), "coverage": score.get("coverage"), "wall_s": round(time.time() - started),
@@ -99,17 +107,20 @@ def write(rows: list[dict]) -> str:
             by_state[st] = {"n": len(rs), "found": sum(r["found"] for r in rs)}
     summary = {"runs": n, "found": found, "found_rate": round(found / n, 3) if n else None, "misidentified": sum(r["misidentified"] for r in rows),
                "location_error_m_mean": round(sum(errs) / len(errs), 2) if errs else None, "elapsed_s_mean": round(sum(times) / len(times)) if times else None,
-               "cost_yuan_mean": round(sum(r["cost_yuan"] for r in rows) / n, 4) if n else None, "by_state": by_state}
+               "cost_yuan_mean": round(sum(r["cost_yuan"] for r in rows) / n, 4) if n else None, "by_state": by_state,
+               "by_environment": {e: {"n": sum(1 for r in rows if r.get("environment") == e), "found": sum(r["found"] for r in rows if r.get("environment") == e)}
+                                  for e in dict.fromkeys(r.get("environment") or "" for r in rows) if e}}
     (out / f"{stamp}.json").write_text(json.dumps({"suite": "rescue", "summary": summary, "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
     labels = {"walking": "走动", "sitting": "静止", "water": "落水"}
     lines = [f"# 评测报告 {stamp}", "", f"端到端：生成救援场景 → 启动仿真 → 下达搜救任务（自动起飞）→ 与标准答案对照。共 {n} 个场景。", "",
              f"- 找到：{found}/{n}；错认（把路人或衣物确认为目标）：{summary['misidentified']}",
              f"- 定位误差平均 {summary['location_error_m_mean']} 米；发现用时平均 {summary['elapsed_s_mean']} 秒；每次模型费用平均 ¥{summary['cost_yuan_mean']}",
-             "- 按目标状态：" + "；".join(f"{labels[k]} {v['found']}/{v['n']}" for k, v in by_state.items()), "",
-             "| 场景 | 地点 | 目标状态 | 路人 | 干扰衣物 | 结果 | 定位误差 | 发现用时 | 覆盖 | 费用 |", "| --- | --- | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: |"]
+             "- 按目标状态：" + "；".join(f"{labels[k]} {v['found']}/{v['n']}" for k, v in by_state.items()),
+             "- 按环境：" + "；".join(f"{k} {v['found']}/{v['n']}" for k, v in summary["by_environment"].items()), "",
+             "| 场景 | 环境 | 地点 | 目标状态 | 路人 | 干扰衣物 | 结果 | 定位误差 | 发现用时 | 覆盖 | 费用 |", "| --- | --- | --- | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: |"]
     for r in rows:
         res = "找到" if r["found"] else ("错认" if r["misidentified"] else ("未找到" if r["status"] == "done" else r["status"]))
-        lines.append(f"| {r['scene']} | {r['place'] or '随机'} | {labels.get(r['target_state'], r['target_state'])} | {r['bystanders']} | {r['decoys']} | {res} | "
+        lines.append(f"| {r['scene']} | {r.get('environment') or '—'} | {r['place'] or '随机'} | {labels.get(r['target_state'], r['target_state'])} | {r['bystanders']} | {r['decoys']} | {res} | "
                      f"{r['location_error_m'] if r['location_error_m'] is not None else '—'} | {r['elapsed_s'] if r['elapsed_s'] is not None else '—'} | {r['coverage']} | ¥{r['cost_yuan']} |" + ("（重试一次）" if r.get("retried") else ""))
     (out / f"{stamp}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return str(out / f"{stamp}.md")
@@ -119,21 +130,24 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="救援端到端评测")
     parser.add_argument("--seeds", default="1-6")
     parser.add_argument("--place", action="append", default=[], help="名称:纬度:经度（WGS-84），可重复")
+    parser.add_argument("--environment", action="append", choices=["park", "forest", "riverside", "plaza"],
+                        help="随机场景的环境类型，可重复（每个种子在每种环境各跑一次）；不给时按种子选")
     args = parser.parse_args()
     lo, _, hi = args.seeds.partition("-")
-    jobs = [(s, None) for s in range(int(lo), int(hi or lo) + 1)]
+    envs = args.environment or [None]
+    jobs = [(s, None, e) for s in range(int(lo), int(hi or lo) + 1) for e in envs]
     for i, p in enumerate(args.place):
         name, lat, lon = p.split(":")
-        jobs.append((100 + i, {"name": name, "address": "", "city": "", "lat": float(lat), "lon": float(lon), "source": "评测指定（WGS-84）"}))
+        jobs.append((100 + i, {"name": name, "address": "", "city": "", "lat": float(lat), "lon": float(lon), "source": "评测指定（WGS-84）"}, None))
     rows = []
     with httpx.Client(base_url=API, timeout=120) as client:
-        for seed, loc in jobs:
+        for seed, loc, env in jobs:
             try:
-                rows.append(run_one(client, seed, loc))
+                rows.append(run_one(client, seed, loc, env))
             except Exception as error:      # noqa: BLE001  单个场景失败不影响其余
                 print(f"种子 {seed} 失败：{type(error).__name__}：{error}", flush=True)
                 _cleanup(client)            # 取消残留任务、停仿真，避免后面的场景连锁 409（独立审查 M3）
-                rows.append({"seed": seed, "scene": f"rescue_{seed}", "status": f"error: {error}", "target_state": "?", "bystanders": 0, "decoys": 0,
+                rows.append({"seed": seed, "scene": f"rescue_{seed}", "environment": env or "", "status": f"error: {error}", "target_state": "?", "bystanders": 0, "decoys": 0,
                              "found": False, "misidentified": False, "location_error_m": None, "elapsed_s": None, "coverage": None, "cost_yuan": 0,
                              "place": (loc or {}).get("name"), "mission": None, "task": "", "wall_s": 0})
     print("报告：", write(rows), flush=True)

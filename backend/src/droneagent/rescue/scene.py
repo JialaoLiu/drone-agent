@@ -180,7 +180,10 @@ def _real_landmarks(twin: dict, water: list, in_water) -> list[dict]:
     return landmarks
 
 
-def _layout(rng: random.Random, twin: dict | None) -> dict:
+def _layout(rng: random.Random, twin: dict | None, environment: str = "park") -> dict:
+    if not twin and environment != "park":          # 山林、河岸、城市广场（见 environments.py）
+        from .environments import BUILDERS
+        return BUILDERS[environment](rng, HALF)
     if twin:
         fence = [[-HALF, -HALF], [HALF, -HALF], [HALF, HALF], [-HALF, HALF]]
         water = [f["polygon"] for f in twin["features"] if f["kind"] == "water"]
@@ -236,8 +239,22 @@ def _people(rng: random.Random, lay: dict) -> tuple[list[dict], list[dict], dict
         sx, sy = shore[0] + dist * math.cos(inward), shore[1] + dist * math.sin(inward)
         if not in_water(sx, sy):
             sx, sy = shore[0] - dist * math.cos(inward), shore[1] - dist * math.sin(inward)
-        target.update(start=[round(sx, 2), round(sy, 2)], z=round(-target["height"] * 0.80, 2), speed=0.08,
-                      path=_walk_path(rng, (sx, sy), in_water, 6, 2.0))
+        for f in (0.5, 0.3, 0.15):                  # 溪流很窄：离岸距离缩短到落在水里为止（不额外取随机数，公园场景不变）
+            if in_water(sx, sy):
+                break
+            for sgn in (1, -1):
+                tx, ty = shore[0] + sgn * f * dist * math.cos(inward), shore[1] + sgn * f * dist * math.sin(inward)
+                if in_water(tx, ty):
+                    sx, sy = tx, ty
+                    break
+        if lay.get("drift"):                 # 河里：顺水流方向漂
+            dx, dy = lay["drift"]
+            dx, dy = (dx, dy) if rng.random() < 0.5 else (-dx, -dy)
+            path = [[round(sx + 3 * i * dx, 2), round(sy + 3 * i * dy, 2)] for i in range(12) if in_water(sx + 3 * i * dx, sy + 3 * i * dy)]
+            target.update(start=[round(sx, 2), round(sy, 2)], z=round(-target["height"] * 0.80, 2), speed=0.25, path=path)
+        else:
+            target.update(start=[round(sx, 2), round(sy, 2)], z=round(-target["height"] * 0.80, 2), speed=0.08,
+                          path=_walk_path(rng, (sx, sy), in_water, 6, 2.0))
     else:
         for _ in range(80):
             a, r = rng.uniform(0, 2 * math.pi), rng.uniform(10, 40)
@@ -248,7 +265,8 @@ def _people(rng: random.Random, lay: dict) -> tuple[list[dict], list[dict], dict
         target.update(start=[round(sx, 2), round(sy, 2)], z=0.0, speed=round(speed, 2),
                       path=_walk_path(rng, (sx, sy), ok, 12, 4.0) if state == "walking" else [[round(sx, 2), round(sy, 2)]])
     people = [target]
-    for k in range(rng.randint(5, 10)):     # 路人
+    lo, hi = lay.get("bystanders", (5, 10))
+    for k in range(rng.randint(lo, hi)):     # 路人
         for _ in range(80):
             sx, sy = rng.uniform(-HALF + 6, HALF - 6), rng.uniform(-HALF + 6, HALF - 6)
             if ok(sx, sy):
@@ -298,7 +316,8 @@ def incident(rng: random.Random, target: dict, lay: dict, last_seen: dict) -> di
         place = min(others, key=lambda l: math.dist(l["center"], last_seen["center"]))
         notes.append("位置说成了附近的另一个地标")
     who = rng.choice(["我家孩子", "我儿子", "我女儿", "一个小孩"]) if target["child"] else rng.choice(["我老公", "我同事", "我哥", "一位游客"])
-    caller = rng.choice(["报案人（家属）", "报案人（路人）", "公园管理员"]) if not target["child"] else rng.choice(["报案人（家长）", "公园管理员"])
+    kid_callers, adult_callers = lay.get("callers", (["报案人（家长）", "公园管理员"], ["报案人（家属）", "报案人（路人）", "公园管理员"]))
+    caller = rng.choice(adult_callers) if not target["child"] else rng.choice(kid_callers)
     minutes = rng.choice([15, 20, 30, 40, 60])
     clothes = f"穿{top}上衣" + (f"、{bottom}裤子" if bottom else "，裤子记不清了")
     age = "大概七八岁" if target["child"] else "三四十岁"
@@ -365,7 +384,14 @@ def _park_ground(rng: random.Random, lay: dict, extent: float) -> Image.Image:
 
 # ---------- 生成 ----------
 
-def generate(seed: int, name: str | None = None, location: dict | None = None, out_dir: Path | None = None) -> Path:
+def pick_environment(seed: int) -> str:
+    """不指定环境时按种子选（单独的随机数，不影响公园场景原有的生成结果）。"""
+    from .environments import ENVIRONMENTS
+    return random.Random(f"env-{seed}").choice(list(ENVIRONMENTS))
+
+
+def generate(seed: int, name: str | None = None, location: dict | None = None, out_dir: Path | None = None,
+             environment: str | None = None) -> Path:
     from ..sim.scene import _twin
     name = name or f"rescue_{seed}"
     rng = random.Random(seed)
@@ -375,7 +401,9 @@ def generate(seed: int, name: str | None = None, location: dict | None = None, o
     if twin:
         from .. import twin as twin_data
         twin["pois"] = twin_data.pois(twin["origin"], HALF)
-    lay = _layout(rng, twin)
+    from .environments import ENVIRONMENTS
+    env = None if twin else (environment or pick_environment(seed))
+    lay = _layout(rng, twin, env or "park")
     people, decoys, brief = _people(rng, lay)
     origin = twin["origin"] if twin else ORIGIN
     extent = 2 * HALF + 40
@@ -383,6 +411,8 @@ def generate(seed: int, name: str | None = None, location: dict | None = None, o
     source = "procedural"
     if twin and satellite_ground(origin, extent, ground):
         source = "satellite"
+    elif lay.get("ground"):
+        lay["ground"](rng, extent).save(ground)
     else:
         _park_ground(rng, lay, extent).save(ground)
     features = (twin["features"] if twin else [{"kind": "water", "polygon": w} for w in lay["water"]])
@@ -391,7 +421,10 @@ def generate(seed: int, name: str | None = None, location: dict | None = None, o
             "arrays": [], "panels": [], "landmarks": lay["landmarks"], "location": location, "features": features,
             "terrain": twin["terrain"] if twin else None, "twin": twin["summary"] if twin else None,
             "ground": {"source": source, "extent_m": extent,
-                       "note": "地面为该位置的卫星影像（Esri World Imagery）" if source == "satellite" else "仿真地面为程序生成的草地、步道与湖岸"},
+                       "note": "地面为该位置的卫星影像（Esri World Imagery）" if source == "satellite" else
+                       {"forest": "仿真地面为程序生成的林地、小道与溪岸（平面，不含坡度）", "riverside": "仿真地面为程序生成的草地、河岸步道与停车场",
+                        "plaza": "仿真地面为程序生成的广场铺装"}.get(env, "仿真地面为程序生成的草地、步道与湖岸")},
+            "environment": {"type": env, **ENVIRONMENTS[env]} if env else {"type": "real", "label": "真实场地", "note": "真实地物与卫星影像"},
             "people": people, "decoys": decoys, "brief": brief,
             "incident": {"text": brief["incident"]["text"], "minutes": brief["incident"]["minutes"]}}   # 网页可见的只有报案人说的话
     azimuth, elevation = rng.uniform(0, 2 * math.pi), rng.uniform(math.radians(40), math.radians(70))
@@ -408,11 +441,12 @@ def _world_sdf(name: str, site: dict, lay: dict, ground: str, extent: float, sun
     parts = [person_sdf(p) for p in site["people"]] + [decoy_sdf(d) for d in site["decoys"]]
     parts += [water_sdf(i, w) for i, w in enumerate(lay["water"])]
     parts += [obstacle_sdf(o) for o in site["obstacles"]]
-    for l in site["landmarks"]:
+    for l in site["landmarks"] if not lay.get("models") else []:      # 公园湖泊的码头、凉亭；其他环境的模型在 lay["models"] 里
         if l["id"] == "pier":
             parts.append(pier_sdf(l["center"], l.get("yaw", 0.0)))
         elif l["id"] == "pavilion":
             parts.append(pavilion_sdf(l["center"]))
+    parts += lay.get("models", [])
     parts.append('<include><uri>model://x500_inspect</uri><name>x500_inspect_0</name><pose>0 0 0.25 0 0 0</pose></include>')
     o = site["origin"]
     return f'''<?xml version="1.0" encoding="UTF-8"?>
@@ -447,13 +481,14 @@ def main() -> None:
     parser.add_argument("--lat", type=float)
     parser.add_argument("--lon", type=float)
     parser.add_argument("--label", default="自定义地点")
+    parser.add_argument("--environment", choices=["park", "forest", "riverside", "plaza"])
     args = parser.parse_args()
     config.ensure_dirs()
     loc = {"name": args.label, "address": "", "city": "", "lat": args.lat, "lon": args.lon, "source": "命令行指定（WGS-84）"} if args.lat is not None else None
-    out = generate(args.seed, args.name, loc)
+    out = generate(args.seed, args.name, loc, environment=args.environment)
     site = json.loads((out / "site.json").read_text(encoding="utf-8"))
     t = site["people"][0]
-    print(f"已生成 {out}：目标 {site['brief']['description']}（{STATE_LABELS[t['state']]}），最后出现在{site['brief']['last_seen_label']}；"
+    print(f"已生成 {out}（{site['environment']['label']}）：目标 {site['brief']['description']}（{STATE_LABELS[t['state']]}），最后出现在{site['brief']['last_seen_label']}；"
           f"路人 {len(site['people']) - 1} 人，干扰衣物 {len(site['decoys'])} 件；地面：{site['ground']['note']}")
 
 

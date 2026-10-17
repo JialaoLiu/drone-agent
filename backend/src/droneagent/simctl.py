@@ -21,7 +21,7 @@ def scenes() -> list[dict]:
     for d in config.WORLDS_DIR.glob("*/site.json"):
         site = json.loads(d.read_text(encoding="utf-8"))
         out.append({"name": site["name"], "seed": site["seed"], "panels": len(site["panels"]), "arrays": len(site["arrays"]),
-                    "scenario": site.get("scenario", "solar"),
+                    "scenario": site.get("scenario", "solar"), "environment": (site.get("environment") or {}).get("label"),
                     "location": (site.get("location") or {}).get("name"), "ground": (site.get("ground") or {}).get("source", "procedural"),
                     "created_at": d.stat().st_mtime})
     return sorted(out, key=lambda x: -x["created_at"])

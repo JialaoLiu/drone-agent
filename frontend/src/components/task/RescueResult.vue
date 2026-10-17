@@ -34,7 +34,7 @@ const shown = computed(() => [...dets.value].sort((a, b) => (order[a.kind] ?? 9)
     </div>
     <p v-else-if="result" class="muted small">没有找到目标。</p>
     <div v-if="result?.near_misses?.length" class="near">
-      <b class="small">没有完全符合描述的人，报案描述可能有误。衣着部分一致的人：</b>
+      <b class="small">{{ result.near_misses.some((m: any) => m.full) ? '疑似目标（衣着与描述一致，没能近距离确认，可能已走开或被遮挡）：' : '没有完全符合描述的人，报案描述可能有误。衣着部分一致的人：' }}</b>
       <ul><li v-for="m in result.near_misses" :key="m.id" @click="emit('photo', m.photo)">{{ m.text }}</li></ul>
     </div>
     <h3 class="small muted">搜索中看到的人和物（{{ dets.length }}）</h3>
