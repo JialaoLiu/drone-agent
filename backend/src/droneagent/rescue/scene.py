@@ -15,7 +15,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
 
 from .. import config
-from ..sim.scene import ORIGIN, _ground, _inside, _tree
+from ..sim.scene import ORIGIN, _ground, _inside, obstacle_sdf
 
 COLORS = {"红色": (0.80, 0.10, 0.10), "蓝色": (0.12, 0.25, 0.75), "白色": (0.92, 0.92, 0.92), "黑色": (0.08, 0.08, 0.08),
           "黄色": (0.95, 0.80, 0.10), "绿色": (0.15, 0.55, 0.20), "灰色": (0.50, 0.50, 0.52), "橙色": (0.95, 0.45, 0.08),
@@ -136,6 +136,50 @@ def _walk_path(rng: random.Random, start: tuple[float, float], ok, steps: int, s
     return pts
 
 
+def _procedural_landmarks(rng: random.Random, water: list, in_water, obstacles: list) -> list[dict]:
+    """随机场地的地标：这些地物在仿真里真的建了模型（码头、凉亭），或在围栏边上（门）。"""
+    landmarks = []
+    if water:
+        shore, normal = _nearest_shore(max(water, key=len), 0.0, 0.0)
+        landmarks.append({"id": "pier", "label": "码头", "center": [round(shore[0], 1), round(shore[1], 1)], "yaw": normal + math.pi,
+                          "shore": True, "source": "procedural"})
+    candidates = {"east_gate": ("东门", [HALF - 3, rng.uniform(-30, 30)]), "west_gate": ("西门", [-HALF + 3, rng.uniform(-30, 30)]),
+                  "playground": ("儿童游乐场", None), "pavilion": ("凉亭", None)}
+    for key, (label, c) in candidates.items():
+        if c is None:
+            for _ in range(60):
+                x, y = rng.uniform(-HALF + 12, HALF - 12), rng.uniform(-HALF + 12, HALF - 12)
+                if not in_water(x, y) and all(math.hypot(x - o["center"][0], y - o["center"][1]) > 6 for o in obstacles) \
+                        and all(math.hypot(x - l["center"][0], y - l["center"][1]) > 25 for l in landmarks):
+                    c = [round(x, 1), round(y, 1)]
+                    break
+        if c:
+            landmarks.append({"id": key, "label": label, "center": c, "source": "procedural"})
+    return landmarks
+
+
+DIRECTIONS = [("north", "场地北侧", (0, 1)), ("south", "场地南侧", (0, -1)), ("east", "场地东侧", (1, 0)), ("west", "场地西侧", (-1, 0))]
+
+
+def _real_landmarks(twin: dict, water: list, in_water) -> list[dict]:
+    """真实场地的地标：只用 OpenStreetMap 里真实存在的地物（twin["pois"]）；不够时补“水边”和方位描述，
+    不再程序生成凉亭、码头这类现场可能没有的东西（第三轮反馈：真实场地出现了不存在的凉亭）。"""
+    lim = HALF - 3
+    landmarks = [l for l in twin.get("pois", []) if abs(l["center"][0]) < lim and abs(l["center"][1]) < lim][:6]
+    if water and not any(l.get("shore") for l in landmarks):
+        shore, _ = _nearest_shore(max(water, key=len), 0.0, 0.0)
+        if abs(shore[0]) < lim and abs(shore[1]) < lim:
+            landmarks.append({"id": "shore", "label": "水边", "center": [round(shore[0], 1), round(shore[1], 1)],
+                              "shore": True, "source": "osm"})
+    for key, label, (dx, dy) in DIRECTIONS:
+        if len(landmarks) >= 3:
+            break
+        c = [dx * (HALF - 12), dy * (HALF - 12)]
+        if not in_water(*c):
+            landmarks.append({"id": key, "label": label, "center": c, "source": "direction"})
+    return landmarks
+
+
 def _layout(rng: random.Random, twin: dict | None) -> dict:
     if twin:
         fence = [[-HALF, -HALF], [HALF, -HALF], [HALF, HALF], [-HALF, HALF]]
@@ -156,22 +200,10 @@ def _layout(rng: random.Random, twin: dict | None) -> dict:
                     h = round(rng.uniform(6, 12), 1)
                     obstacles.append({"id": f"T{k + 1}", "label": "树", "center": [round(x, 1), round(y, 1)], "radius": round(rng.uniform(2, 3.5), 1), "height": h})
                     break
-    landmarks = []
-    if water:
-        shore, normal = _nearest_shore(max(water, key=len), 0.0, 0.0)
-        landmarks.append({"id": "pier", "label": "码头", "center": [round(shore[0], 1), round(shore[1], 1)], "yaw": normal + math.pi})
-    candidates = {"east_gate": ("东门", [HALF - 3, rng.uniform(-30, 30)]), "west_gate": ("西门", [-HALF + 3, rng.uniform(-30, 30)]),
-                  "playground": ("儿童游乐场", None), "pavilion": ("凉亭", None)}
-    for key, (label, c) in candidates.items():
-        if c is None:
-            for _ in range(60):
-                x, y = rng.uniform(-HALF + 12, HALF - 12), rng.uniform(-HALF + 12, HALF - 12)
-                if not in_water(x, y) and all(math.hypot(x - o["center"][0], y - o["center"][1]) > 6 for o in obstacles) \
-                        and all(math.hypot(x - l["center"][0], y - l["center"][1]) > 25 for l in landmarks):
-                    c = [round(x, 1), round(y, 1)]
-                    break
-        if c:
-            landmarks.append({"id": key, "label": label, "center": c})
+    if twin:
+        landmarks = _real_landmarks(twin, water, in_water)
+    else:
+        landmarks = _procedural_landmarks(rng, water, in_water, obstacles)
     # 禁飞区：随机场地放一个（模拟变电站）
     nfz = []
     if not twin:
@@ -189,7 +221,7 @@ def _layout(rng: random.Random, twin: dict | None) -> dict:
 def _people(rng: random.Random, lay: dict) -> tuple[list[dict], list[dict], dict]:
     ok, in_water = lay["walkable"], lay["in_water"]
     state = rng.choice(STATES) if lay["water"] else rng.choice(("walking", "sitting"))
-    pier = [l for l in lay["landmarks"] if l["id"] == "pier"]
+    pier = [l for l in lay["landmarks"] if l.get("shore")]
     last_seen = pier[0] if state == "water" and pier else rng.choice(lay["landmarks"])     # 落水的人最后出现在水边
     child = rng.random() < 0.6
     target = {"id": "target", "model": "person_target", "role": "target", "state": state, "child": child,
@@ -340,6 +372,9 @@ def generate(seed: int, name: str | None = None, location: dict | None = None, o
     out = (out_dir or config.WORLDS_DIR) / name
     (out / "textures").mkdir(parents=True, exist_ok=True)
     twin = _twin(location) if location else None
+    if twin:
+        from .. import twin as twin_data
+        twin["pois"] = twin_data.pois(twin["origin"], HALF)
     lay = _layout(rng, twin)
     people, decoys, brief = _people(rng, lay)
     origin = twin["origin"] if twin else ORIGIN
@@ -372,7 +407,7 @@ def generate(seed: int, name: str | None = None, location: dict | None = None, o
 def _world_sdf(name: str, site: dict, lay: dict, ground: str, extent: float, sun: tuple) -> str:
     parts = [person_sdf(p) for p in site["people"]] + [decoy_sdf(d) for d in site["decoys"]]
     parts += [water_sdf(i, w) for i, w in enumerate(lay["water"])]
-    parts += [_tree(o) for o in site["obstacles"] if o.get("label") == "树"]
+    parts += [obstacle_sdf(o) for o in site["obstacles"]]
     for l in site["landmarks"]:
         if l["id"] == "pier":
             parts.append(pier_sdf(l["center"], l.get("yaw", 0.0)))

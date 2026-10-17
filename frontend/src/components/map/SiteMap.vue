@@ -73,8 +73,10 @@ const drone = useTweenedPose(source)
         <text :x="sx(z.center[0])" :y="sy(z.center[1])" class="label center">{{ z.label }}（禁飞）</text>
       </g>
       <g v-for="o in site.obstacles" :key="o.id">
-        <circle :cx="sx(o.center[0])" :cy="sy(o.center[1])" :r="o.radius * SCALE" fill="#3f8f3f" fill-opacity="0.55" />
-        <text :x="sx(o.center[0])" :y="sy(o.center[1]) + o.radius * SCALE + 12" class="label center small">{{ o.label }} {{ o.height }} 米</text>
+        <!-- 建筑按真实轮廓画（安全员也按轮廓判断净空），树按树冠圆画 -->
+        <polygon v-if="o.polygon" :points="pts(o.polygon)" class="building"><title>{{ o.label }} {{ o.height }} 米</title></polygon>
+        <circle v-else :cx="sx(o.center[0])" :cy="sy(o.center[1])" :r="o.radius * SCALE" fill="#3f8f3f" fill-opacity="0.55"><title>{{ o.label }} {{ o.height }} 米</title></circle>
+        <text v-if="!o.polygon || (o.area_m2 ?? 0) >= 300" :x="sx(o.center[0])" :y="sy(o.center[1]) + (o.polygon ? 4 : o.radius * SCALE + 12)" class="label center small">{{ o.label }} {{ o.height }} 米</text>
       </g>
       <text v-for="a in site.arrays" :key="a.id" :x="sx(a.center[0] - a.size[0] / 2) - 14" :y="sy(a.center[1]) + 5" class="label strong">{{ a.id }}</text>
       <polygon v-for="p in site.panels" :key="p.id" :points="pts(p.corners)" :fill="fill(p.id)" class="panel"
@@ -89,8 +91,10 @@ const drone = useTweenedPose(source)
         </g>
       </g>
       <g v-for="l in site.landmarks ?? []" :key="l.id">
-        <circle :cx="sx(l.center[0])" :cy="sy(l.center[1])" r="6" fill="#7048e8" stroke="#fff" stroke-width="1.5" />
-        <text :x="sx(l.center[0]) + 9" :y="sy(l.center[1]) + 4" class="label">{{ l.label }}</text>
+        <!-- 方位描述（场地北侧等）不是地物，只写字不打点 -->
+        <circle v-if="l.source !== 'direction'" :cx="sx(l.center[0])" :cy="sy(l.center[1])" r="6" fill="#7048e8" stroke="#fff" stroke-width="1.5" />
+        <text :x="sx(l.center[0]) + (l.source === 'direction' ? 0 : 9)" :y="sy(l.center[1]) + 4" class="label"
+          :class="{ center: l.source === 'direction', direction: l.source === 'direction' }">{{ l.label }}</text>
       </g>
       <g v-for="p in truth?.people ?? []" :key="p.id">
         <circle :cx="sx(p.start[0])" :cy="sy(p.start[1])" :r="p.role === 'target' ? 7 : 5" fill="none" :stroke="p.role === 'target' ? '#d6336c' : '#adb5bd'" stroke-width="2" stroke-dasharray="3 2" />
@@ -123,6 +127,9 @@ const drone = useTweenedPose(source)
 .drone { will-change: transform; }
 .label { font-size: 13px; fill: var(--text); paint-order: stroke; stroke: var(--panel); stroke-width: 3px; }
 .sat .label { fill: #fff; stroke: rgba(0, 0, 0, 0.6); }
+.building { fill: #868e96; fill-opacity: 0.55; stroke: #495057; stroke-width: 1; }
+.sat .building { fill: #f1f3f5; fill-opacity: 0.35; stroke: #fff; }
+.label.direction { font-style: italic; opacity: 0.85; }
 .label.small { font-size: 11px; }
 .label.center { text-anchor: middle; }
 .label.strong { font-weight: 700; font-size: 15px; }

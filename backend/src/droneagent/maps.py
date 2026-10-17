@@ -133,12 +133,13 @@ def _baidu_get(path: str, params: dict) -> dict:
     if not ak:
         raise MapError("没有配置 BAIDU_MAP_AK（backend/.env）")
     params = {**params, "ak": ak}
-    if sk:   # SN 校验（百度官方算法）：用未编码的“路径?参数”串，按规定字符集编码后接上 SK，再整体 quote_plus 取 MD5
-        query = path + "?" + "&".join(f"{k}={v}" for k, v in params.items())
-        raw = quote(query, safe="/:=&?#+!$,;'@()*[]") + sk
-        params["sn"] = hashlib.md5(quote_plus(raw).encode()).hexdigest()
+    # SN 校验（百度官方算法）：用未编码的“路径?参数”串，按规定字符集编码后接上 SK，再整体 quote_plus 取 MD5。
+    # 请求必须原样发送签名用的编码串：交给 httpx 重新编码会把逗号等字符编成 %2C，签名就对不上（坐标参数里有逗号）
+    url = quote(path + "?" + "&".join(f"{k}={v}" for k, v in params.items()), safe="/:=&?#+!$,;'@()*[]")
+    if sk:
+        url += "&sn=" + hashlib.md5(quote_plus(url + sk).encode()).hexdigest()
     try:
-        r = httpx.get(BAIDU + path, params=params, timeout=10)
+        r = httpx.get(BAIDU + url, timeout=10)
         r.raise_for_status()
         data = r.json()
     except (httpx.HTTPError, ValueError) as error:
@@ -160,6 +161,27 @@ def search_place(query: str, region: str = "全国") -> list[dict]:
         lat, lon = gcj02_to_wgs84(loc["lat"], loc["lng"])
         out.append({"name": item.get("name", ""), "address": item.get("address", ""), "city": item.get("city", ""),
                     "lat": round(lat, 7), "lon": round(lon, 7), "source": "百度地点检索（GCJ-02 换算为 WGS-84，误差约 1–2 米）"})
+    return out
+
+
+NEARBY_QUERIES = ("出入口$南门$北门$东门$西门$停车场$厕所$码头$桥$广场", "游乐场$凉亭$休息亭$休息区$服务中心$运动场$球场$观景台$亭$喷泉")   # 每次最多 10 个关键词
+
+
+def nearby_pois(lat: float, lon: float, radius: float) -> list[dict]:
+    """国内场地周边的真实地物（百度圆形区域检索，WGS-84 输入、GCJ-02 返回再换算为 WGS-84）。
+    OpenStreetMap 在国内覆盖很少，用它补充救援场景的地标。名称里的“某某公园-”前缀去掉。"""
+    results = []
+    for q in NEARBY_QUERIES:
+        results += _baidu_get("/place/v2/search", {"query": q, "location": f"{lat:.7f},{lon:.7f}", "coord_type": 1,
+                                                   "radius": int(radius), "radius_limit": "true", "output": "json", "ret_coordtype": "gcj02ll",
+                                                   "page_size": 20, "scope": 1}).get("results", [])
+    out = []
+    for item in results:
+        loc = item.get("location")
+        if not loc or not item.get("name"):
+            continue
+        wlat, wlon = gcj02_to_wgs84(loc["lat"], loc["lng"])
+        out.append({"name": item["name"].split("-")[-1].strip() or item["name"], "lat": wlat, "lon": wlon})
     return out
 
 

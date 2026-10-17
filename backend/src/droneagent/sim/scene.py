@@ -363,6 +363,22 @@ def _tree(o: dict) -> str:
             f'</link></model>')
 
 
+def building_sdf(o: dict) -> str:
+    """真实建筑：按 OpenStreetMap 轮廓挤出到标注高度（没有标注按层数或 3 层估计），不再用一棵“树”或一个圆代替。"""
+    poly = o["polygon"][:-1] if len(o["polygon"]) > 3 and o["polygon"][0] == o["polygon"][-1] else o["polygon"]
+    pts = "".join(f"<point>{x:.2f} {y:.2f}</point>" for x, y in poly)
+    shade = 0.62 + 0.12 * ((sum(map(ord, o["id"])) % 5) / 4)          # 相邻建筑颜色略有差别
+    return (f'<model name="building_{o["id"]}"><static>true</static><pose>0 0 0 0 0 0</pose><link name="link">'
+            f'<visual name="v"><geometry><polyline>{pts}<height>{o["height"]:.1f}</height></polyline></geometry>'
+            f'<material><diffuse>{shade:.2f} {shade - 0.03:.2f} {shade - 0.07:.2f} 1</diffuse><ambient>{shade * 0.7:.2f} {shade * 0.7:.2f} {shade * 0.66:.2f} 1</ambient></material>'
+            f'</visual></link></model>')
+
+
+def obstacle_sdf(o: dict) -> str:
+    """有轮廓的障碍物（建筑）按轮廓挤出，其余（树）按树建模。"""
+    return building_sdf(o) if o.get("polygon") else _tree(o)
+
+
 def _substation(z: dict) -> str:
     x, y = z["center"]
     return (f'<model name="nfz_{z["id"]}"><static>true</static><pose>{x} {y} 0 0 0 0</pose><link name="link">'
@@ -426,7 +442,7 @@ def _ground_extent(site: Site, centered: bool = False) -> float:
 def _world_sdf(name: str, site: Site, textures: dict[str, str], ground: str, sun: tuple[float, float, float], centered: bool = False) -> str:
     parts = [_panel_model(p, textures[p.id]) for p in site.panels]
     parts += [_array_stand(a) for a in site.arrays]
-    parts += [_tree(o) for o in site.obstacles]
+    parts += [obstacle_sdf(o) for o in site.obstacles]
     parts += [_substation(z) for z in site.no_fly_zones]
     # 巡检机放在起飞点；PX4 以 PX4_GZ_MODEL_NAME 连接这个实例
     parts.append('<include><uri>model://x500_inspect</uri><name>x500_inspect_0</name><pose>0 0 0.25 0 0 0</pose></include>')

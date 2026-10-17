@@ -46,7 +46,7 @@ const solar: Scenario = {
   id: 'solar', label: '光伏巡检', verb: '巡检', target: '缺陷', group: '列', item: '板',
   findingTypes: { crack: '裂纹', soiling: '污损', broken: '玻璃破碎', missing: '缺失' },
   legend: [
-    { color: 'var(--map-panel)', label: '光伏板' }, { color: 'var(--bad)', label: '确认缺陷' }, { color: '#e3a008', label: '待确认' },
+    { color: 'var(--map-panel)', label: '光伏板' }, { color: '#868e96', label: '建筑（真实轮廓）' }, { color: 'var(--bad)', label: '确认缺陷' }, { color: '#e3a008', label: '待确认' },
     { color: '#5b8def', label: '复核后排除' }, { color: 'var(--map-route)', label: '计划航线（空心圆为绕行点）', shape: 'dash' },
     { color: '#d6336c', label: '标准答案（虚线框）', shape: 'dash' },
   ],
@@ -103,7 +103,7 @@ const rescue: Scenario = {
   id: 'rescue', label: '应急救援', verb: '搜救', target: '人员', group: '区域', item: '目标',
   findingTypes: { target: '确认目标', person: '待人工辨认', rejected: '确认后排除', bystander: '路人', object: '非人物体', unsure: '看不清', candidate: '疑似' },
   legend: [
-    { color: '#4dabf7', label: '水面' }, { color: '#e03131', label: '确认的目标', shape: 'circle' }, { color: '#f59f00', label: '疑似或排除', shape: 'circle' },
+    { color: '#4dabf7', label: '水面' }, { color: '#868e96', label: '建筑（真实轮廓）' }, { color: '#e03131', label: '确认的目标', shape: 'circle' }, { color: '#f59f00', label: '疑似或排除', shape: 'circle' },
     { color: '#868e96', label: '路人或物体', shape: 'circle' }, { color: 'var(--map-route)', label: '搜索航线', shape: 'dash' },
     { color: '#7048e8', label: '地标（最后出现位置）', shape: 'circle' },
   ],

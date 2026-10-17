@@ -158,3 +158,41 @@ def test_only_target_can_be_in_water():
     for seed in range(1, 30):
         site, _ = _site(seed)
         assert all(p["state"] != "water" for p in site["people"] if p["role"] != "target")
+
+
+def test_poi_items_real_landmarks_only():
+    """真实场地地标：有类型的地物才当地标；同名或太近的只留一个；道路等只有名字的 OSM 元素不算（第三轮反馈：不存在的凉亭）。"""
+    from droneagent import twin
+    from droneagent.geo import Origin
+    o = Origin(23.0, 113.0, 0.0)
+    at = lambda x, y: o.to_global(x, y, 0)[:2]          # noqa: E731
+    raw = [{"tags": {"amenity": "parking"}, "points": [at(20, 10)]},
+           {"tags": {"amenity": "parking"}, "points": [at(25, 12)]},                     # 同名且太近
+           {"tags": {"leisure": "playground", "name": "Wattle Park Playground"}, "points": [at(-30, 5)]},
+           {"tags": {"highway": "residential", "name": "Main Road"}, "points": [at(0, 40)]},   # 道路名不算
+           {"tags": {"man_made": "pier"}, "points": [at(10, -40)]},
+           {"tags": {"amenity": "bench"}, "points": [at(500, 0)]}]                       # 场地外
+    items = twin.poi_items(raw, o, 70)
+    labels = [l["label"] for l in items]
+    assert labels.count("停车场") == 1 and "Wattle Park Playground（儿童游乐场）" in labels and "码头" in labels
+    assert "Main Road" not in labels and "长椅" not in labels
+    assert next(l for l in items if l["label"] == "码头").get("shore")
+    assert twin._poi_label({"name": "新舟码头"}) == "新舟码头"          # 百度检索结果只有名字
+
+
+def test_real_site_without_pois_uses_directions_not_invented_objects():
+    from droneagent.rescue import scene
+    water = [[[10, 10], [30, 10], [30, 30], [10, 30]]]
+    lms = scene._real_landmarks({"pois": []}, water, lambda x, y: 10 < x < 30 and 10 < y < 30)
+    labels = {l["label"] for l in lms}
+    assert "凉亭" not in labels and "码头" not in labels and "东门" not in labels
+    assert "水边" in labels and any(l["source"] == "direction" for l in lms)
+    assert any(l.get("shore") for l in lms)                  # 落水场景仍有“最后出现在水边”的地标
+
+
+def test_buildings_are_extruded_footprints():
+    from droneagent.sim.scene import obstacle_sdf
+    b = obstacle_sdf({"id": "B1", "label": "建筑", "center": [0, 0], "radius": 10, "height": 12.0,
+                      "polygon": [[0, 0], [10, 0], [10, 8], [0, 8], [0, 0]]})
+    assert "<polyline>" in b and b.count("<point>") == 4 and "<height>12.0</height>" in b
+    assert "<sphere>" in obstacle_sdf({"id": "T1", "label": "树", "center": [0, 0], "radius": 2, "height": 8})

@@ -18,10 +18,10 @@ export interface Panel { id: string; array: string; row: number; col: number; ce
 export interface Site {
   name: string; seed: number; geofence: number[][]; max_altitude: number; min_altitude: number
   scenario?: string; origin?: { lat: number; lon: number; alt?: number }
-  landmarks?: { id: string; label: string; center: number[] }[]
+  landmarks?: { id: string; label: string; center: number[]; source?: 'osm' | 'baidu' | 'procedural' | 'direction' }[]
   incident?: { text: string; minutes: number } | null
   no_fly_zones: { id: string; label: string; center: number[]; radius: number }[]
-  obstacles: { id: string; label: string; center: number[]; radius: number; height: number }[]
+  obstacles: { id: string; label: string; center: number[]; radius: number; height: number; polygon?: number[][]; area_m2?: number }[]
   arrays: { id: string; center: number[]; rows: number; cols: number; size: number[] }[]
   panels: Panel[]
   location?: Place | null

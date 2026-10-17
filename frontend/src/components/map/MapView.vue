@@ -29,6 +29,20 @@ watch(() => props.site.name, async (name) => {
   } catch { /* 百度底图不可用时只提供 Esri 卫星图 */ }
 }, { immediate: true })
 const legend = computed(() => scenarioOf(props.site.scenario).legend)
+// 国内 OpenStreetMap 的建筑轮廓常常缺失：卫星图上有楼、数据里没有时，这些楼不在仿真与安全校验里，要明说
+const noBuildings = computed(() => {
+  if (!real.value) return false
+  const xs = props.site.geofence.map((p) => p[0]), ys = props.site.geofence.map((p) => p[1])
+  return !(props.site.obstacles ?? []).some((o) => o.polygon && o.center[0] > Math.min(...xs) && o.center[0] < Math.max(...xs)
+    && o.center[1] > Math.min(...ys) && o.center[1] < Math.max(...ys))
+})
+// 地标从哪来：真实场地只用真实存在的地物，没有时用方位描述（第三轮反馈：不能出现现场没有的凉亭）
+const landmarkNote = computed(() => {
+  const src = new Set((props.site.landmarks ?? []).map((l) => l.source))
+  if (!real.value || !src.size) return ''
+  const named = [src.has('osm') && 'OpenStreetMap', src.has('baidu') && '百度地点检索'].filter(Boolean).join('、')
+  return (named ? `地标取自${named}中真实存在的地物` : '这里查不到可用的真实地标') + (src.has('direction') ? '；斜体的“场地北侧”等只是方位描述' : '')
+})
 </script>
 
 <template>
@@ -37,7 +51,8 @@ const legend = computed(() => scenarioOf(props.site.scenario).legend)
       <button :class="{ on: mode === 'plan' }" class="small" @click="mode = 'plan'">平面图</button>
       <button :class="{ on: mode === 'satellite' }" class="small" :disabled="!real" :title="real ? '' : '随机生成的场地没有真实位置'" @click="mode = 'satellite'">卫星图</button>
       <button v-if="frame" :class="{ on: mode === 'baidu' }" class="small" @click="mode = 'baidu'">百度卫星图</button>
-      <span v-if="real" class="muted small">布局依据：真实地物（OpenStreetMap 的水面、建筑、树）与高程；卫星图只作底图，不参与生成</span>
+      <span v-if="real" class="muted small">布局依据：真实地物（OpenStreetMap 的水面、建筑轮廓、树）与高程；卫星图只作底图，不参与生成<template v-if="landmarkNote">。{{ landmarkNote }}</template></span>
+      <span v-if="noBuildings" class="small warn-note">场地内没有建筑轮廓数据：如果卫星图上能看到楼房，说明 OpenStreetMap 在这里缺数据，这些楼房不在仿真和安全校验里</span>
     </div>
     <BaiduMap v-if="mode === 'baidu' && frame" :key="site.name" :site="site" :frame="frame" :findings="findings" :plan="plan" :telemetry="telemetry" />
     <SiteMap v-else :site="site" :findings="findings" :plan="plan" :telemetry="telemetry" :truth="truth" :score="score"
@@ -47,6 +62,7 @@ const legend = computed(() => scenarioOf(props.site.scenario).legend)
 </template>
 
 <style scoped>
+.warn-note { color: var(--warn, #b7791f); flex-basis: 100%; }
 .switch { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
 .switch .on { border-color: var(--accent); color: var(--accent); }
 </style>

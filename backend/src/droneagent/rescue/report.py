@@ -53,7 +53,10 @@ def collect(state: dict, site: dict, battery_end: float) -> dict:
         advice = "处理上面的原因后重新下达任务。"
     else:
         facts = f"本次没有找到目标：搜索了计划 {planned} 个拍摄点中的 {searched} 个" + ("（因电量、取消或异常提前结束）" if searched < planned else "") + "。"
-        advice = "建议扩大搜索半径或改为平行扫描再飞一次，并组织地面人员在水边与出入口重点排查。"
+        spots = [l["label"] for l in site.get("landmarks", []) if l.get("source") != "direction"]
+        has_water = any(f.get("kind") == "water" for f in site.get("features") or [])
+        where = "、".join(dict.fromkeys((["水边"] if has_water else []) + spots[:3]))     # 只提场地里真有的地方
+        advice = "建议扩大搜索半径或改为平行扫描再飞一次，并组织地面人员" + (f"在{where}重点排查。" if where else "沿场地边界与通道排查。")
     misses = [] if found else near_misses(state.get("brief") or {}, dets)
     if misses:
         facts += "没有完全符合描述的人，但有衣着部分一致的人，报案描述可能有误：" + "；".join(m["text"] for m in misses) + "。"
