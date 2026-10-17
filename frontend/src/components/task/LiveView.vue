@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 无人机实时视角：执行中每秒刷新一次机载相机画面（1.34）。只在任务执行中显示，结束后停止请求。
+// 无人机实时视角：执行中每 2 秒刷新一次机载相机画面（1.34）。只在任务执行中显示，结束后停止请求。
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { liveViewUrl } from '../../api'
 
@@ -10,6 +10,7 @@ const src = ref('')
 const failed = ref(false)
 let timer: number | undefined
 function load() {
+  if (document.hidden) return                                     // 页面在后台时不取图
   const img = new Image()
   const url = liveViewUrl(camera.value, ++tick.value)
   img.onload = () => { src.value = url; failed.value = false }   // 新画面加载好再替换，避免闪烁
@@ -18,7 +19,7 @@ function load() {
 }
 watch(() => props.active, (on) => {
   window.clearInterval(timer)
-  if (on) { load(); timer = window.setInterval(load, 1000) }
+  if (on) { load(); timer = window.setInterval(load, 2000) }     // 每 2 秒一帧：取图要从相机桥传整帧原始画面，太频繁会拖慢仿真（DR-085）
 }, { immediate: true })
 onBeforeUnmount(() => window.clearInterval(timer))
 </script>

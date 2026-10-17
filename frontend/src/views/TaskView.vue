@@ -13,6 +13,7 @@ import TaskVerdict from '../components/task/TaskVerdict.vue'
 import Timeline from '../components/task/Timeline.vue'
 import TruthComparison from '../components/task/TruthComparison.vue'
 import RescueResult from '../components/task/RescueResult.vue'
+import ClarifyReply from '../components/task/ClarifyReply.vue'
 import MapView from '../components/map/MapView.vue'
 import { DIAGNOSIS_STAGES, scenarioOf } from '../scenarios'
 import { useMissions } from '../stores/missions'
@@ -25,7 +26,7 @@ import type { Marker, Site, Truth } from '../types'
 const route = useRoute()
 const router = useRouter()
 const id = computed(() => (route.params.id ? String(route.params.id) : null))
-const { mission, events, telemetry, score, error, live, isTroubleshoot, refresh } = useTaskStream(id)
+const { mission, events, telemetry, score, error, live, isTroubleshoot, refresh, reload } = useTaskStream(id)
 const { sim } = useSim()
 const { cancel } = useMissions()
 const { load } = useSites()
@@ -97,6 +98,7 @@ function select(pid: string) {
       </div>
     </section>
 
+    <ClarifyReply v-if="mission.status === 'clarify'" :mission-id="mission.id" :events="events" @sent="reload" />
     <TaskProgress :events="events" :status="mission.status" :stages="isTroubleshoot ? DIAGNOSIS_STAGES : scenario.stages" />
 
     <div v-if="isTroubleshoot" class="layout">

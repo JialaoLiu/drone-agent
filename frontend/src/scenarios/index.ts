@@ -101,7 +101,7 @@ const solar: Scenario = {
 const STATE_LABELS: Record<string, string> = { walking: '走动', sitting: '静止', water: '落水' }
 const rescue: Scenario = {
   id: 'rescue', label: '应急救援', verb: '搜救', target: '人员', group: '区域', item: '目标',
-  findingTypes: { target: '确认目标', rejected: '确认后排除', bystander: '路人', object: '非人物体', unsure: '看不清', candidate: '疑似' },
+  findingTypes: { target: '确认目标', person: '待人工辨认', rejected: '确认后排除', bystander: '路人', object: '非人物体', unsure: '看不清', candidate: '疑似' },
   legend: [
     { color: '#4dabf7', label: '水面' }, { color: '#e03131', label: '确认的目标', shape: 'circle' }, { color: '#f59f00', label: '疑似或排除', shape: 'circle' },
     { color: '#868e96', label: '路人或物体', shape: 'circle' }, { color: 'var(--map-route)', label: '搜索航线', shape: 'dash' },
@@ -114,6 +114,7 @@ const rescue: Scenario = {
       { text: `公园里有个小孩走丢了，大约 8 岁，穿红色上衣、蓝色裤子，半小时前在${at}附近`, note: '标准搜救：从最后出现的位置向外搜' },
       { text: `有位老人在${lm[1]?.label ?? at}附近走失，穿白色上衣、灰色裤子，可能已经离开很久`, note: '时间久：搜索半径会更大' },
       { text: `有人看到一个穿黄色上衣的人在${at}落水了，快找`, note: '紧急：优先水边' },
+      { text: `有个人在${at}附近走丢了，长什么样不清楚`, note: '特征不明：找出所有人交给人工辨认' },
       { text: '帮我找个人', note: '信息不够：调度员会追问特征和位置' },
     ]
   },
@@ -137,6 +138,9 @@ const rescue: Scenario = {
       if (s.misidentified) return { tone: 'bad', title: `错认：确认的不是要找的人（实际是${s.confused_with === '物体' ? '地上的物体' : '路人'}）`, advice: '需要人工核对确认照片；这次的结论不能用。', metrics }
     }
     if (found) return { tone: found.in_water ? 'bad' : 'ok', title: found.in_water ? '已找到目标：在水中，需立即救援' : '已找到目标', advice: result.advice ?? '', metrics }
+    const people = (result.detections ?? []).filter((d: any) => d.kind === 'person').length
+    if (result.search_all && people) return { tone: 'warn', title: `特征不明：拍到 ${people} 个人，请人工辨认`, advice: result.advice ?? '', metrics }
+    if (result.near_misses?.length) return { tone: 'warn', title: '没有完全符合描述的人：报案描述可能有误', advice: result.advice ?? '', metrics }
     return { tone: 'warn', title: '没有找到目标', advice: result.advice ?? '', metrics }
   },
   stages: [
@@ -144,7 +148,7 @@ const rescue: Scenario = {
     { key: 'plan', label: '规划搜索与安全校验', kinds: ['plan', 'violation', 'approved'] },
     { key: 'confirm', label: '确认', kinds: ['awaiting_approval'] },
     { key: 'search', label: '起飞与搜索', kinds: ['takeoff', 'screen'] },
-    { key: 'verify', label: '发现与确认', kinds: ['candidate', 'found', 'rejected'] },
+    { key: 'verify', label: '发现与确认', kinds: ['candidate', 'found', 'rejected', 'person', 'unsure'] },
     { key: 'report', label: '返航与报告', kinds: ['return', 'landed', 'report'] },
   ],
 }

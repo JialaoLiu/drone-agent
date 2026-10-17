@@ -84,5 +84,6 @@ export function useTaskStream(id: Ref<string | null>) {
 
   watch(id, (v) => { if (v) load(v) }, { immediate: true })
   onBeforeUnmount(() => { unmounted = true; generation++; closeSocket(); window.clearTimeout(timer) })
-  return { mission, events, telemetry, score, error, live, isTroubleshoot, refresh }
+  const reload = () => { if (id.value) load(id.value) }
+  return { mission, events, telemetry, score, error, live, isTroubleshoot, refresh, reload }
 }

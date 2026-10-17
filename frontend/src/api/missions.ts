@@ -6,6 +6,8 @@ export const getMission = (id: string) => request<Mission>(`/missions/${enc(id)}
 export const createMission = (task: string, autoApprove: boolean) =>
   post<{ id: string; queued: boolean; ahead?: number }>('/missions', { task, auto_approve: autoApprove })
 export const approveMission = (id: string, approved: boolean) => post<{ status: string }>(`/missions/${enc(id)}/approve`, { approved })
+export const replyMission = (id: string, text: string, autoApprove: boolean) =>
+  post<{ id: string; queued: boolean; ahead?: number }>(`/missions/${enc(id)}/reply`, { text, auto_approve: autoApprove })
 export const cancelMission = (id: string) => post<{ status: string }>(`/missions/${enc(id)}/cancel`)
 export const getScore = (id: string) => request<Record<string, any>>(`/missions/${enc(id)}/score`)
 export const listFaults = () => request<{ id: string; label: string; symptom: string }[]>('/troubleshoot/faults')

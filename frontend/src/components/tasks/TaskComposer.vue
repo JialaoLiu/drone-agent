@@ -39,6 +39,12 @@ async function submit() {
       <span v-if="site" class="muted small">{{ scenario.label }} · {{ scenario.summary(site) }}{{ site.location ? ' · ' + site.location.name : '' }}</span>
       <router-link to="/scenes" class="small">更换</router-link>
     </div>
+    <div v-if="site?.incident" class="incident">
+      <b>警情</b>
+      <p>{{ site.incident.text }}</p>
+      <button class="small" @click="task = `接到报警：${site.incident.text.replace(/^[^：]*：/, '')} 请立即搜寻。`">按警情下达</button>
+      <span class="small muted">报案人的描述可能不准；系统会如实报告与描述不符的情况。</span>
+    </div>
     <textarea v-model="task" rows="3" :placeholder="`用一句话描述${scenario.verb}任务，例如：${examples[0]?.text ?? ''}`" @keydown.enter.meta.prevent="submit" @keydown.enter.ctrl.prevent="submit" />
     <div class="row">
       <button class="link small" @click="showExamples = !showExamples">{{ showExamples ? '收起示例' : '示例' }}</button>
@@ -57,6 +63,9 @@ async function submit() {
 
 <style scoped>
 .composer { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-bottom: 1px solid var(--line); }
+.incident { border: 1px solid var(--warn); background: var(--warn-bg); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.incident p { margin: 0; font-size: 13px; line-height: 1.55; }
+.incident button { align-self: flex-start; }
 .scene { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
 textarea { width: 100%; resize: vertical; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }

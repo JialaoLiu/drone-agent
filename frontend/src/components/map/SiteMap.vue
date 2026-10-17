@@ -96,13 +96,16 @@ const drone = useTweenedPose(source)
         <circle :cx="sx(p.start[0])" :cy="sy(p.start[1])" :r="p.role === 'target' ? 7 : 5" fill="none" :stroke="p.role === 'target' ? '#d6336c' : '#adb5bd'" stroke-width="2" stroke-dasharray="3 2" />
         <text v-if="p.role === 'target'" :x="sx(p.start[0]) + 9" :y="sy(p.start[1]) - 6" class="label small">目标起点（{{ p.state === 'water' ? '落水' : p.state === 'walking' ? '走动' : '静止' }}）</text>
       </g>
-      <g v-for="(m, i) in markers ?? []" :key="'m' + i" class="marker">
-        <circle :cx="sx(m.x)" :cy="sy(m.y)" :r="m.tone === 'target' ? 9 : 6" :fill="MARK[m.tone]" fill-opacity="0.85" stroke="#fff" stroke-width="2" />
-        <text v-if="m.tone === 'target' || m.tone === 'warn'" :x="sx(m.x) + 11" :y="sy(m.y) + 4" class="label small">{{ m.label }}</text>
-      </g>
       <g :transform="`translate(${sx(0)},${sy(0)})`">
         <circle r="11" fill="var(--panel)" fill-opacity="0.7" stroke="var(--text)" stroke-width="2" />
         <text class="label center strong" y="5">H</text>
+      </g>
+    </svg>
+    <!-- 会动的东西（飞机、发现的人）单独一层：飞机移动时不重绘带卫星影像的底图（DR-085） -->
+    <svg :viewBox="`0 0 ${width} ${height}`" class="map overlay" aria-hidden="true">
+      <g v-for="(m, i) in markers ?? []" :key="'m' + i" class="marker">
+        <circle :cx="sx(m.x)" :cy="sy(m.y)" :r="m.tone === 'target' ? 9 : 6" :fill="MARK[m.tone]" fill-opacity="0.85" stroke="#fff" stroke-width="2" />
+        <text v-if="m.tone === 'target' || m.tone === 'warn'" :x="sx(m.x) + 11" :y="sy(m.y) + 4" class="label small">{{ m.label }}</text>
       </g>
       <g v-if="drone" :transform="`translate(${sx(drone.x)},${sy(drone.y)}) rotate(${drone.yaw})`" class="drone">
         <circle r="18" fill="var(--accent)" fill-opacity="0.15" />
@@ -116,6 +119,8 @@ const drone = useTweenedPose(source)
 <style scoped>
 .wrap { position: relative; }
 .map { width: 100%; height: auto; display: block; border-radius: 10px; }
+.overlay { position: absolute; inset: 0; pointer-events: none; }
+.drone { will-change: transform; }
 .label { font-size: 13px; fill: var(--text); paint-order: stroke; stroke: var(--panel); stroke-width: 3px; }
 .sat .label { fill: #fff; stroke: rgba(0, 0, 0, 0.6); }
 .label.small { font-size: 11px; }

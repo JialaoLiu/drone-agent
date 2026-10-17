@@ -232,7 +232,7 @@ def sim_view(camera: str = Query("wide", pattern="^(wide|zoom)$")) -> Response:
     """机载相机的实时画面（网页“实时视角”每秒请求一次）。同一相机 0.8 秒内复用上一帧，避免多个页面同时请求时压垮相机桥。"""
     from .sim import camera as cam
     hit = _view_cache.get(camera)
-    if hit and time.time() - hit[0] < 0.8:
+    if hit and time.time() - hit[0] < 1.5:
         return Response(hit[1], media_type="image/jpeg", headers={"Cache-Control": "no-store"})
     try:
         frame = cam.capture(camera, timeout=3.0)
