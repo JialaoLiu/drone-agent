@@ -47,5 +47,5 @@ def dispatch_next() -> str | None:
         auto = bool(((nxt.get("brief") or {}).get("queued") or {}).get("auto_approve"))
         store.update_mission(nxt["id"], status="planning", brief=None, only_from=("queued",))
         store.event(nxt["id"], "system", "dequeued", "轮到这个任务，开始执行")
-        mission.start(nxt["id"], nxt["task"], nxt["scene"], auto)
+        mission.restart(nxt["id"], nxt["task"], nxt["scene"], auto)     # 从干净的线程开始（回复追问后排队的任务也一样）
         return nxt["id"]

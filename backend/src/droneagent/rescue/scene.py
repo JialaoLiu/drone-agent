@@ -239,8 +239,43 @@ def _people(rng: random.Random, lay: dict) -> tuple[list[dict], list[dict], dict
             if ok(x, y):
                 decoys.append({"id": f"D{k + 1}", "color": target["top"], "center": [round(x, 2), round(y, 2)], "yaw": round(rng.uniform(0, 3.14), 2)})
                 break
-    brief = {"last_seen": last_seen["id"], "last_seen_label": last_seen["label"], "description": describe(target)}
+    brief = {"last_seen": last_seen["id"], "last_seen_label": last_seen["label"], "description": describe(target),
+             "incident": incident(rng, target, lay, last_seen)}
     return people, decoys, brief
+
+
+SIMILAR = {"红色": "橙色", "橙色": "红色", "蓝色": "紫色", "紫色": "蓝色", "白色": "灰色", "灰色": "白色", "黄色": "橙色", "粉色": "红色", "绿色": "蓝色", "黑色": "灰色"}
+
+
+def incident(rng: random.Random, target: dict, lay: dict, last_seen: dict) -> dict:
+    """报案人说的话（警情）：现实中特征来自报案人，常常不准——记错颜色深浅、记不清裤子、位置只记得大概。
+    这些误差是有意加入的，用来检验系统在描述不准时的表现。真实答案在 site["brief"]（网页接口不返回）。"""
+    top, bottom, place, notes = target["top"], target["bottom"], last_seen, []
+    if rng.random() < 0.12:
+        top = SIMILAR.get(top, top)
+        notes.append("上衣颜色记成了相近的颜色")
+    r = rng.random()
+    if r < 0.30:
+        bottom = None
+        notes.append("记不清裤子颜色")
+    elif r < 0.42:
+        bottom = rng.choice([b for b in BOTTOMS if b != bottom])
+        notes.append("裤子颜色记错")
+    others = [l for l in lay["landmarks"] if l["id"] != last_seen["id"]]
+    if others and rng.random() < 0.2 and target["state"] != "water":
+        place = min(others, key=lambda l: math.dist(l["center"], last_seen["center"]))
+        notes.append("位置说成了附近的另一个地标")
+    who = rng.choice(["我家孩子", "我儿子", "我女儿", "一个小孩"]) if target["child"] else rng.choice(["我老公", "我同事", "我哥", "一位游客"])
+    caller = rng.choice(["报案人（家属）", "报案人（路人）", "公园管理员"]) if not target["child"] else rng.choice(["报案人（家长）", "公园管理员"])
+    minutes = rng.choice([15, 20, 30, 40, 60])
+    clothes = f"穿{top}上衣" + (f"、{bottom}裤子" if bottom else "，裤子记不清了")
+    age = "大概七八岁" if target["child"] else "三四十岁"
+    if target["state"] == "water":
+        text = f"{caller}：有人看到{who}在{place['label']}那边掉进水里了！{age}，{clothes}，就是{minutes}分钟内的事，快！"
+    else:
+        text = f"{caller}：{who}不见了，{age}，{clothes}，大约{minutes}分钟前在{place['label']}附近，之后就找不到了。"
+    return {"text": text, "minutes": minutes, "reported": {"top": top, "bottom": bottom, "child": target["child"], "last_seen": place["id"]},
+            "errors": notes}
 
 
 def describe(t: dict) -> str:
@@ -322,7 +357,8 @@ def generate(seed: int, name: str | None = None, location: dict | None = None, o
             "terrain": twin["terrain"] if twin else None, "twin": twin["summary"] if twin else None,
             "ground": {"source": source, "extent_m": extent,
                        "note": "地面为该位置的卫星影像（Esri World Imagery）" if source == "satellite" else "仿真地面为程序生成的草地、步道与湖岸"},
-            "people": people, "decoys": decoys, "brief": brief}
+            "people": people, "decoys": decoys, "brief": brief,
+            "incident": {"text": brief["incident"]["text"], "minutes": brief["incident"]["minutes"]}}   # 网页可见的只有报案人说的话
     azimuth, elevation = rng.uniform(0, 2 * math.pi), rng.uniform(math.radians(40), math.radians(70))
     sun = (math.cos(elevation) * math.sin(azimuth), math.cos(elevation) * math.cos(azimuth), -math.sin(elevation))
     site["sun"] = [round(v, 4) for v in sun]          # 太阳方向（指向地面），用于排除无人机自己的影子

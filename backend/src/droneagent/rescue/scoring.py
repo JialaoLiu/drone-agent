@@ -13,6 +13,17 @@ def score(site: dict, result: dict, photo_meta: dict | None) -> dict:
            "found": False, "misidentified": False, "location_error_m": None, "elapsed_s": None,
            "bystanders_seen": sum(1 for d in result.get("detections", []) if d["kind"] in ("bystander", "rejected")),
            "decoys": len(site.get("decoys", [])), "coverage": result.get("coverage")}
+    if not found and result.get("search_all"):
+        # 特征不明：拍到的人里有目标（5 米内）就算“交给人工辨认时包含目标”
+        from .. import store
+        for d in result.get("detections", []):
+            if d["kind"] != "person":
+                continue
+            ph = store.get_photo((d.get("confirm") or {}).get("photo") or d["photo"]) or {}
+            truth = (((ph.get("meta") or {}).get("people")) or {}).get(target["model"])
+            if truth and math.hypot(d["x"] - truth[0], d["y"] - truth[1]) <= FOUND_RADIUS:
+                return {**out, "found": True, "location_error_m": round(math.hypot(d["x"] - truth[0], d["y"] - truth[1]), 2), "via": "search_all"}
+        return out
     if not found:
         return out
     truth = ((photo_meta or {}).get("people") or {}).get(target["model"])

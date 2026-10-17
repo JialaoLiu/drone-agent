@@ -71,8 +71,9 @@ async def coordinator(state: RescueState) -> dict:
     if brief["type"] == "unsupported":
         _emit(state, "coordinator", "unsupported", brief["reason"])
         return {"brief": brief, "outcome": "unsupported"}
-    label = {l["id"]: l["label"] for l in site["landmarks"]}[brief["last_seen"]]
+    label = {l["id"]: l["label"] for l in site["landmarks"]}.get(brief["last_seen"], "未知位置")
     _emit(state, "coordinator", "brief", f"任务理解：寻找{brief['description']}，最后出现在{label}"
+          + ("；特征不明，将找出所有人交给人工辨认" if brief.get("search_all") else "")
           + ("；情况紧急" if brief["urgency"] == "high" else ""), brief)
     return {"brief": brief, "revisions": 0, "detections": [], "searched": 0}
 
@@ -151,14 +152,17 @@ async def takeoff(state: RescueState) -> dict:
     return {**out, "airborne": True}
 
 
-def _own_shadow(site: dict, frame, c: dict, radius: float = 2.5) -> bool:
-    """候选是否就是无人机自己的影子：影子位置由太阳方向和飞机高度算出（真实系统按日期时间计算太阳方位）。"""
+def _own_shadow(site: dict, frame, c: dict) -> bool:
+    """候选是否就是无人机自己的影子：影子位置由太阳方向和飞机高度算出（真实系统按日期时间计算太阳方位）。
+    半径取影子本身的大小（机身约 1 米，加定位误差），不用固定 2.5 米，减少误杀站在影子附近的人（独立审查 L2）；
+    影子候选的面积也要小于一个人加影子的大小。"""
     sun = site.get("sun")
     if not sun or sun[2] >= -0.05:
         return False
     x, y, z = frame.pose.position
     sx, sy = x - z * sun[0] / sun[2], y - z * sun[1] / sun[2]
-    return math.hypot(c["x"] - sx, c["y"] - sy) < radius
+    radius = 1.2 + 0.03 * z
+    return math.hypot(c["x"] - sx, c["y"] - sy) < radius and c.get("area_m2", 0) < 1.0
 
 
 def _low_pass(site: dict, here: tuple, item: dict, search_alt: float, battery: float) -> tuple[float, list] | None:
@@ -186,8 +190,14 @@ def _budget_ok(f, extra_seconds: float = 25.0) -> bool:
     return f.state.battery - back - extra_seconds / safety.DRAIN_SECONDS * 100 * safety.SAFETY_FACTOR >= RESERVE
 
 
-def _classify(item: dict) -> str:
-    """初筛结果的分类。看得出是人、但是否相符不确定的，也要去确认（不能当成路人，审查二 H04）。"""
+MAX_PEOPLE = 8                     # 特征不明时最多逐个拍近照的人数（电量与时间）
+
+
+def _classify(item: dict, search_all: bool = False) -> str:
+    """初筛结果的分类。看得出是人、但是否相符不确定的，也要去确认（不能当成路人，审查二 H04）。
+    特征不明时，每个人都要拍清楚交给人工辨认。"""
+    if search_all and item["person"] == "yes":
+        return "candidate"
     if item["person"] == "no":
         return "object"
     if item["person"] == "unsure":
@@ -283,7 +293,7 @@ async def search(state: RescueState) -> dict:
             near = [d for d in detections if math.hypot(it["x"] - d["x"], it["y"] - d["y"]) < 3]
             if any(d["kind"] in ("bystander", "rejected") for d in near) or sum(1 for d in near if d.get("confirm")) >= 2:
                 continue
-            det = {"id": f"P{len(detections) + 1}", "x": it["x"], "y": it["y"], "kind": _classify(it), "photo": pid, "person": it["person"],
+            det = {"id": f"P{len(detections) + 1}", "x": it["x"], "y": it["y"], "kind": _classify(it, state["brief"].get("search_all", False)), "photo": pid, "person": it["person"],
                    "top": it.get("top"), "bottom": it.get("bottom"), "child": it.get("child"), "in_water": it.get("in_water") == "yes",
                    "evidence": it["evidence"], "confidence": it["confidence"], "step": step.target, "seen_at": time.time()}
             detections.append(det)
@@ -313,6 +323,14 @@ async def search(state: RescueState) -> dict:
                 head = "在水中发现人员（衣着在水下无法确认）" if hit.get("clothing_unverified") else f"确认找到目标 {det['id']}"
                 _emit(state, "searcher", "found", f"{head}：{hit['evidence']}" + ("；需立即救援" if hit["in_water"] else ""), found)
                 break
+            if decision == "person":              # 特征不明：记为待人工辨认的人员，继续搜索
+                det.update(kind="person", x=verdict.get("x", det["x"]), y=verdict.get("y", det["y"]))
+                _emit(state, "searcher", "person", f"{det['id']}：拍到一个人（{verdict['evidence']}），待人工辨认", det)
+                if sum(1 for d in detections if d["kind"] == "person") >= MAX_PEOPLE:
+                    _emit(state, "coordinator", "stop_search", f"已拍到 {MAX_PEOPLE} 个人，停止搜索，交给人工辨认")
+                    stop = True
+                    break
+                continue
             if decision == "rejected":
                 det["kind"] = "rejected"
                 _emit(state, "searcher", "rejected", f"{det['id']} 不是要找的人：{verdict['evidence']}")

@@ -5,7 +5,7 @@ from droneagent.agents import mission, queue, runtime
 
 def test_queued_mission_starts_when_idle_on_same_scene(monkeypatch):
     started = []
-    monkeypatch.setattr(mission, "start", lambda mid, task, scene, auto: started.append((mid, auto)))
+    monkeypatch.setattr(mission, "restart", lambda mid, task, scene, auto: started.append((mid, auto)))
     monkeypatch.setattr(simctl, "status", lambda: {"scene": "solar_7", "px4": True, "camera": True})
     runtime.active_mission = None
     busy = store.create_mission("第一个", "solar_7")
@@ -20,7 +20,7 @@ def test_queued_mission_starts_when_idle_on_same_scene(monkeypatch):
 
 
 def test_queued_mission_fails_if_scene_changed(monkeypatch):
-    monkeypatch.setattr(mission, "start", lambda *a: None)
+    monkeypatch.setattr(mission, "restart", lambda *a: None)
     monkeypatch.setattr(simctl, "status", lambda: {"scene": "solar_9", "px4": True, "camera": True})
     runtime.active_mission = None
     mid = store.create_mission("排队", "solar_7")

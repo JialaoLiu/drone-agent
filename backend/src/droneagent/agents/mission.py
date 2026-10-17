@@ -743,6 +743,28 @@ def start(mission_id: str, task: str, scene: str, auto_approve: bool = False):
     return runtime.submit(_run(mission_id, {"mission_id": mission_id, "task": task, "scene": scene, "auto_approve": auto_approve}), mission_id)
 
 
+def prepare_reply(mission_id: str, text: str) -> str:
+    """调度员追问后，用户在同一个任务里回复：原话、追问和回复合在一起重新理解（负责人第三轮反馈）。返回合并后的任务。"""
+    m = store.get_mission(mission_id)
+    question = next((e["message"] for e in reversed(store.events(mission_id, 0)) if e["kind"] == "clarify"), "")
+    combined = f"{m['task']}\n（调度员追问：{question}）\n补充：{text}"[:900]
+    store.update_mission(mission_id, task=combined, status="planning", brief=None, plan=None)
+    store.event(mission_id, "system", "reply", f"用户补充：{text}")
+    return combined
+
+
+async def _restart(mission_id: str, task: str, scene: str, auto_approve: bool) -> None:
+    """清掉上一轮的检查点（同一个线程号），按合并后的任务从头执行。"""
+    g = await graph(scenario_of(scene))
+    if _saver is not None:
+        await _saver.adelete_thread(mission_id)
+    await _run(mission_id, {"mission_id": mission_id, "task": task, "scene": scene, "auto_approve": auto_approve})
+
+
+def restart(mission_id: str, task: str, scene: str, auto_approve: bool):
+    return runtime.submit(_restart(mission_id, task, scene, auto_approve), mission_id)
+
+
 def resume(mission_id: str, approved: bool):
     return runtime.submit(_run(mission_id, Command(resume={"approved": approved})), mission_id)
 

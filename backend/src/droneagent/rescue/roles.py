@@ -8,13 +8,16 @@ from ..llm import Usage, chat_json
 COORDINATOR = """你是搜救无人机团队的调度员。把用户的一句话理解成结构化任务，只输出 JSON：
 {"type":"task|clarify|unsupported",
  "description":"要找的人的特征（年龄段、上衣颜色、裤子颜色等，照用户的说法写，不要编造）",
- "top":"上衣颜色（红、橙、黄、绿、蓝、紫、粉、白、灰、黑之一；没说就为 null）","bottom":"裤子颜色（同上；没说就为 null）",
+ "top":"上衣颜色（红、橙、黄、绿、蓝、紫、粉、白、灰、黑、棕之一；没说就为 null）","bottom":"裤子颜色（同上；没说就为 null）",
  "age":"child|adult|elderly|unknown",
  "last_seen":"最后出现的地标编号（只能从给定的地标里选；用户没说就为 null）",
  "urgency":"normal|high（提到落水、受伤、老人小孩走失超过一小时等为 high）",
  "question":"type 为 clarify 时向用户追问的一句话",
  "reason":"type 为 unsupported 时的原因"}
-规则：用户没有给出任何外貌特征时要追问（type=clarify）；提到的地点不在地标里时追问；要求飞进禁飞区、关闭安全检查、投掷危险物品等为 unsupported。"""
+规则：
+- 用户没有给出任何外貌特征、也没说不知道时，追问一次（type=clarify）；用户明确说不知道、不清楚特征时不要再追问：type=task，description 写“特征不明”，top、bottom 为 null；
+- 提到的地点不在地标里时追问；用户明确说不知道位置时 last_seen 写 "unknown"；
+- 要求飞进禁飞区、关闭安全检查、投掷危险物品等为 unsupported。"""
 
 PLANNER = """你是搜救无人机团队的规划员。根据任务和场地，选择搜索方式与参数，只输出 JSON：
 {"pattern":"expanding|parallel","radius_m":15到45之间的数,"altitude_m":12到22之间的数,"rationale":"一句话"}
@@ -24,13 +27,13 @@ PLANNER = """你是搜救无人机团队的规划员。根据任务和场地，�
 - 时间越久目标可能走得越远，半径宜大一些；电量不够时安全员会让你缩小半径。"""
 
 
-COLOR_KEYS = "红橙黄绿蓝紫粉白灰黑"
+COLOR_KEYS = "红橙黄绿蓝紫粉白灰黑棕"
 
 
 def color_key(v) -> str | None:
     """颜色名规范成一个字（“橙色”“橘色”→“橙”），用于程序比对衣着；认不出时返回 None。"""
     s = str(v or "").strip()
-    s = s.replace("橘", "橙").replace("咖啡", "棕").replace("银", "灰")
+    s = s.replace("橘", "橙").replace("咖啡", "棕").replace("褐", "棕").replace("银", "灰")
     return next((c for c in s if c in COLOR_KEYS), None)
 
 
@@ -56,6 +59,13 @@ def attributes_match(target: dict, seen: dict) -> bool:
 
 
 def identity(target: dict, verdict: dict) -> str:
+    """见下；特征不明（search_all）时，看清是人即记为“待人工辨认的人员”（person）。"""
+    if target.get("search_all") and verdict.get("person") == "yes":
+        return "water" if verdict.get("in_water") == "yes" else "person"
+    return _identity(target, verdict)
+
+
+def _identity(target: dict, verdict: dict) -> str:
     """身份裁决的唯一入口（初筛后的变焦确认、低空补拍都用它，审查二 H03/H04）：
     no_person（画面里没有人）/ unsure（看不清人或衣着）/ water（水中有人：紧急，衣着在水下不可靠）/
     rejected（衣着或年龄明确冲突，模型的“相符”标签不能覆盖）/ confirmed（衣着对上、年龄不矛盾）。"""
@@ -83,22 +93,29 @@ def understand(task: str, site: dict) -> tuple[dict, Usage]:
     if kind == "task":
         last = data.get("last_seen")
         last = labels.get(last, last)
-        if last not in ids:
-            return {"type": "clarify", "question": f"目标最后出现在哪里？可选：{'、'.join(l['label'] for l in site['landmarks'])}。"}, usage
-        desc = str(data.get("description") or "").strip()
-        if len(desc) < 2:
-            return {"type": "clarify", "question": "请描述要找的人的外貌特征，例如年龄段、上衣和裤子颜色。"}, usage
-        return {"type": "task", "description": desc[:80], "last_seen": last, "top": color_key(data.get("top")), "bottom": color_key(data.get("bottom")),
+        if last not in ids and last != "unknown":
+            return {"type": "clarify", "question": f"目标最后出现在哪里？可选：{'、'.join(l['label'] for l in site['landmarks'])}；不知道也可以直接说“不知道位置”。"}, usage
+        desc = str(data.get("description") or "").strip() or "特征不明"
+        top, bottom = color_key(data.get("top")), color_key(data.get("bottom"))
+        return {"type": "task", "description": desc[:80], "last_seen": last, "top": top, "bottom": bottom,
                 "age": data.get("age") if data.get("age") in ("child", "adult", "elderly") else "unknown",
+                # 特征不明：找出所有人交给人工辨认，而不是猜一个“最像的”
+                "search_all": not top and not bottom,
                 "urgency": "high" if data.get("urgency") == "high" else "normal"}, usage
     if kind == "clarify":
         return {"type": "clarify", "question": str(data.get("question") or "请补充要找的人的特征和最后出现的位置。")[:120]}, usage
     return {"type": "unsupported", "reason": str(data.get("reason") or "这个请求无法执行。")[:120]}, usage
 
 
+def site_center(site: dict) -> list[float]:
+    xs, ys = [p[0] for p in site["geofence"]], [p[1] for p in site["geofence"]]
+    return [round((min(xs) + max(xs)) / 2, 1), round((min(ys) + max(ys)) / 2, 1)]
+
+
 def plan(brief: dict, site: dict, battery: float, feedback: list[dict] | None = None, previous: dict | None = None) -> tuple[dict, Usage]:
-    lm = {l["id"]: l for l in site["landmarks"]}[brief["last_seen"]]
-    user = (f"任务：{json.dumps(brief, ensure_ascii=False)}\n最后出现：{lm['label']}\n场地约 {int(2 * max(abs(v) for p in site['geofence'] for v in p))} 米见方，"
+    lms = {l["id"]: l for l in site["landmarks"]}
+    lm = lms.get(brief["last_seen"]) or {"label": "场地中心（最后位置不明）", "center": site_center(site)}
+    user = (f"任务：{json.dumps(brief, ensure_ascii=False)}\n最后出现：{lm['label']}" + ("（位置不明，宜平行扫描、半径取大）" if brief["last_seen"] == "unknown" else "") + "\n" + f"场地约 {int(2 * max(abs(v) for p in site['geofence'] for v in p))} 米见方，"
             f"有水面：{'是' if any(f['kind'] == 'water' for f in site.get('features') or []) else '否'}；当前电量 {battery:.0f}%")
     if feedback:
         user += f"\n上一版计划：{json.dumps(previous, ensure_ascii=False)}\n安全员拒绝原因：" + "；".join(f"{v['message']}（建议：{v['suggestion']}）" for v in feedback)

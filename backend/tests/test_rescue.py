@@ -129,3 +129,32 @@ def test_rescue_report_keeps_cancelled(monkeypatch):
              "brief": {"description": "小孩"}, "detections": [], "searched": 3}
     asyncio.run(rescue.report(state))
     assert store.mission_status(mid) == "cancelled"          # 审查二 H06
+
+
+def test_incident_is_visible_and_may_contain_errors():
+    errs = 0
+    for seed in range(1, 25):
+        site, _ = _site(seed)
+        inc = site["incident"]
+        assert inc["text"] and "：" in inc["text"]                       # 报案人说的话
+        assert "errors" not in inc and "reported" not in inc               # 网页可见部分不含误差说明与真实答案
+        errs += bool(site["brief"]["incident"]["errors"])
+    assert errs > 0                                                        # 有一部分警情故意不准
+
+
+def test_search_all_identity_and_near_misses():
+    from droneagent.rescue.roles import identity
+    from droneagent.rescue.report import near_misses
+    assert identity({"search_all": True}, {"person": "yes", "in_water": "no"}) == "person"
+    brief = {"top": "红", "bottom": "蓝"}
+    dets = [{"id": "P1", "kind": "rejected", "top": "红", "bottom": "黑", "x": 1, "y": 2, "photo": 5},
+            {"id": "P2", "kind": "bystander", "top": "绿", "bottom": "白", "x": 3, "y": 4, "photo": 6}]
+    m = near_misses(brief, dets)
+    assert [x["id"] for x in m] == ["P1"] and "上衣" in m[0]["text"]
+
+
+def test_only_target_can_be_in_water():
+    """“水中有人就确认”依赖一个不变量：场景里只有目标会落水，路人不进水（独立审查 L1）。改场景生成时这条测试会提醒。"""
+    for seed in range(1, 30):
+        site, _ = _site(seed)
+        assert all(p["state"] != "water" for p in site["people"] if p["role"] != "target")

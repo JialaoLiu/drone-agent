@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import math
 import time
 from dataclasses import dataclass, field
@@ -20,6 +21,8 @@ from mavsdk.plugins.failure import FailureType, FailureUnit
 from mavsdk.plugins.gimbal import ControlMode, GimbalMode, SendMode
 
 from . import config
+
+log = logging.getLogger(__name__)
 from .geo import Origin
 
 CRUISE_SPEED = 5.0        # m/s
@@ -127,8 +130,8 @@ class Flight:
             await asyncio.sleep(0.2)          # 让已取消的订阅先退出
             try:
                 old.destroy()
-            except Exception:                 # noqa: BLE001  销毁失败不影响新建
-                pass
+            except Exception as error:        # noqa: BLE001  销毁失败不影响新建，但要留记录便于排查端口占用（独立审查 L4）
+                log.warning("销毁旧的 MAVSDK 实例失败：%s", type(error).__name__)
         if self.url not in Flight._mavsdk:
             m = Mavsdk(Configuration.create_with_component_type(ComponentType.GROUND_STATION))
             await m.add_any_connection(self.url)
@@ -149,10 +152,17 @@ class Flight:
                                                          self._watch_attitude(), self._watch_status(), self._watch_health())]
         # 默认参数在后台逐个写入、每个最多等 3 秒：仿真重启后个别参数可能一直收不到应答，
         # 写在连接流程里会让连接一直不返回，所有飞行前检查都卡到超时（DR-064）
+        # 返航高度关系到飞控自带返航是否超出场地限高，必须在连接时写入（独立审查 M1）；仿真电池参数可以后台写
+        try:
+            await asyncio.wait_for(self.param.set_param_float("RTL_RETURN_ALT", DEFAULT_PARAMS["RTL_RETURN_ALT"]), 5.0)
+        except Exception:     # noqa: BLE001  真机或其他飞控没有这个参数
+            pass
         self._tasks.append(asyncio.create_task(self._apply_defaults()))
 
     async def _apply_defaults(self) -> None:
         for name, value in DEFAULT_PARAMS.items():
+            if name == "RTL_RETURN_ALT":
+                continue
             try:
                 await asyncio.wait_for(self.param.set_param_float(name, value), 3.0)
             except Exception:  # 真机或其他飞控没有这些参数、或没有应答，忽略
@@ -328,7 +338,9 @@ class Flight:
     async def get_param(self, name: str) -> float:
         try:
             return await _cmd(self.param.get_param_float(name), f"读取参数 {name}")
-        except Exception:
+        except FlightError:
+            raise                      # 超时直接报错，不再等第二个超时（独立审查 L3）
+        except Exception:              # 参数是整数类型时按整数读
             return float(await _cmd(self.param.get_param_int(name), f"读取参数 {name}"))
 
     async def inject_failure(self, unit: str, kind: str = "OFF", instance: int = 0) -> None:

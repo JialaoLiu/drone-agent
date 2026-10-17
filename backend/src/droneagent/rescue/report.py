@@ -7,7 +7,24 @@ import time
 from .. import config, store
 from ..agents.report import _frame, _img
 
-KIND_LABELS = {"target": "确认目标", "rejected": "确认后排除", "bystander": "路人", "object": "非人物体", "unsure": "看不清", "candidate": "疑似未确认"}
+KIND_LABELS = {"target": "确认目标", "person": "待人工辨认的人员", "rejected": "确认后排除", "bystander": "路人", "object": "非人物体",
+               "unsure": "待确认", "candidate": "疑似未确认"}
+
+
+def near_misses(brief: dict, dets: list[dict]) -> list[dict]:
+    """没找到时：衣着部分对得上的人（上衣或裤子一致），报案描述可能有误。"""
+    from .roles import color_key
+    out = []
+    for d in dets:
+        if d["kind"] not in ("rejected", "bystander", "unsure"):
+            continue
+        top_ok = brief.get("top") and color_key(d.get("top")) == brief["top"]
+        bottom_ok = brief.get("bottom") and color_key(d.get("bottom")) == brief["bottom"]
+        if top_ok or bottom_ok:
+            seen = "、".join(x for x in [f"{d.get('top') or '?'}上衣", f"{d.get('bottom') or '?'}裤子"])
+            out.append({"id": d["id"], "x": d["x"], "y": d["y"], "photo": (d.get("confirm") or {}).get("photo") or d["photo"],
+                        "text": f"{d['id']}：{seen}（{'上衣' if top_ok else '裤子'}与描述一致）"})
+    return out[:5]
 
 
 def collect(state: dict, site: dict, battery_end: float) -> dict:
@@ -27,6 +44,9 @@ def collect(state: dict, site: dict, battery_end: float) -> dict:
                  f"起飞后 {found['elapsed_s'] // 60} 分 {found['elapsed_s'] % 60} 秒确认") + ("；目标在水中" if found["in_water"] else "") + "。"
         advice = ("目标在水中，请立即派救生人员携带救生圈前往，无人机可返回悬停指示位置。" if found["in_water"]
                   else "请地面人员按坐标前往接回，途中注意目标可能继续走动。")
+    elif (state.get("brief") or {}).get("search_all") and counts.get("person"):
+        facts = f"特征不明：共拍到 {counts['person']} 个人（每人都有近照），请人工辨认。"
+        advice = "把近照发给报案人辨认；确认后按坐标派地面人员前往。"
     elif searched == 0:
         reason = state.get("error") or ("任务被取消" if state.get("outcome") == "cancelled" else "没有起飞")
         facts = f"本次没有开始搜索：{reason}。"
@@ -34,8 +54,12 @@ def collect(state: dict, site: dict, battery_end: float) -> dict:
     else:
         facts = f"本次没有找到目标：搜索了计划 {planned} 个拍摄点中的 {searched} 个" + ("（因电量、取消或异常提前结束）" if searched < planned else "") + "。"
         advice = "建议扩大搜索半径或改为平行扫描再飞一次，并组织地面人员在水边与出入口重点排查。"
+    misses = [] if found else near_misses(state.get("brief") or {}, dets)
+    if misses:
+        facts += "没有完全符合描述的人，但有衣着部分一致的人，报案描述可能有误：" + "；".join(m["text"] for m in misses) + "。"
+        advice = "请向报案人核实衣着（特别是裤子颜色）和最后出现的位置，并查看这些人的近照。" + advice
     facts += f"发现路人 {counts['bystander']} 人，确认后排除 {counts['rejected']} 人，非人物体 {counts['object']} 处，看不清 {counts['unsure']} 处。"
-    return {"scenario": "rescue", "found": found, "detections": dets, "counts": counts, "searched": searched, "planned": planned,
+    return {"scenario": "rescue", "found": found, "detections": dets, "near_misses": misses, "search_all": bool((state.get("brief") or {}).get("search_all")), "counts": counts, "searched": searched, "planned": planned,
             "coverage": round(searched / planned, 3) if planned else None, "summary": facts + advice, "advice": advice,
             "description": (state.get("brief") or {}).get("description"), "last_seen": lm,
             "flight_seconds": round(time.time() - started) if started else 0, "battery_used": round(state.get("battery_used") or 0, 1),

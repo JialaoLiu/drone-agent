@@ -367,6 +367,30 @@ def approve(mid: str, body: Decision) -> dict:
     return {"status": store.mission_status(mid)}
 
 
+class Reply(BaseModel):
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
+    auto_approve: bool = False
+
+
+@app.post("/missions/{mid}/reply")
+def reply(mid: str, body: Reply) -> dict:
+    """回复调度员的追问：在同一个任务里继续（不新开任务，不丢上下文）。"""
+    m = store.get_mission(mid)
+    if m is None:
+        raise HTTPException(404, "任务不存在")
+    if m["status"] != "clarify":
+        raise HTTPException(409, "这个任务没有在等待补充信息")
+    status = simctl.status()
+    if status["scene"] != m["scene"] or not status["px4"]:
+        raise HTTPException(409, f"当前仿真场景是 {status['scene']}，与任务场景 {m['scene']} 不一致或尚未就绪")
+    task = mission.prepare_reply(mid, body.text)
+    if task_queue.busy(exclude=mid):
+        ahead = task_queue.enqueue(mid, body.auto_approve)
+        return {"id": mid, "queued": True, "ahead": ahead}
+    mission.restart(mid, task, m["scene"], body.auto_approve)
+    return {"id": mid, "queued": False}
+
+
 CANCEL_GRACE = 15.0      # 取消后给任务自行停下的时间（秒）
 
 

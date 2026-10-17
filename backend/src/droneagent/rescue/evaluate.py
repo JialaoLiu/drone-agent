@@ -71,6 +71,20 @@ def run_one(client: httpx.Client, seed: int, location: dict | None) -> dict:
     return row
 
 
+def _cleanup(client: httpx.Client) -> None:
+    try:
+        active = client.get("/sim").json().get("active_mission")
+        for m in client.get("/missions").json():
+            if m["status"] in ("queued", "planning", "awaiting_approval", "running"):
+                client.post(f"/missions/{m['id']}/cancel")
+        if active:
+            _wait(client, lambda: client.get("/sim").json().get("active_mission") is None, 300, 5)
+        client.post("/sim/stop")
+        time.sleep(5)
+    except Exception as error:      # noqa: BLE001
+        print(f"清理失败：{error}", flush=True)
+
+
 def write(rows: list[dict]) -> str:
     out = config.BACKEND_DIR / "eval" / "results"
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S") + "-rescue"
@@ -118,6 +132,7 @@ def main() -> None:
                 rows.append(run_one(client, seed, loc))
             except Exception as error:      # noqa: BLE001  单个场景失败不影响其余
                 print(f"种子 {seed} 失败：{type(error).__name__}：{error}", flush=True)
+                _cleanup(client)            # 取消残留任务、停仿真，避免后面的场景连锁 409（独立审查 M3）
                 rows.append({"seed": seed, "scene": f"rescue_{seed}", "status": f"error: {error}", "target_state": "?", "bystanders": 0, "decoys": 0,
                              "found": False, "misidentified": False, "location_error_m": None, "elapsed_s": None, "coverage": None, "cost_yuan": 0,
                              "place": (loc or {}).get("name"), "mission": None, "task": "", "wall_s": 0})

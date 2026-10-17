@@ -1,11 +1,45 @@
 # 代码审查报告（独立复审）
 
+> ## 本文件的约定（先读）
+>
+> **文件名固定为 `docs/reviews/review-independent.md`，每轮审查原地覆盖，不再新建带日期的副本。**
+>
+> 每轮按这个顺序写，不要改结构：
+>
+> 1. **§ 上一轮复核结果** —— 上期每条问题逐条给 `已修复 / 未修复 / 部分修复`，附核对方式与证据行号。**这一步先做，没查完不动新代码。**
+> 2. **§ 本轮新发现** —— 按 高 / 中 / 低 分组，每条含文件:行、类别、证据、修法。
+> 3. **§ 本轮范围与覆盖** —— 起止提交、文件数、覆盖率、跑过的验证命令与结果。
+> 4. **§ 诚实说明** —— 没复现的、没跑的、没读的。
+>
+> 上一轮的历史结论不保留在本文件里；需要追溯请看同目录下带日期的归档（`2026-10-17-review.md`、`2026-10-17-review-7f12596.md`）。
+
+---
+
+## 0. 上一轮复核结果
+
+**本轮是第一轮，无上期条目。下一轮从这里开始逐条核对：**
+
+| # | 上一轮问题 | 位置 | 复核方法 |
+|---|---|---|---|
+| H1 | `_confirm_altitude` 用 `check_plan` 默认 `start=(0,0,0)`，进场航段未对障碍物校验 | `agents/rescue.py:165-171`、`:211-214` | 看是否传入真实 `start=(f.state.x, f.state.y, f.state.z)`，是否改用 `check_segment` 校验实际航段 |
+| M1 | `_apply_defaults` 后台化，`RTL_RETURN_ALT` 可能起飞前未写入 | `flight.py:29,146,148-153` | 看 `RTL_RETURN_ALT` 是否回到 await 路径，或起飞前是否 `await` 参数就绪 |
+| M2 | `color_key` 产出的「棕」不在 `COLOR_KEYS` 里，褐色永远匹配不上 | `rescue/roles.py:27,33` | 看 `COLOR_KEYS` 是否含「棕」，或该 replace 是否已删 |
+| M3 | `rescue/evaluate.py` 单场景失败后不清理，后续种子连锁 409 | `rescue/evaluate.py` `main()` 异常分支 | 看是否加了 cancel + `/sim/stop` 清理 |
+| L1 | `in_water` 直接确认，依赖「只有 target 落水」的隐式不变量 | `agents/rescue.py:197,201` | 看是否加断言/注释/测试固定该不变量 |
+| L2 | `_own_shadow` 固定 2.5 米半径会误杀站在影子落点上的人 | `agents/rescue.py:155` | 看半径是否随高度与仰角变化，或是否记录过滤事件 |
+| L3 | `get_param` float 超时后回退 int，最坏 24 秒 | `flight.py:318-322` | 看是否先 `except FlightError: raise` 再回退 |
+| L4 | `fresh` 重连 `destroy()` 失败被吞，实例已 pop → 泄漏 | `flight.py:120-125` | 看失败时是否记 warning |
+
+---
+
+## 1. 本轮概要
+
 日期：2026-10-17
 审查范围：`e3d2e91..7f12596`（救援场景引入 → 晨间报告），**只看后端逻辑与相关前端改动**
 审查方式：`ocr delegate preview` / `ocr delegate rule` 定范围与规则；diff 逐行阅读；关键路径回读完整上下文验证
 基线验证：`cd backend && uv run python -m pytest -q` → **91 passed in 9.89s**
 
-## 结论
+### 结论
 
 **有 1 个高严重度问题：`_confirm_altitude` 的安全校验查的是错误路径，低空确认的进场航段没有对障碍物做校验。**
 
