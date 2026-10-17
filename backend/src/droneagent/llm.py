@@ -98,6 +98,7 @@ def chat_json(system: str, user: str, images: list[bytes] | None = None, model: 
             STATS["cached_answers"] += 1
         return hit["parsed"], Usage(hit["model"], 0, 0, 0, 0, 0.0, len(images or []))
     last: Exception | None = None
+    spent = {"prompt": 0, "completion": 0, "hit": 0, "cost": 0.0}     # 所有实际收到响应的尝试（含格式错误重试）都要记账（审查 M05）
     for attempt in range(3):
         started = time.monotonic()
         try:
@@ -108,24 +109,28 @@ def chat_json(system: str, user: str, images: list[bytes] | None = None, model: 
                 continue
             r.raise_for_status()
             data = r.json()
-            text = data["choices"][0]["message"]["content"]
-            parsed = _parse(text)
             usage = data.get("usage") or {}
             hit = usage.get("prompt_cache_hit_tokens", (usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0)) or 0
             prompt = usage.get("prompt_tokens", 0)
             served = data.get("model") or model
             cost, _ = pricing.cost(served, hit, prompt - hit, usage.get("completion_tokens", 0), datetime.now(timezone.utc))
-            with _stats_lock:
+            with _stats_lock:                      # 先记账，再解析：解析失败重试时这次的用量不能丢
                 STATS["calls"] += 1
                 STATS["prompt_tokens"] += prompt
                 STATS["completion_tokens"] += usage.get("completion_tokens", 0)
                 STATS["cache_hit_tokens"] += hit
                 STATS["reasoning_tokens"] += (usage.get("completion_tokens_details") or {}).get("reasoning_tokens", 0) or 0
+            spent["prompt"] += prompt
+            spent["completion"] += usage.get("completion_tokens", 0)
+            spent["hit"] += hit
+            spent["cost"] += cost or 0.0
+            text = data["choices"][0]["message"]["content"]
+            parsed = _parse(text)
             if cache:
                 cache.parent.mkdir(parents=True, exist_ok=True)
                 cache.write_text(json.dumps({"parsed": parsed, "model": served}, ensure_ascii=False), encoding="utf-8")
-            result = Usage(served, prompt, usage.get("completion_tokens", 0), hit,
-                           round((time.monotonic() - started) * 1000), cost, len(images or []))
+            result = Usage(served, spent["prompt"], spent["completion"], spent["hit"],
+                           round((time.monotonic() - started) * 1000), round(spent["cost"], 6), len(images or []))
             if USAGE_SINK is not None:
                 try:
                     USAGE_SINK(result)

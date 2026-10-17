@@ -67,8 +67,8 @@ async def _record(scene: str, standoff: float) -> Path:
         check = await health.preflight(f)
         if not check["ok"]:
             raise RuntimeError("飞行前检查未通过：" + check["advice"])
-        await f.takeoff(10)
         try:
+            await f.takeoff(10)          # 起飞也在保护范围内：离地后才报错时同样要返航（审查 H07）
             for st in route:
                 await f.goto(*st.position, st.yaw)
                 if st.kind == "transit":
@@ -83,7 +83,7 @@ async def _record(scene: str, standoff: float) -> Path:
                 await f.goto(*w, f.state.yaw)
             await f.return_home()
         except Exception:
-            if f.state.in_air:
+            if f.state.in_air or f.state.armed:
                 await f.failsafe_return()
                 await f._wait(lambda: not f.state.in_air, 240, "返航超时")
             raise

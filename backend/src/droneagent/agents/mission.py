@@ -272,7 +272,7 @@ async def approval(state: State) -> dict:
 async def takeoff(state: State) -> dict:
     f = await runtime.flight()
     # 本任务取得控制权：之后每条普通指令发送前、等待中都会检查是否已取消（深度审查 H02）
-    f.begin_control(lambda: "任务已取消" if _cancelled(state) else None)
+    f.begin_control(lambda: "任务已取消" if _cancelled(state) else None, owner=state["mission_id"])
     if _cancelled(state):
         return {"outcome": "cancelled", "queue": [], "current": ""}
     first = next(s for s in state["steps"] if s["kind"] == "overview")
@@ -529,14 +529,16 @@ async def return_home(state: State) -> dict:
     # 以飞控遥测为准：起飞只成功一半（已离地但没到高度）时任务标记可能没写上（深度审查 H01）
     if not (state.get("airborne") or f.state.in_air or f.state.armed):
         return {}
-    f.end_control()            # 取消后仍允许返航指令
+    f.end_control(owner=state["mission_id"])            # 取消后仍允许返航指令
     if f.preempted:
         # 飞控返航已接管（一键返航）：不再发送任何指令，只等落地
         _emit(state, "pilot", "return", f"{f.preempted}，等待降落（电量 {f.state.battery:.0f}%）")
         try:
             await f._wait(lambda: not f.state.in_air or not f.state.armed, 240, "飞控返航超时")
         except FlightError as err:
-            _emit(state, "pilot", "error", str(err))
+            # 没有确认落地就不能记为已降落，也不能释放飞机去接新任务（审查 H04）
+            _emit(state, "pilot", "error", f"{err}：飞机仍在空中，需要人工干预")
+            return {"airborne": True, "outcome": "failed", "error": f"{err}，飞机仍在空中"}
         _emit(state, "pilot", "landed", f"已降落，电量 {f.state.battery:.0f}%")
         used = (state.get("battery_used") or 0.0) + max(0.0, (state.get("sortie_battery") or state.get("battery_start") or 100) - f.state.battery)
         return {"airborne": False, "battery_used": used}
@@ -552,7 +554,8 @@ async def return_home(state: State) -> dict:
         try:
             await f._wait(lambda: not f.state.in_air, 240, "飞控返航超时")
         except FlightError as err:
-            _emit(state, "pilot", "error", str(err))
+            _emit(state, "pilot", "error", f"{err}：飞机仍在空中，需要人工干预")
+            return {"airborne": True, "outcome": "failed", "error": f"{err}，飞机仍在空中"}
     _emit(state, "pilot", "landed", f"已降落，电量 {f.state.battery:.0f}%")
     used = (state.get("battery_used") or 0.0) + max(0.0, (state.get("sortie_battery") or state.get("battery_start") or 100) - f.state.battery)
     return {"airborne": False, "battery_used": used}
@@ -690,9 +693,9 @@ async def _run(mission_id: str, payload) -> None:
     finally:
         runtime.end_run(mission_id)
         if runtime.current_flight() is not None:
-            runtime.current_flight().end_control()
-        if store.mission_status(mission_id) not in runtime.LIVE_STATUSES:
-            runtime.release(mission_id)     # 任务已结束（含取消、异常）：确保释放占用
+            runtime.current_flight().end_control(owner=mission_id)    # 只清除本任务的控制（审查 H06）
+        if store.mission_status(mission_id) not in runtime.LIVE_STATUSES and runtime.grounded():
+            runtime.release(mission_id)     # 任务已结束（含取消、异常）且飞机已在地面：释放占用；仍在空中时保留（审查 H04）
             from . import queue
             await asyncio.to_thread(queue.dispatch_next)
 

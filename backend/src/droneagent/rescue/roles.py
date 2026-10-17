@@ -34,21 +34,39 @@ def color_key(v) -> str | None:
     return next((c for c in s if c in COLOR_KEYS), None)
 
 
-def attributes_match(target: dict, seen: dict) -> bool:
-    """变焦确认时由程序比对衣着与年龄（模型只报告看到的属性）：上衣必须对上；裤子看得到时也要对上；
-    年龄只在明确矛盾时排除（从上往下看很难判断年龄，看不出不算矛盾）。"""
+def compare_attributes(target: dict, seen: dict) -> str:
+    """程序比对衣着与年龄（模型只报告看到的属性）。返回 match / conflict / unknown：
+    - conflict：上衣或裤子看到了且对不上，或年龄明确矛盾（从上往下看不出年龄不算矛盾）；
+    - match：上衣对上，裤子对上或看不到，年龄不矛盾；
+    - unknown：上衣没看到，或目标的上衣颜色本身未知。"""
     t_top, t_bottom = target.get("top"), target.get("bottom")
     s_top, s_bottom = color_key(seen.get("top")), color_key(seen.get("bottom"))
-    if not t_top or s_top != t_top:
-        return False
-    if t_bottom and s_bottom and s_bottom != t_bottom:
-        return False
     age, child = target.get("age"), seen.get("child")
-    if age == "child" and child == "no":
-        return False
-    if age in ("adult", "elderly") and child == "yes":
-        return False
-    return True
+    if (t_top and s_top and s_top != t_top) or (t_bottom and s_bottom and s_bottom != t_bottom):
+        return "conflict"
+    if (age == "child" and child == "no") or (age in ("adult", "elderly") and child == "yes"):
+        return "conflict"
+    if not t_top or not s_top:
+        return "unknown"
+    return "match"
+
+
+def attributes_match(target: dict, seen: dict) -> bool:
+    return compare_attributes(target, seen) == "match"
+
+
+def identity(target: dict, verdict: dict) -> str:
+    """身份裁决的唯一入口（初筛后的变焦确认、低空补拍都用它，审查二 H03/H04）：
+    no_person（画面里没有人）/ unsure（看不清人或衣着）/ water（水中有人：紧急，衣着在水下不可靠）/
+    rejected（衣着或年龄明确冲突，模型的“相符”标签不能覆盖）/ confirmed（衣着对上、年龄不矛盾）。"""
+    if verdict.get("person") == "no":
+        return "no_person"
+    if verdict.get("person") != "yes":
+        return "unsure"
+    if verdict.get("in_water") == "yes":
+        return "water"
+    result = compare_attributes(target, verdict)
+    return {"conflict": "rejected", "match": "confirmed"}.get(result, "unsure")
 
 
 def landmarks_text(site: dict) -> str:

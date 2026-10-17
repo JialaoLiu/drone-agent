@@ -65,3 +65,9 @@ def test_column_count_words_normalized(monkeypatch):
     monkeypatch.setattr(roles, "chat_json", lambda *a, **k: ({"advice": "先处理 A、D 两列的破碎板，再看 A-R1-C01。", "priorities": []}, Usage("m", 1, 1, 0, 1, 0.0)))
     out, _ = roles.report_summary({"defects": [{"panel_id": "A-R1-C01"}], "unverified": []})
     assert out["advice"] == "先处理 A、D 列的破碎板，再看 A-R1-C01。" and not out["advice_rejected"]
+
+
+def test_check_advice_rejects_chinese_quantities():
+    for bad in ["缺陷比例为百分之九十九，建议全面更换。", "约三分之一的板需要清洗。", "请检查三到五块板。", "大部分板需要清洗。", "先处理两处破损。"]:
+        assert not roles.check_advice(bad, set()), bad
+    assert roles.check_advice("先处理破碎和缺失的板，再统一安排清洗，未确认的疑似请到现场一并确认。", set())   # 普通用词“统一”“一并”不误伤

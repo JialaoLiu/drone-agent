@@ -60,3 +60,20 @@ def test_second_look_is_not_served_from_first_answer(monkeypatch):
     llm.chat_json("系统", "同一张图", [b"jpeg"], thinking=False, attempt=0)
     llm.chat_json("系统", "同一张图", [b"jpeg"], thinking=False, attempt=1)
     assert len(sent) == 2
+
+
+def test_usage_counts_retried_bad_responses(monkeypatch):
+    """第一次返回不是 JSON、第二次正确：两次的用量都要记上（审查 M05）。"""
+    import httpx
+    from droneagent import config, llm
+    replies = iter(["不是 JSON", '{"ok": true}'])
+    class R:
+        status_code = 200
+        def __init__(self): self.text = next(replies)
+        def raise_for_status(self): pass
+        def json(self): return {"choices": [{"message": {"content": self.text}}], "usage": {"prompt_tokens": 100, "completion_tokens": 10}, "model": "m"}
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: R())
+    monkeypatch.setattr(llm.time, "sleep", lambda s: None)
+    monkeypatch.setattr(config, "env", lambda name, default="": "k" if "KEY" in name else default)
+    data, usage = llm.chat_json("s", "u")
+    assert data == {"ok": True} and usage.prompt_tokens == 200 and usage.completion_tokens == 20

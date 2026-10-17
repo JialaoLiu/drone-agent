@@ -140,7 +140,7 @@ def _layout(rng: random.Random, twin: dict | None) -> dict:
     if twin:
         fence = [[-HALF, -HALF], [HALF, -HALF], [HALF, HALF], [-HALF, HALF]]
         water = [f["polygon"] for f in twin["features"] if f["kind"] == "water"]
-        obstacles = twin["obstacles"][:25]
+        obstacles = list(twin["obstacles"])          # 安全员需要全部障碍物，不能截断（审查二 H02）
     else:
         fence = [[-HALF, -HALF], [HALF, -HALF], [HALF, HALF], [-HALF, HALF]]
         cx, cy = rng.uniform(-15, 25), rng.uniform(5, 35)

@@ -59,6 +59,11 @@ def force_stop(mission_id: str) -> bool:
 LIVE_STATUSES = ("planning", "awaiting_approval", "running")
 
 
+def grounded() -> bool:
+    """飞机是否在地面（没有遥测时视为在地面：仿真没运行）。"""
+    return not (telemetry.get("in_air") or telemetry.get("armed"))
+
+
 def reconcile(status_of) -> str | None:
     """自愈：被占用的任务在数据库里已经结束，且后台没有它的执行实例时，释放占用（DR-058）。
     status_of：任务编号 -> 数据库中的状态。返回被释放的任务编号。"""
@@ -67,7 +72,7 @@ def reconcile(status_of) -> str | None:
         return None
     with _mission_lock:
         running = mid in _running
-    if status_of(mid) not in LIVE_STATUSES and not running and not job_running(mid):
+    if status_of(mid) not in LIVE_STATUSES and not running and not job_running(mid) and grounded():
         release(mid)
         return mid
     return None

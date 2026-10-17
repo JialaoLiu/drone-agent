@@ -110,3 +110,24 @@ def test_missing_textures_are_detected(tmp_path, monkeypatch):
     ok.write_bytes(b"x")
     (tmp_path / "w" / "w.sdf").write_text(f"<albedo_map>{ok}</albedo_map><albedo_map>/nowhere/b.png</albedo_map>")
     assert simctl.missing_textures("w") == ["/nowhere/b.png"]
+
+
+def test_building_polygon_blocks_segment_through_long_building():
+    """细长建筑：面积等效圆会漏掉东端，按真实轮廓必须拦下（审查 H02）。"""
+    site = {"geofence": [[-100, -100], [100, -100], [100, 100], [-100, 100]], "max_altitude": 40, "min_altitude": 5,
+            "no_fly_zones": [], "obstacles": [{"id": "B1", "label": "建筑", "center": [30, 20], "radius": 31.6, "height": 30,
+                                               "polygon": [[0, 15], [60, 15], [60, 25], [0, 25]]}]}
+    steps = [survey.Step("overview", "T", (55, 5, 20), 0, -60, "wide"), survey.Step("overview", "T", (55, 35, 20), 0, -60, "wide")]
+    assert "obstacle" in codes(safety.check_segment(site, steps[0].position, steps[1].position, 0))
+    assert "obstacle" not in codes(safety.check_segment(site, (75, 5, 20), (75, 35, 20), 0))     # 东边 15 米外绕过
+
+
+def test_segment_terrain_upper_limit_in_valley():
+    """端点合规、航段中间是山谷时离地高度超限（审查 H01）。"""
+    import numpy as np
+    grid = np.zeros((21, 21))
+    grid[10, 10] = -30.0
+    site = {"geofence": [[-50, -50], [50, -50], [50, 50], [-50, 50]], "max_altitude": 40, "min_altitude": 5, "no_fly_zones": [], "obstacles": [],
+            "terrain": {"origin_elevation": 0.0, "step": 1.0, "half": 10.0, "rel": grid.tolist(), "relief": 30.0}}
+    assert not codes(safety.check_point(site, (-8, 0, 20))) and not codes(safety.check_point(site, (8, 0, 20)))   # 两端都合规
+    assert "terrain" in codes(safety.check_segment(site, (-8, 0, 20), (8, 0, 20), 0))

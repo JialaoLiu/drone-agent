@@ -82,3 +82,50 @@ def test_own_shadow_filter():
     frame = SimpleNamespace(pose=SimpleNamespace(position=(10.0, 0.0, 15.0)))
     shadow_x = 10.0 - 15.0 * 0.3 / -0.95
     assert _own_shadow(site, frame, {"x": shadow_x, "y": 0.2}) and not _own_shadow(site, frame, {"x": 10.0, "y": 8.0})
+
+
+def test_identity_conflict_cannot_be_overridden_by_model_label():
+    from droneagent.rescue.roles import identity
+    t = {"top": "红", "bottom": "蓝", "age": "child"}
+    assert identity(t, {"person": "yes", "top": "蓝", "bottom": "黑", "child": "no", "in_water": "no", "match": "yes"}) == "rejected"   # 审查二 H03
+    assert identity(t, {"person": "yes", "top": None, "bottom": None, "child": "unsure", "in_water": "no", "match": "partial"}) == "unsure"
+    assert identity(t, {"person": "unsure", "match": "unsure"}) == "unsure"
+    assert identity(t, {"person": "no", "match": "no"}) == "no_person"
+    assert identity(t, {"person": "yes", "top": "灰", "in_water": "yes", "match": "no"}) == "water"
+    assert identity(t, {"person": "yes", "top": "红色", "bottom": "蓝", "child": "unsure", "in_water": "no", "match": "partial"}) == "confirmed"
+
+
+def test_classify_unsure_match_still_followed():
+    assert _classify({"person": "yes", "match": "unsure", "in_water": "no"}) == "candidate"     # 审查二 H04
+
+
+def test_low_pass_checks_real_path_from_current_position():
+    """飞机在 (-20,20,16)，候选在 (20,20)，中间有 12 米高的树：平移段要过安全员（审查二 H01）。"""
+    from droneagent.agents.rescue import _low_pass
+    site = {"geofence": [[-70, -70], [70, -70], [70, 70], [-70, 70]], "max_altitude": 40, "min_altitude": 8, "no_fly_zones": [],
+            "obstacles": [{"id": "T1", "label": "树", "center": [0, 20], "radius": 3, "height": 12}]}
+    item = {"id": "P1", "x": 20, "y": 20}
+    assert _low_pass(site, (-20, 20, 16), item, 16, 90) is not None          # 16 米平移在树顶 3 米以上：可以
+    assert _low_pass(site, (-20, 20, 13), item, 16, 90) is None              # 当前只有 13 米：平移会擦到树，不补拍
+    near_tree = {"id": "P2", "x": 1, "y": 20}
+    plan = _low_pass(site, (-20, 20, 16), near_tree, 16, 90)
+    assert plan is None or plan[0] >= 12                                       # 树旁边不能降到 9 米
+
+
+def test_rescue_report_keeps_cancelled(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+    from droneagent import store
+    from droneagent.agents import rescue, runtime
+    site, _ = _site()
+    mid = store.create_mission("找人", site["name"])
+    store.update_mission(mid, status="cancelled")          # 返航途中被取消
+    async def fake_flight():
+        return SimpleNamespace(state=SimpleNamespace(battery=60.0))
+    monkeypatch.setattr(runtime, "flight", fake_flight)
+    from droneagent.rescue import report as rr
+    monkeypatch.setattr(rr, "render", lambda *a: "/tmp/x.html")
+    state = {"mission_id": mid, "scene": site["name"], "task": "找人", "plan": {"photos": 10, "center": [0, 0], "last_seen_label": "码头"},
+             "brief": {"description": "小孩"}, "detections": [], "searched": 3}
+    asyncio.run(rescue.report(state))
+    assert store.mission_status(mid) == "cancelled"          # 审查二 H06

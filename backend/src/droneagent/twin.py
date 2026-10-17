@@ -292,8 +292,11 @@ def obstacles(data: dict, limit: float = 150.0) -> list[dict]:
             area = 0.5 * abs(float(np.dot(p[:, 0], np.roll(p[:, 1], 1)) - np.dot(p[:, 1], np.roll(p[:, 0], 1))))
             if math.hypot(cx, cy) > limit:
                 continue
+            # 安全员按真实轮廓（polygon）判断净空；radius 取外接圆，只用于显示和粗筛，不再用面积等效圆（审查 H02）
+            far = float(np.max(np.hypot(p[:, 0] - cx, p[:, 1] - cy)))
             out.append({"id": f"B{len(out) + 1}", "label": "建筑", "center": [round(cx, 1), round(cy, 1)],
-                        "radius": round(min(15.0, max(2.0, math.sqrt(area / math.pi))), 1), "height": it["height"]})
+                        "radius": round(max(2.0, far), 1), "height": it["height"], "polygon": [[round(x, 2), round(y, 2)] for x, y in it["polygon"]],
+                        "area_m2": round(area, 1)})
         elif it["kind"] == "tree" and math.hypot(*it["center"]) <= limit:
             out.append({"id": f"T{len(out) + 1}", "label": "树", "center": it["center"], "radius": 2.5, "height": 9.0})
     return out

@@ -78,10 +78,16 @@ def start(name: str, wait: float = 120.0, on_stage=None, cancelled=None) -> dict
     if missing:
         # 贴图缺失时 Gazebo 不报错，光伏板会渲染成一片灰色，视觉判断全部失真（DR-054），所以启动前拦下
         raise RuntimeError(f"场景 {name} 引用的 {len(missing)} 个贴图文件不存在（例如 {missing[0]}），请重新生成该场景")
+    def check_cancel():
+        if cancelled and cancelled():
+            raise RuntimeError("启动已取消")
+    check_cancel()                      # 每个副作用前都检查：作废的启动不能再停进程或拉起进程（审查 H10）
     stage("停止旧的仿真进程")
     stop()
+    check_cancel()
     log = config.DATA_DIR / "logs" / "px4.log"
     log.unlink(missing_ok=True)
+    check_cancel()
     stage("启动飞控（PX4）与仿真器（Gazebo）")
     r = subprocess.run([str(SCRIPT), name], capture_output=True, timeout=120)
     if r.returncode != 0:
@@ -90,8 +96,7 @@ def start(name: str, wait: float = 120.0, on_stage=None, cancelled=None) -> dict
     deadline = time.time() + wait
     stage("等待飞控启动完成")
     while time.time() < deadline:
-        if cancelled and cancelled():
-            raise RuntimeError("启动已取消")
+        check_cancel()
         px4, cam = px4_ready(), bridge_ready()
         if px4 and cam:
             return status()

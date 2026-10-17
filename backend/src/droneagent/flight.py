@@ -86,20 +86,26 @@ class Flight:
         # 返航、降落不受限制。
         self.preempted: str | None = None
         self.cancel_check = None          # 无参函数，返回取消原因或 None；由当前执行的任务设置
+        self.control_owner: str | None = None
 
     def guard(self) -> None:
         reason = self.preempted or (self.cancel_check() if self.cancel_check else None)
         if reason:
             raise Preempted(reason)
 
-    def begin_control(self, cancel_check=None) -> None:
-        """新的任务开始控制飞机：飞机在地面时清除上一次的返航接管标记。"""
+    def begin_control(self, cancel_check=None, owner: str | None = None) -> None:
+        """新的任务开始控制飞机：飞机在地面时清除上一次的返航接管标记。owner 为任务编号，只有它能结束控制（审查 H06）。"""
         if not self.state.in_air:
             self.preempted = None
         self.cancel_check = cancel_check
+        self.control_owner = owner
 
-    def end_control(self) -> None:
+    def end_control(self, owner: str | None = None) -> None:
+        """结束控制。给出 owner 时只有当前持有者能清除（另一个任务收尾不能清掉正在飞的任务的取消检查）。"""
+        if owner is not None and getattr(self, "control_owner", None) not in (None, owner):
+            return
         self.cancel_check = None
+        self.control_owner = None
 
     async def __aenter__(self) -> "Flight":
         await self.connect()
@@ -230,10 +236,14 @@ class Flight:
         self.guard()
         await self.wait_ready()
         self.guard()
+        # 每条有副作用的指令前都重新检查取消与返航接管：检查之后、指令之间收到取消，后面的指令不能再发（审查 H03）
         await _cmd(self.action.set_takeoff_altitude(altitude), "设置起飞高度")
+        self.guard()
         await _cmd(self.action.set_current_speed(CRUISE_SPEED), "设置飞行速度")
+        self.guard()
         try:
             await _cmd(self.action.arm(), "解锁")
+            self.guard()
             await _cmd(self.action.takeoff(), "起飞")
         except Exception as error:
             raise FlightError(f"起飞被拒绝：{error}") from error

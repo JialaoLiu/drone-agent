@@ -22,8 +22,7 @@ from . import mission, runtime
 from .mission import _cancelled, _emit, _flight_failure, _preflight_text, _shoot, _usage, approval, request_approval, return_home
 
 MAX_REVISIONS = 2
-CONFIRM_MATCH = ("yes",)            # 变焦确认时必须明确相符
-SCREEN_FOLLOW = ("yes", "partial")  # 初筛相符或部分相符就去确认
+RESERVE = 25.0                      # 返航后至少保留的电量（%）
 
 
 class RescueState(TypedDict, total=False):
@@ -135,7 +134,7 @@ async def rejected(state: RescueState) -> dict:
 
 async def takeoff(state: RescueState) -> dict:
     f = await runtime.flight()
-    f.begin_control(lambda: "任务已取消" if _cancelled(state) else None)
+    f.begin_control(lambda: "任务已取消" if _cancelled(state) else None, owner=state["mission_id"])
     if _cancelled(state):
         return {"outcome": "cancelled"}
     check = await health.preflight(f)
@@ -162,91 +161,107 @@ def _own_shadow(site: dict, frame, c: dict, radius: float = 2.5) -> bool:
     return math.hypot(c["x"] - sx, c["y"] - sy) < radius
 
 
-def _confirm_altitude(site: dict, item: dict, search_alt: float) -> float:
-    """低空确认的高度：尽量低（看得清衣着），但必须通过安全员校验（树高可能超过 10 米、限高下限）。"""
-    for alt in (max(site["min_altitude"], 9.0), 12.0, search_alt):
-        step = survey.Step("confirm", item.get("id", ""), (item["x"], item["y"], alt), 0.0, -90.0, "wide")
-        if not safety.check_plan(site, [step], battery=100.0, reserve=0.0):
-            return alt
-    return search_alt
+def _low_pass(site: dict, here: tuple, item: dict, search_alt: float, battery: float) -> tuple[float, list] | None:
+    """低空补拍的完整动作（从当前位置平移到候选上方 → 下降 → 爬回搜索高度 → 返航）先交给安全员；
+    选能通过的最低高度，都不通过时返回 None，不执行补拍（审查二 H01）。"""
+    for alt in (max(site["min_altitude"], 9.0), 12.0):
+        if alt >= search_alt:
+            continue
+        above = (item["x"], item["y"], here[2])
+        low = (item["x"], item["y"], alt)
+        up = (item["x"], item["y"], search_alt)
+        legs = [(here, above), (above, low), (low, up), (up, (0.0, 0.0, search_alt))]
+        bad = [v for a, b in legs for v in safety.check_segment(site, a, b, 0)]
+        bad += [v for pt in (above, low, up) for v in safety.check_point(site, pt)]
+        steps = [survey.Step("transit", "", above, 0, 0, ""), survey.Step("confirm", item["id"], low, 0, -90, "wide"),
+                 survey.Step("transit", "", up, 0, 0, "")]
+        if not bad and battery - safety.battery_needed(steps, start=here) >= RESERVE:
+            return alt, [above, low, up]
+    return None
+
+
+def _budget_ok(f, extra_seconds: float = 25.0) -> bool:
+    """再做一次确认动作（约 extra_seconds 秒）之后，是否仍够返航并保留余量（审查二 H05）。"""
+    back = safety.battery_needed([survey.Step("transit", "", (0, 0, f.state.z), 0, 0, "")], start=(f.state.x, f.state.y, f.state.z))
+    return f.state.battery - back - extra_seconds / safety.DRAIN_SECONDS * 100 * safety.SAFETY_FACTOR >= RESERVE
 
 
 def _classify(item: dict) -> str:
+    """初筛结果的分类。看得出是人、但是否相符不确定的，也要去确认（不能当成路人，审查二 H04）。"""
     if item["person"] == "no":
         return "object"
     if item["person"] == "unsure":
         return "unsure"
     if item.get("in_water") == "yes":
         return "candidate"          # 水里有人本身就是紧急情况，衣服在水下看不清颜色，不能按衣着排除（工程日志 43）
-    return "candidate" if item["match"] in SCREEN_FOLLOW else "bystander"
+    return "bystander" if item["match"] == "no" else "candidate"
 
 
-async def _confirm(state: RescueState, item: dict, index: int) -> tuple[dict | None, dict]:
-    """在原地用变焦相机对准候选确认。返回（找到时的目标信息, 确认结果）。目标走开时在原位置上方补拍一次。"""
+def _hit(verdict: dict, decision: str, x: float, y: float, pid: int) -> dict:
+    return {"x": round(x, 2), "y": round(y, 2), "in_water": decision == "water", "photo": pid, "clothing_unverified": decision == "water",
+            "evidence": verdict["evidence"], "confidence": verdict["confidence"], "found_at": time.time()}
+
+
+async def _confirm(state: RescueState, item: dict, index: int) -> tuple[dict | None, dict, str]:
+    """确认一个候选。返回（找到时的目标信息, 最后一次观察, 裁决）。裁决见 roles.identity。
+    先在原地用变焦对准；变焦里没看到人（多半已经走开）时，经安全员校验后飞到上方降低高度用广角重找。"""
     f = await runtime.flight()
     site = _site(state)
-    desc = state["brief"]["description"]
-    for attempt in range(2):
-        here = (f.state.x, f.state.y, f.state.z)
-        yaw, pitch = look_angles(here, (item["x"], item["y"], 0.8))
-        step = survey.Step("confirm", item["id"], here, yaw, pitch, "zoom", "确认")
-        frame, pid = await _shoot(state, step, index)
-        verdict, usage = await asyncio.to_thread(detect.verify, frame, desc)
-        _usage(state, "searcher", usage)
-        verdict["photo"] = pid
-        in_water = verdict["person"] == "yes" and verdict["in_water"] == "yes"
-        # 模型报告看到的属性，程序比对：衣着对上、年龄不矛盾即确认（模型常因“看不出年龄”只给部分相符，工程日志 43）
-        attrs = verdict["person"] == "yes" and roles.attributes_match(state["brief"], verdict)
-        verdict["attributes_match"] = attrs
-        if verdict["person"] == "yes" and (verdict["match"] in CONFIRM_MATCH or attrs or in_water):
-            pos = await asyncio.to_thread(detect.locate_in_zoom, frame)
-            x, y = pos if pos else (item["x"], item["y"])
-            return {"x": round(x, 2), "y": round(y, 2), "in_water": verdict["in_water"] == "yes", "photo": pid,
-                    "clothing_unverified": in_water and verdict["match"] not in CONFIRM_MATCH and not attrs,
-                    "evidence": verdict["evidence"], "confidence": verdict["confidence"], "found_at": time.time()}, verdict
-        # 初筛明明是人、变焦里却没看到人（或看不清）：多半已经走开了（从发现到对准要十来秒，变焦画面只有约 4 米宽，
-        # 远处用变焦追走动的人追不上）。改为飞到候选正上方、降到低空用广角拍：画面约 10 米宽，人再走几步也还在（工程日志 43）
-        if verdict["person"] == "yes" or attempt or item.get("person") != "yes":
-            return None, verdict
-        low = _confirm_altitude(site, item, state["plan"]["altitude_m"])
-        _emit(state, "pilot", "retake", f"{item['id']} 的变焦画面里没有看到人，可能已经走开，飞到上方降到 {low:.0f} 米用广角重新寻找")
-        step = survey.Step("confirm", item["id"] + "L", (item["x"], item["y"], low), 0.0, -90.0, "wide", "低空确认")
-        wide, pid = await _shoot(state, step, index + 1)
-        # 拍完先原地垂直爬回搜索高度：之后不论继续搜索还是返航都是水平飞行，低空水平飞可能撞到树（树高可达 12 米）
-        await f.goto(item["x"], item["y"], state["plan"]["altitude_m"], f.state.yaw, tolerance=1.0)
-        near = [c for c in await asyncio.to_thread(detect.candidates, wide)
-                if math.hypot(c["x"] - item["x"], c["y"] - item["y"]) < 12 and not _own_shadow(site, wide, c)]
-        if not near:
-            return None, verdict
-        best = min(near, key=lambda c: math.hypot(c["x"] - item["x"], c["y"] - item["y"]))     # 离上次位置最近的那个
-        crop = detect.crop(wide, best, metres=3.0, size=480)
-        verdict, usage = await asyncio.to_thread(detect.verify, crop, desc, None, "无人机低空俯视照片里以可疑位置为中心裁出的局部")
-        _usage(state, "searcher", usage)
-        verdict["photo"] = pid
-        attrs = verdict["person"] == "yes" and roles.attributes_match(state["brief"], verdict)
-        verdict["attributes_match"] = attrs
-        if verdict["person"] == "yes" and (verdict["match"] in CONFIRM_MATCH or attrs or verdict["in_water"] == "yes"):
-            return {"x": best["x"], "y": best["y"], "in_water": verdict["in_water"] == "yes", "photo": pid,
-                    "clothing_unverified": verdict["in_water"] == "yes" and not attrs and verdict["match"] not in CONFIRM_MATCH,
-                    "evidence": verdict["evidence"], "confidence": verdict["confidence"], "found_at": time.time()}, verdict
-        return None, verdict
-    return None, verdict
+    brief = state["brief"]
+    desc = brief["description"]
+    here = (f.state.x, f.state.y, f.state.z)
+    yaw, pitch = look_angles(here, (item["x"], item["y"], 0.8))
+    frame, pid = await _shoot(state, survey.Step("confirm", item["id"], here, yaw, pitch, "zoom", "确认"), index)
+    verdict, usage = await asyncio.to_thread(detect.verify, frame, desc)
+    _usage(state, "searcher", usage)
+    verdict["photo"] = pid
+    decision = roles.identity(brief, verdict)
+    verdict["decision"] = decision
+    if decision in ("confirmed", "water"):
+        pos = await asyncio.to_thread(detect.locate_in_zoom, frame)
+        x, y = pos if pos else (item["x"], item["y"])
+        return _hit(verdict, decision, x, y, pid), verdict, decision
+    # 初筛是人、变焦里没有人：多半走开了（从发现到对准十来秒，变焦画面只有约 4 米宽）。其他裁决直接返回
+    if decision != "no_person" or item.get("person") != "yes":
+        return None, verdict, decision
+    search_alt = state["plan"]["altitude_m"]
+    plan = _low_pass(site, (f.state.x, f.state.y, f.state.z), item, search_alt, f.state.battery)
+    if plan is None:
+        _emit(state, "safety", "skip_low_pass", f"{item['id']} 可能已经走开，但低空补拍的航段或电量未通过安全员校验，不补拍")
+        return None, verdict, "unsure"
+    low, (above, lowpt, up) = plan
+    _emit(state, "pilot", "retake", f"{item['id']} 的变焦画面里没有看到人，可能已经走开，飞到上方降到 {low:.0f} 米用广角重新寻找（已通过安全员校验）")
+    await f.goto(*above, f.state.yaw)                     # 先在当前高度平移到候选上方，再垂直下降
+    wide, pid = await _shoot(state, survey.Step("confirm", item["id"] + "L", lowpt, 0.0, -90.0, "wide", "低空确认"), index + 1)
+    await f.goto(*up, f.state.yaw, tolerance=1.0)          # 垂直爬回搜索高度后才允许水平飞行（树高可达 12 米）
+    near = [c for c in await asyncio.to_thread(detect.candidates, wide)
+            if math.hypot(c["x"] - item["x"], c["y"] - item["y"]) < 12 and not _own_shadow(site, wide, c)]
+    if not near:
+        return None, {**verdict, "photo": pid, "evidence": "低空补拍附近没有找到人"}, "unsure"
+    best = min(near, key=lambda c: math.hypot(c["x"] - item["x"], c["y"] - item["y"]))     # 离上次位置最近的那个
+    crop = detect.crop(wide, best, metres=3.0, size=480)
+    verdict, usage = await asyncio.to_thread(detect.verify, crop, desc, None, "无人机低空俯视照片里以可疑位置为中心裁出的局部")
+    _usage(state, "searcher", usage)
+    verdict["photo"] = pid
+    decision = roles.identity(brief, verdict)
+    verdict["decision"] = decision
+    if decision in ("confirmed", "water"):
+        return _hit(verdict, decision, best["x"], best["y"], pid), verdict, decision
+    return None, verdict, "unsure" if decision == "no_person" else decision
 
 
 async def search(state: RescueState) -> dict:
-    """按航线逐点搜索；初筛相符就地确认；找到目标或电量不够时结束。"""
+    """按航线逐点搜索；初筛相符或看不出是否相符的就地确认；找到目标、电量不够或取消时结束。"""
     f = await runtime.flight()
     site = _site(state)
     desc = state["brief"]["description"]
     detections: list[dict] = list(state.get("detections") or [])
     points = [survey.Step(**s) for s in state["steps"] if s["kind"] == "search"]
-    reserve = 25.0
     searched = 0
     for i, step in enumerate(points):
         if _cancelled(state):
             return {"outcome": "cancelled", "detections": detections, "searched": searched}
-        back = safety.battery_needed([survey.Step("transit", "", (0, 0, step.position[2]), 0, 0, "")], start=(f.state.x, f.state.y, f.state.z))
-        if f.state.battery - back < reserve + 3:
+        if not _budget_ok(f, extra_seconds=10.0):
             _emit(state, "coordinator", "stop_search", f"电量 {f.state.battery:.0f}%，只够返航，停止搜索（已搜 {searched}/{len(points)} 个点）")
             break
         try:
@@ -262,40 +277,54 @@ async def search(state: RescueState) -> dict:
             continue
         if usage:
             _usage(state, "searcher", usage)
-        found = None
-        new = []
-        for k, it in enumerate(items):
-            # 同一个人在相邻照片里会重复出现：3 米内已有记录的不再重复确认
-            if any(math.hypot(it["x"] - d["x"], it["y"] - d["y"]) < 3 and d["kind"] in ("bystander", "rejected") for d in detections):
+        found, new, stop = None, [], False
+        for it in items:
+            # 同一个人在相邻照片里会重复出现：3 米内已明确排除的不再确认；看不清的允许再确认（最多 2 次）
+            near = [d for d in detections if math.hypot(it["x"] - d["x"], it["y"] - d["y"]) < 3]
+            if any(d["kind"] in ("bystander", "rejected") for d in near) or sum(1 for d in near if d.get("confirm")) >= 2:
                 continue
-            det = {"id": f"P{len(detections) + 1}", "x": it["x"], "y": it["y"], "kind": _classify(it), "photo": pid, "person": it["person"], "top": it.get("top"),
-                   "bottom": it.get("bottom"), "child": it.get("child"), "in_water": it.get("in_water") == "yes", "evidence": it["evidence"],
-                   "confidence": it["confidence"], "step": step.target}
+            det = {"id": f"P{len(detections) + 1}", "x": it["x"], "y": it["y"], "kind": _classify(it), "photo": pid, "person": it["person"],
+                   "top": it.get("top"), "bottom": it.get("bottom"), "child": it.get("child"), "in_water": it.get("in_water") == "yes",
+                   "evidence": it["evidence"], "confidence": it["confidence"], "step": step.target, "seen_at": time.time()}
             detections.append(det)
             new.append(det)
-            if det["kind"] == "candidate":
-                _emit(state, "searcher", "candidate", f"{step.target}：发现疑似目标 {det['id']}（{det['evidence']}），用变焦确认", det)
-                try:
-                    hit, verdict = await _confirm(state, det, len(store.photos(state["mission_id"])))
-                except (FlightError, camera.CameraUnavailable) as error:
-                    return {**(await _flight_failure(state, error)), "detections": detections, "searched": searched}
-                except ModelUnavailable as error:
-                    _emit(state, "searcher", "error", f"确认时视觉模型不可用：{error}")
-                    det["kind"] = "unsure"
-                    continue
-                det["confirm"] = verdict
-                if hit:
-                    det["kind"] = "target"
-                    found = {**hit, "id": det["id"], "elapsed_s": round(hit["found_at"] - state["started_at"])}
-                    head = "在水中发现人员（衣着在水下无法确认）" if hit.get("clothing_unverified") else f"确认找到目标 {det['id']}"
-                    _emit(state, "searcher", "found", f"{head}：{hit['evidence']}" + ("；需立即救援" if hit["in_water"] else ""), found)
-                    break
+            if det["kind"] != "candidate":
+                continue
+            if _cancelled(state):
+                return {"outcome": "cancelled", "detections": detections, "searched": searched}
+            if not _budget_ok(f):                         # 每个候选确认前都核算返航电量（审查二 H05）
+                det["kind"], det["reason"] = "unsure", "电量不够，未确认"
+                _emit(state, "coordinator", "stop_search", f"电量 {f.state.battery:.0f}%，不够再确认 {det['id']}，停止搜索并返航")
+                stop = True
+                break
+            _emit(state, "searcher", "candidate", f"{step.target}：发现疑似目标 {det['id']}（{det['evidence']}），用变焦确认", det)
+            try:
+                hit, verdict, decision = await _confirm(state, det, len(store.photos(state["mission_id"])))
+            except (FlightError, camera.CameraUnavailable) as error:
+                return {**(await _flight_failure(state, error)), "detections": detections, "searched": searched}
+            except ModelUnavailable as error:
+                _emit(state, "searcher", "error", f"确认时视觉模型不可用：{error}")
+                det["kind"] = "unsure"
+                continue
+            det["confirm"] = verdict
+            if hit:
+                det.update(kind="target", x=hit["x"], y=hit["y"], first_seen=[it["x"], it["y"]])   # 地图用最新定位（审查二 M03）
+                found = {**hit, "id": det["id"], "elapsed_s": round(hit["found_at"] - state["started_at"])}
+                head = "在水中发现人员（衣着在水下无法确认）" if hit.get("clothing_unverified") else f"确认找到目标 {det['id']}"
+                _emit(state, "searcher", "found", f"{head}：{hit['evidence']}" + ("；需立即救援" if hit["in_water"] else ""), found)
+                break
+            if decision == "rejected":
                 det["kind"] = "rejected"
                 _emit(state, "searcher", "rejected", f"{det['id']} 不是要找的人：{verdict['evidence']}")
+            else:
+                det["kind"] = "unsure"             # 看不清或补拍失败：保留为待确认，不当成排除（审查二 H04）
+                _emit(state, "searcher", "unsure", f"{det['id']} 没能确认（{verdict['evidence']}），记为待确认")
         people = sum(1 for d in new if d["kind"] in ("bystander", "rejected", "candidate", "target", "unsure"))
         _emit(state, "searcher", "screen", f"{step.target}（{i + 1}/{len(points)}）：照片里 {len(cands)} 处可疑，判断为人 {people} 处", {"photo": pid, "detections": new})
         if found:
             return {"detections": detections, "found": found, "searched": searched}
+        if stop:
+            break
     return {"detections": detections, "searched": searched}
 
 
@@ -306,7 +335,10 @@ async def report(state: RescueState) -> dict:
     result["usage"] = store.usage_summary(state["mission_id"])["total"]
     result["report_path"] = await asyncio.to_thread(rescue_report.render, state["mission_id"], state["task"], _site(state), result)
     status = state.get("outcome") or "done"
-    store.update_mission(state["mission_id"], result=result, status=status if status in ("failed", "cancelled") else "done")
+    if _cancelled(state):                       # 返航或报告期间被取消：保持取消，不能改回完成（审查二 H06）
+        status = "cancelled"
+    store.update_mission(state["mission_id"], result=result)
+    store.update_mission(state["mission_id"], status=status if status in ("failed", "cancelled") else "done", only_from=("running", "planning"))
     _emit(state, "reporter", "report", result["summary"])
     return {}
 

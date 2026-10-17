@@ -195,7 +195,7 @@ async def job(mid: str, symptom: str, fault: str | None) -> None:
         _emit(mid, "step", "连接飞控……")
         f = await runtime.flight()
         # 取消与返航接管：试飞中的每条指令都会检查（深度审查 H02）
-        f.begin_control(lambda: "排障已取消" if store.mission_status(mid) == "cancelled" else None)
+        f.begin_control(lambda: "排障已取消" if store.mission_status(mid) == "cancelled" else None, owner=mid)
         result = await run(mid, symptom, fault)
         store.update_mission(mid, status=result["status"], result=result, only_from=("running",))
     except asyncio.CancelledError:
@@ -210,7 +210,7 @@ async def job(mid: str, symptom: str, fault: str | None) -> None:
         # 无论成功、失败、取消还是模型不可用的早退，都先让飞机落地，再恢复良好配置（深度审查 H09）
         try:
             if f is not None:
-                f.end_control()
+                f.end_control(owner=mid)
                 if f.state.in_air:
                     if not f.preempted:
                         await f.failsafe_return()
@@ -221,7 +221,10 @@ async def job(mid: str, symptom: str, fault: str | None) -> None:
             _emit(mid, "error", f"恢复参数或返航失败：{error}；请重启仿真后再使用")
         finally:
             runtime.end_run(mid)
-            runtime.release(mid)
+            if runtime.grounded():
+                runtime.release(mid)
+            else:
+                _emit(mid, "error", "飞机仍在空中，保留占用直到落地；需要人工干预")
             from . import queue
             await asyncio.to_thread(queue.dispatch_next)
 

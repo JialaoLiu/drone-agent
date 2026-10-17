@@ -46,6 +46,26 @@ def _segment_distance(p: tuple, a: tuple, b: tuple) -> float:
     return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
 
 
+def _seg_seg_distance(a: tuple, b: tuple, c: tuple, d: tuple) -> float:
+    """两条平面线段之间的最短距离（相交为 0）。"""
+    def cross(o, p, q):
+        return (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0])
+    d1, d2, d3, d4 = cross(c, d, a), cross(c, d, b), cross(a, b, c), cross(a, b, d)
+    if ((d1 > 0) != (d2 > 0)) and ((d3 > 0) != (d4 > 0)):
+        return 0.0
+    return min(_segment_distance(a, c, d), _segment_distance(b, c, d), _segment_distance(c, a, b), _segment_distance(d, a, b))
+
+
+def obstacle_distance(ob: dict, a: tuple, b: tuple) -> float:
+    """航段（平面投影）到障碍物的水平距离。有真实轮廓（建筑）时按轮廓计算，否则按圆（树）计算（审查 H02）。"""
+    poly = ob.get("polygon")
+    if poly:
+        if _inside(poly, a[0], a[1]) or _inside(poly, b[0], b[1]):
+            return 0.0
+        return min(_seg_seg_distance(a, b, poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly)))
+    return max(0.0, _segment_distance(ob["center"], a, b) - ob["radius"])
+
+
 def battery_needed(steps: list[Step], start: tuple = (0, 0, 0)) -> float:
     """执行计划并返航所需电量（%，含保守系数）。"""
     return route_seconds(steps, start) / DRAIN_SECONDS * 100 * SAFETY_FACTOR
@@ -77,6 +97,11 @@ def check_point(site: dict, pos: tuple[float, float, float], index: int | None =
                              f"把高度调整到 {site['min_altitude']}–{site['max_altitude']} 米之间"))
     if not _inside(site["geofence"], x, y):
         out.append(Violation("geofence", f"位置 ({x:.1f}, {y:.1f}) 在电子围栏外", index, "缩短拍摄距离或换一侧拍摄"))
+    for ob in site.get("obstacles", []):
+        top = ob["height"] + _ground(site, *ob["center"])
+        if not airborne_ok and z < top + OBSTACLE_VERTICAL_MARGIN and obstacle_distance(ob, (x, y), (x, y)) < MARGIN:
+            out.append(Violation("obstacle", f"位置 ({x:.1f}, {y:.1f}) 高度 {z:.1f} 米，离{ob['label']}（{ob['id']}，高 {ob['height']} 米）太近",
+                                 index, f"升高到 {ob['height'] + OBSTACLE_VERTICAL_MARGIN:.0f} 米以上或换位置"))
     for zone in site["no_fly_zones"]:
         d = math.dist((x, y), zone["center"])
         if d < zone["radius"] + MARGIN:
@@ -93,7 +118,7 @@ def check_segment(site: dict, a: tuple, b: tuple, index: int) -> list[Violation]
     low = min(a[2], b[2])
     for ob in site["obstacles"]:
         top = ob["height"] + _ground(site, *ob["center"])      # 障碍物顶部相对起飞点的高度（真实场地含地形）
-        if low < top + OBSTACLE_VERTICAL_MARGIN and _segment_distance(ob["center"], a, b) < ob["radius"] + MARGIN:
+        if low < top + OBSTACLE_VERTICAL_MARGIN and obstacle_distance(ob, a, b) < MARGIN:
             out.append(Violation("obstacle", f"第 {index + 1} 段航线高度 {low:.1f} 米，离{ob['label']}（{ob['id']}，高 {ob['height']} 米）太近",
                                  index, f"升高到 {ob['height'] + OBSTACLE_VERTICAL_MARGIN:.0f} 米以上或绕行"))
     steps = max(2, int(math.dist(a[:2], b[:2])))   # 航段抽样检查围栏（真实场地同时检查离地高度）
@@ -104,9 +129,14 @@ def check_segment(site: dict, a: tuple, b: tuple, index: int) -> list[Violation]
             out.append(Violation("geofence", f"第 {index + 1} 段航线越出电子围栏", index, "调整路线"))
             break
         z = a[2] + (b[2] - a[2]) * k / steps
-        if site.get("terrain") and not terrain_hit and min(a[2], b[2]) >= site["min_altitude"] and z - _ground(site, x, y) < site["min_altitude"]:
-            terrain_hit = True
-            out.append(Violation("terrain", f"第 {index + 1} 段航线经过的地面较高，离地高度低于 {site['min_altitude']} 米", index, "升高航线"))
+        if site.get("terrain") and not terrain_hit and min(a[2], b[2]) >= site["min_altitude"]:
+            agl = z - _ground(site, x, y)
+            if agl < site["min_altitude"]:
+                terrain_hit = True
+                out.append(Violation("terrain", f"第 {index + 1} 段航线经过的地面较高，离地高度低于 {site['min_altitude']} 米", index, "升高航线"))
+            elif agl > site["max_altitude"]:      # 航段中间地面变低时离地高度可能超限（审查 H01）
+                terrain_hit = True
+                out.append(Violation("terrain", f"第 {index + 1} 段航线经过的地面较低，离地高度超过限高 {site['max_altitude']} 米", index, "降低航线或绕开低洼处"))
     return out
 
 

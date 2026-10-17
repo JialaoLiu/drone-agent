@@ -195,12 +195,13 @@ def _run_sim_start(scene_name: str, gen: int) -> None:
                 _sim_job["stage"] = text
     try:
         simctl.start(scene_name, on_stage=stage, cancelled=lambda: _sim_job["gen"] != gen)
+        with _sim_job_lock:
+            if _sim_job["gen"] != gen:           # 已作废的启动不能清理新一代的遥测和检查结果（审查 H10）
+                return
+            _sim_job.update(state="idle", stage="", error="")
         runtime.telemetry.clear()
         _health_cache.clear()
         runtime.submit(runtime.flight())
-        with _sim_job_lock:
-            if _sim_job["gen"] == gen:
-                _sim_job.update(state="idle", stage="", error="")
     except Exception as error:     # noqa: BLE001  启动失败要让网页看到原因
         with _sim_job_lock:
             if _sim_job["gen"] == gen:
@@ -398,7 +399,7 @@ async def mission_events(websocket: WebSocket, mid: str, after: int = 0, token: 
                 after = e["seq"]
             status = await asyncio.to_thread(store.mission_status, mid)
             await websocket.send_json({"type": "telemetry", "status": status, "telemetry": runtime.telemetry})
-            if status not in ("planning", "awaiting_approval", "running") and not await asyncio.to_thread(store.events, mid, after):
+            if status not in ("queued", "planning", "awaiting_approval", "running") and not await asyncio.to_thread(store.events, mid, after):   # 排队不是终态（审查 M03）
                 await websocket.send_json({"type": "end", "status": status})
                 break
             await asyncio.sleep(0.5)

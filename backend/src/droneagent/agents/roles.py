@@ -103,12 +103,22 @@ REPORTER = """你是无人机巡检团队的报告员。统计数字由程序写
 PANEL_ID = re.compile(r"[A-Z]-R\d+-C\d+")
 
 
+CN_NUM = "零一二三四五六七八九十百千万两半"
+_NUMERIC = [
+    r"[0-9０-９]",                                                     # 阿拉伯数字
+    r"百分之|千分之|分之[" + CN_NUM + r"]",                            # 百分之九十九、三分之一（审查 H08）
+    r"[" + CN_NUM + r"]+\s*(块|个|处|列|%|％|分钟|秒|次|成|倍|台|组|片|米|小时|天|排|行|张|项|名)",
+    r"[" + CN_NUM + r"]+\s*[到至~～-]\s*[" + CN_NUM + r"]+",             # 范围：三到五
+    r"(大部分|绝大多数|一半|过半|半数|全部)\s*的?\s*(板|缺陷|列)",          # 模糊的数量事实也由程序给出
+]
+
+
 def check_advice(advice: str, valid: set[str]) -> bool:
-    """建议只能引用数据中存在的板编号，去掉编号后不能再有任何数字（数字一律由程序给出）。"""
+    """建议只能引用数据中存在的板编号，去掉编号后不能再有任何数量表达（数字与数量事实一律由程序给出）。"""
     if any(pid not in valid for pid in PANEL_ID.findall(advice)):
         return False
-    return not re.search(r"[0-9０-９零一二三四五六七八九十百千万两]+\s*(块|个|处|列|%|％|分钟|秒|次|成)", PANEL_ID.sub("", advice)) \
-        and not re.search(r"[0-9０-９]", PANEL_ID.sub("", advice))
+    rest = PANEL_ID.sub("", advice)
+    return not any(re.search(p, rest) for p in _NUMERIC)
 
 
 def report_summary(result: dict) -> tuple[dict, Usage]:
