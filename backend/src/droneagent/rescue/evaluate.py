@@ -36,7 +36,11 @@ def run_one(client: httpx.Client, seed: int, location: dict | None) -> dict:
     target = next(p for p in truth["people"] if p["role"] == "target")
     client.post("/sim/start", json={"scene": scene}).raise_for_status()      # 被拒绝（例如有任务在执行）时直接报错
     _wait(client, lambda: client.get("/sim").json().get("job", {}).get("state") == "idle" and client.get("/sim").json()["px4"], 240)
-    _wait(client, lambda: client.get("/sim/health").json().get("ok") is True, 120)
+    last = {}
+    try:
+        _wait(client, lambda: (last.update(client.get("/sim/health").json()) or last.get("ok") is True), 180)
+    except TimeoutError:
+        raise TimeoutError(f"飞行前检查 3 分钟内没有通过：{last.get('advice') or [i['label'] + ' ' + i['detail'] for i in last.get('items', []) if i.get('ok') is False]}")
     task = f"公园里有人走失：{truth['brief']['description']}，最后在{truth['brief']['last_seen_label']}附近被看到"
     retried = False
     for attempt in range(2):
