@@ -12,7 +12,7 @@ const { sim, phase, phaseText } = useSim()
 const { load } = useSites()
 const site = ref<Site | null>(null)
 const stats = ref<Record<string, any> | null>(null)
-watch(() => sim.value.scene, async (name) => { site.value = await load(name) }, { immediate: true })
+watch(() => sim.value.scene, async (name) => { const s = await load(name); if (name === sim.value.scene) site.value = s }, { immediate: true })
 onMounted(async () => { stats.value = await getStats().catch(() => null) })
 const scenario = computed(() => scenarioOf(site.value?.scenario))
 </script>

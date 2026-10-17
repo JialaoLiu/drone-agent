@@ -17,13 +17,15 @@ const real = computed(() => !!props.site.location && !!props.site.origin)
 const mode = ref<'plan' | 'satellite' | 'baidu'>('plan')
 const frame = ref<BaiduFrame | null>(null)
 
+let gen = 0
 watch(() => props.site.name, async (name) => {
+  const my = ++gen                                    // 旧场地的底图参数晚到时丢弃，不能覆盖新场地（审查 M01）
   frame.value = null
   mode.value = real.value ? 'satellite' : 'plan'      // 真实场地默认显示卫星图（1.18、1.27）
   if (!props.site.location) return
   try {
     const f = await getBasemap(name)
-    if (f.available) frame.value = f as BaiduFrame
+    if (my === gen && name === props.site.name && f.available) frame.value = f as BaiduFrame
   } catch { /* 百度底图不可用时只提供 Esri 卫星图 */ }
 }, { immediate: true })
 const legend = computed(() => scenarioOf(props.site.scenario).legend)
@@ -37,7 +39,7 @@ const legend = computed(() => scenarioOf(props.site.scenario).legend)
       <button v-if="frame" :class="{ on: mode === 'baidu' }" class="small" @click="mode = 'baidu'">百度卫星图</button>
       <span v-if="real" class="muted small">布局依据：真实地物（OpenStreetMap 的水面、建筑、树）与高程；卫星图只作底图，不参与生成</span>
     </div>
-    <BaiduMap v-if="mode === 'baidu' && frame" :site="site" :frame="frame" :findings="findings" :plan="plan" :telemetry="telemetry" />
+    <BaiduMap v-if="mode === 'baidu' && frame" :key="site.name" :site="site" :frame="frame" :findings="findings" :plan="plan" :telemetry="telemetry" />
     <SiteMap v-else :site="site" :findings="findings" :plan="plan" :telemetry="telemetry" :truth="truth" :score="score"
              :selected="selected" :satellite="mode === 'satellite'" :markers="markers" @select="(id) => emit('select', id)" />
     <MapLegend :items="legend" :comparison="!!score && !!site.panels.length" />

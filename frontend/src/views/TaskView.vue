@@ -37,9 +37,19 @@ const selected = ref<string | null>(null)
 const openPhoto = ref<number | null>(null)
 const busy = ref(false)
 
-watch(() => mission.value?.scene, async (name) => { site.value = await load(name); truth.value = null })
-watch([score, showTruth], async () => {
-  if ((score.value || showTruth.value) && site.value && !truth.value) truth.value = await getTruth(site.value.name).catch(() => null)
+// 场地与标准答案的请求按场景名核对后再写入：快速切换任务时，旧任务的慢请求不能覆盖新任务（审查二 M01）
+watch(() => mission.value?.scene, async (name) => {
+  site.value = null
+  truth.value = null
+  const s = await load(name)
+  if (name === mission.value?.scene) site.value = s
+}, { immediate: true })
+// 评分、场地、显示开关任一变化都重新判断是否需要答案：评分先于场地返回时也能补上（审查二 M02）
+watch([score, showTruth, () => site.value?.name], async () => {
+  const name = site.value?.name
+  if (!name || truth.value || !(score.value || showTruth.value)) return
+  const t = await getTruth(name).catch(() => null)
+  if (name === site.value?.name) truth.value = t
 })
 const scenario = computed(() => scenarioOf(site.value?.scenario))
 const result = computed(() => (mission.value?.result ?? null) as Record<string, any> | null)
