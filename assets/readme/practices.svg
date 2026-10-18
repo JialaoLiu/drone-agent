@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="476" viewBox="0 0 1200 476" role="img" aria-labelledby="title desc">
+  <title id="title">关键做法</title>
+  <desc id="desc">场地随机生成、航线现算并用 A* 绕开禁飞区；飞行前与飞行中检查；按相机位姿投影裁切判断哪块板有问题；看不清判为不确定；电量由程序计算并分架次；排障靠恢复参数重飞的对照实验。</desc>
+  <rect width="1200" height="476" rx="24" fill="#FAFAF8"/>
+<text x="64" y="76" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="30" fill="#1F2420" font-weight="700">关键做法</text>
+<rect x="64.0" y="104" width="341.3333333333333" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="64.0" y="130" width="4" height="30" fill="#D9572B"/>
+<text x="90.0" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">场地随机，航线现算</text>
+<text x="90.0" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">每个种子一个新场地；航段</text>
+<text x="90.0" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">穿禁飞区时用 A* 绕行。</text>
+<rect x="429.3333333333333" y="104" width="341.3333333333333" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="429.3333333333333" y="130" width="4" height="30" fill="#D9572B"/>
+<text x="455.3333333333333" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">飞前与飞中检查</text>
+<text x="455.3333333333333" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">自检、传感器、天气；位置</text>
+<text x="455.3333333333333" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">偏差过大即中止返航。</text>
+<rect x="794.6666666666666" y="104" width="341.3333333333333" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="794.6666666666666" y="130" width="4" height="30" fill="#D9572B"/>
+<text x="820.6666666666666" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">哪块板有问题靠几何</text>
+<text x="820.6666666666666" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">按相机位姿投影、裁切校正，</text>
+<text x="820.6666666666666" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">拼成编号拼图交给视觉模型。</text>
+<rect x="64.0" y="278" width="341.3333333333333" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="64.0" y="304" width="4" height="30" fill="#D9572B"/>
+<text x="90.0" y="328" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">看不清不算正常</text>
+<text x="90.0" y="368" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">无法识别判“不确定”；初筛</text>
+<text x="90.0" y="396" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">与复核矛盾时再看一次。</text>
+<rect x="429.3333333333333" y="278" width="341.3333333333333" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="429.3333333333333" y="304" width="4" height="30" fill="#D9572B"/>
+<text x="455.3333333333333" y="328" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">电量由程序算</text>
+<text x="455.3333333333333" y="368" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">按实测标定耗时，1.2 倍</text>
+<text x="455.3333333333333" y="396" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">保守系数，不够就分架次。</text>
+<rect x="794.6666666666666" y="278" width="341.3333333333333" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="794.6666666666666" y="304" width="4" height="30" fill="#D9572B"/>
+<text x="820.6666666666666" y="328" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">排障靠对照实验</text>
+<text x="820.6666666666666" y="368" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">恢复可疑参数重飞，用指标</text>
+<text x="820.6666666666666" y="396" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">前后对比确认原因。</text>
+</svg>

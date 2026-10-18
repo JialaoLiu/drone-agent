@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="302" viewBox="0 0 1200 302" role="img" aria-labelledby="title desc">
+  <title id="title">局限</title>
+  <desc id="desc">飞行只在仿真中验证，缺陷是贴图，真实照片只在公开数据集上离线评测；视觉模型每张图约 384 Token；只有一架飞机，服务重启后任务不能接续；排障只覆盖参数类故障。</desc>
+  <rect width="1200" height="302" rx="24" fill="#FAFAF8"/>
+<text x="64" y="76" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="30" fill="#1F2420" font-weight="700">局限</text>
+<rect x="64.0" y="104" width="250.0" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="64.0" y="130" width="4" height="30" fill="#C9653A"/>
+<text x="90.0" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">飞行只在仿真中验证</text>
+<text x="90.0" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">缺陷是贴图；真实照片只在</text>
+<text x="90.0" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">公开数据集上离线评测。</text>
+<rect x="338.0" y="104" width="250.0" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="338.0" y="130" width="4" height="30" fill="#C9653A"/>
+<text x="364.0" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">视觉细节有上限</text>
+<text x="364.0" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">每张图约 384 Token；</text>
+<text x="364.0" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">可切换到 OpenAI。</text>
+<rect x="612.0" y="104" width="250.0" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="612.0" y="130" width="4" height="30" fill="#C9653A"/>
+<text x="638.0" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">一架飞机一个任务</text>
+<text x="638.0" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">服务重启后，飞行中的</text>
+<text x="638.0" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">任务不能接续。</text>
+<rect x="886.0" y="104" width="250.0" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="886.0" y="130" width="4" height="30" fill="#C9653A"/>
+<text x="912.0" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">排障只覆盖参数类</text>
+<text x="912.0" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">传感器硬件故障的注入</text>
+<text x="912.0" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">依赖仿真器，尚未覆盖。</text>
+</svg>

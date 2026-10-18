@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">评测结果</title>
+  <desc id="desc">实时任务 92 块板 11 个缺陷全部检出、0 误报；100 个随机场地全部通过安全校验；排障诊断 4/4，规则基线 0/4；任务理解与规划两轮 20/20；一次 92 块板实时巡检约 0.056 元。</desc>
+  <rect width="1200" height="320" rx="24" fill="#FAFAF8"/>
+<text x="64" y="76" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="30" fill="#1F2420" font-weight="700">评测结果</text>
+<rect x="64.0" y="104" width="198.4" height="176" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<text x="86.0" y="170" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="40" fill="#2F6B45" font-weight="700">11/11</text>
+<text x="86.0" y="214" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#1F2420" font-weight="700">缺陷检出，0 误报</text>
+<text x="86.0" y="246" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="16" fill="#666B63">实时任务 · 92 块板</text>
+<rect x="282.4" y="104" width="198.4" height="176" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<text x="304.4" y="170" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="40" fill="#2F6B45" font-weight="700">100%</text>
+<text x="304.4" y="214" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#1F2420" font-weight="700">通过安全校验</text>
+<text x="304.4" y="246" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="16" fill="#666B63">100 个随机场地</text>
+<rect x="500.8" y="104" width="198.4" height="176" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<text x="522.8" y="170" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="40" fill="#2F6B45" font-weight="700">4/4</text>
+<text x="522.8" y="214" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#1F2420" font-weight="700">排障诊断正确</text>
+<text x="522.8" y="246" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="16" fill="#666B63">规则基线 0/4</text>
+<rect x="719.2" y="104" width="198.4" height="176" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<text x="741.2" y="170" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="40" fill="#2F6B45" font-weight="700">20/20</text>
+<text x="741.2" y="214" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#1F2420" font-weight="700">任务理解与规划</text>
+<text x="741.2" y="246" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="16" fill="#666B63">两轮均满分</text>
+<rect x="937.6" y="104" width="198.4" height="176" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<text x="959.6" y="170" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="40" fill="#D9572B" font-weight="700">¥0.056</text>
+<text x="959.6" y="214" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#1F2420" font-weight="700">一次实时巡检</text>
+<text x="959.6" y="246" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="16" fill="#666B63">92 块板，关闭推理</text>
+</svg>

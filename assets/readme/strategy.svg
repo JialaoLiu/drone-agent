@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="452" viewBox="0 0 1200 452" role="img" aria-labelledby="title desc">
+  <title id="title">复核策略对比</title>
+  <desc id="desc">四种复核策略的检出率、精确率与估计飞行时间：只初筛 90.3%、84.8%、3.7 分钟；复核疑似 87.1%、100%、4.2 分钟；复核疑似与看不清 87.1%、100%、4.2 分钟；全部近距复核 96.8%、100%、8.0 分钟。</desc>
+  <rect width="1200" height="452" rx="24" fill="#FAFAF8"/>
+<text x="64" y="76" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="30" fill="#1F2420" font-weight="700">复核策略：多飞一点，换来什么</text>
+<text x="64" y="112" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">随机场景 solar_46 / 63 / 71，共 264 块板、31 个缺陷，离线回放 1 轮（2026-10-16）</text>
+<text x="64" y="201" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">只看整列照片初筛</text>
+<text x="64" y="253" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">复核疑似缺陷</text>
+<text x="64" y="305" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">复核疑似与看不清</text>
+<text x="64" y="357" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#1F2420" font-weight="700">全部近距复核</text>
+<text x="300" y="156" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#1F2420" font-weight="700">检出率</text>
+<rect x="300" y="180" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="300" y="180" width="162.54" height="30" rx="4" fill="#C9CCC4"/>
+<text x="470.53999999999996" y="201" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">90.3%</text>
+<rect x="300" y="232" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="300" y="232" width="156.77999999999997" height="30" rx="4" fill="#C9CCC4"/>
+<text x="464.78" y="253" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">87.1%</text>
+<rect x="300" y="284" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="300" y="284" width="156.77999999999997" height="30" rx="4" fill="#C9CCC4"/>
+<text x="464.78" y="305" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">87.1%</text>
+<rect x="300" y="336" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="300" y="336" width="174.24" height="30" rx="4" fill="#2F6B45"/>
+<text x="482.24" y="357" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#1F2420" font-weight="700">96.8%</text>
+<text x="584" y="156" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#1F2420" font-weight="700">精确率</text>
+<rect x="584" y="180" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="584" y="180" width="152.64" height="30" rx="4" fill="#C9CCC4"/>
+<text x="744.64" y="201" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">84.8%</text>
+<rect x="584" y="232" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="584" y="232" width="180.0" height="30" rx="4" fill="#C9CCC4"/>
+<text x="772.0" y="253" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">100%</text>
+<rect x="584" y="284" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="584" y="284" width="180.0" height="30" rx="4" fill="#C9CCC4"/>
+<text x="772.0" y="305" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">100%</text>
+<rect x="584" y="336" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="584" y="336" width="180.0" height="30" rx="4" fill="#2F6B45"/>
+<text x="772.0" y="357" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#1F2420" font-weight="700">100%</text>
+<text x="868" y="156" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#1F2420" font-weight="700">估计飞行</text>
+<rect x="868" y="180" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="868" y="180" width="83.25" height="30" rx="4" fill="#C9CCC4"/>
+<text x="959.25" y="201" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">3.7 分钟</text>
+<rect x="868" y="232" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="868" y="232" width="94.5" height="30" rx="4" fill="#C9CCC4"/>
+<text x="970.5" y="253" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">4.2 分钟</text>
+<rect x="868" y="284" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="868" y="284" width="94.5" height="30" rx="4" fill="#C9CCC4"/>
+<text x="970.5" y="305" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">4.2 分钟</text>
+<rect x="868" y="336" width="180" height="30" rx="4" fill="#F3F3EF"/>
+<rect x="868" y="336" width="180.0" height="30" rx="4" fill="#2F6B45"/>
+<text x="1056.0" y="357" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#1F2420" font-weight="700">8 分钟</text>
+<text x="64" y="408" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="18" fill="#1F2420">针对性复核把误报从 5 次降到 0；全部近距复核才能找全轻微缺陷，飞行时间约翻倍。</text>
+</svg>

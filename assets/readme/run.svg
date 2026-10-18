@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="286" viewBox="0 0 1200 286" role="img" aria-labelledby="title desc">
+  <title id="title">三步跑起来</title>
+  <desc id="desc">安装 PX4 与 Gazebo；安装后端依赖并启动 scripts/start.sh；打开 localhost:4790 下达任务。完整命令见下方。</desc>
+  <rect width="1200" height="286" rx="24" fill="#FAFAF8"/>
+<text x="64" y="64" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="30" fill="#1F2420" font-weight="700">三步跑起来</text>
+<text x="270" y="64" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="17" fill="#666B63">macOS（Apple 芯片）或 Linux · Python 3.12 · Node.js 20+ · 约 8 GB</text>
+<rect x="64.0" y="96" width="317.3333333333333" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<text x="88.0" y="150" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="40" fill="#D9572B" font-weight="700">1</text>
+<text x="134.0" y="146" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">安装 PX4 与 Gazebo</text>
+<text x="88.0" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, &quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, monospace" font-size="17" fill="#2F6B45">make px4_sitl</text>
+<path d="M395.3333333333333 171 h28 m-7 -7 l7 7 l-7 7" stroke="#666B63" stroke-width="2.5" fill="none"/>
+<rect x="441.3333333333333" y="96" width="317.3333333333333" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<text x="465.3333333333333" y="150" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="40" fill="#D9572B" font-weight="700">2</text>
+<text x="511.3333333333333" y="146" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">后端与网页</text>
+<text x="465.3333333333333" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, &quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, monospace" font-size="17" fill="#2F6B45">uv sync · 填 LLM_API_KEY</text>
+<text x="465.3333333333333" y="224" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, &quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, monospace" font-size="17" fill="#2F6B45">scripts/start.sh solar_1</text>
+<path d="M772.6666666666666 171 h28 m-7 -7 l7 7 l-7 7" stroke="#666B63" stroke-width="2.5" fill="none"/>
+<rect x="818.6666666666666" y="96" width="317.3333333333333" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<text x="842.6666666666666" y="150" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="40" fill="#D9572B" font-weight="700">3</text>
+<text x="888.6666666666666" y="146" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">打开网页下达任务</text>
+<text x="842.6666666666666" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, &quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, monospace" font-size="17" fill="#2F6B45">localhost:4790</text>
+</svg>

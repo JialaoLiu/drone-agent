@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="302" viewBox="0 0 1200 302" role="img" aria-labelledby="title desc">
+  <title id="title">协同规则</title>
+  <desc id="desc">角色之间只传结构化数据；安全员结论由代码给出不可推翻；模型只输出计划和判断，数字由程序计算；每一步写入事件表可完整回放，流程用 LangGraph 编排，检查点存在 SQLite。</desc>
+  <rect width="1200" height="302" rx="24" fill="#FAFAF8"/>
+<text x="64" y="76" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="30" fill="#1F2420" font-weight="700">协同规则</text>
+<rect x="64.0" y="104" width="250.0" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="64.0" y="130" width="4" height="30" fill="#2F6B45"/>
+<text x="90.0" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">只传结构化数据</text>
+<text x="90.0" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">角色之间不互相传自由</text>
+<text x="90.0" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">文本指令。</text>
+<rect x="338.0" y="104" width="250.0" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="338.0" y="130" width="4" height="30" fill="#2F6B45"/>
+<text x="364.0" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">安全结论不可推翻</text>
+<text x="364.0" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">安全员结论由代码给出，</text>
+<text x="364.0" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">其他角色不能推翻。</text>
+<rect x="612.0" y="104" width="250.0" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="612.0" y="130" width="4" height="30" fill="#2F6B45"/>
+<text x="638.0" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">数字全由程序算</text>
+<text x="638.0" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">模型只出计划和判断；</text>
+<text x="638.0" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">坐标、电量由程序计算。</text>
+<rect x="886.0" y="104" width="250.0" height="150" rx="16" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="886.0" y="130" width="4" height="30" fill="#2F6B45"/>
+<text x="912.0" y="154" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700">每一步可回放</text>
+<text x="912.0" y="194" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">事件先写表再推送网页，</text>
+<text x="912.0" y="222" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="19" fill="#666B63">检查点存在 SQLite。</text>
+</svg>
