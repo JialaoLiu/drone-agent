@@ -1,33 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
   <title id="title">多 Agent 协同</title>
   <desc id="desc">调度员、规划员、安全员、人工确认、飞手、巡检员、报告员依次协作；安全员拒绝时退回规划员；巡检员看不清时由飞手转向变焦近照；电量不够时换电池分架次；飞行异常交给诊断员。</desc>
-  <rect width="1200" height="360" rx="24" fill="#FAFAF8"/>
+  <rect width="1200" height="360" rx="24" fill="#FFFFFF"/>
 <text x="64" y="76" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="30" fill="#1F2420" font-weight="700">多 Agent 协同</text>
-<rect x="64" y="140" width="134" height="92" rx="14" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="64" y="140" width="134" height="92" rx="14" fill="#F5F6F3" stroke="#E3E5DE" stroke-width="1"/>
 <text x="131.0" y="180" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700" text-anchor="middle">调度员</text>
 <text x="131.0" y="210" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="18" fill="#666B63" text-anchor="middle">理解任务</text>
 <path d="M201 186 h14" stroke="#666B63" stroke-width="2"/><path d="M215 181 l6 5 l-6 5 z" fill="#666B63"/>
-<rect x="220" y="140" width="134" height="92" rx="14" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="220" y="140" width="134" height="92" rx="14" fill="#F5F6F3" stroke="#E3E5DE" stroke-width="1"/>
 <text x="287.0" y="180" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700" text-anchor="middle">规划员</text>
 <text x="287.0" y="210" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="18" fill="#666B63" text-anchor="middle">选策略与架次</text>
 <path d="M357 186 h14" stroke="#666B63" stroke-width="2"/><path d="M371 181 l6 5 l-6 5 z" fill="#666B63"/>
-<rect x="376" y="140" width="134" height="92" rx="14" fill="#F3F3EF" stroke="#D9572B" stroke-width="2"/>
+<rect x="376" y="140" width="134" height="92" rx="14" fill="#F5F6F3" stroke="#D9572B" stroke-width="2"/>
 <text x="443.0" y="180" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#D9572B" font-weight="700" text-anchor="middle">安全员</text>
 <text x="443.0" y="210" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="18" fill="#666B63" text-anchor="middle">代码校验</text>
 <path d="M513 186 h14" stroke="#666B63" stroke-width="2"/><path d="M527 181 l6 5 l-6 5 z" fill="#666B63"/>
-<rect x="532" y="140" width="134" height="92" rx="14" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="532" y="140" width="134" height="92" rx="14" fill="#F5F6F3" stroke="#E3E5DE" stroke-width="1"/>
 <text x="599.0" y="180" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700" text-anchor="middle">人工确认</text>
 <text x="599.0" y="210" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="18" fill="#666B63" text-anchor="middle">可设自动</text>
 <path d="M669 186 h14" stroke="#666B63" stroke-width="2"/><path d="M683 181 l6 5 l-6 5 z" fill="#666B63"/>
-<rect x="688" y="140" width="134" height="92" rx="14" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="688" y="140" width="134" height="92" rx="14" fill="#F5F6F3" stroke="#E3E5DE" stroke-width="1"/>
 <text x="755.0" y="180" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700" text-anchor="middle">飞手</text>
 <text x="755.0" y="210" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="18" fill="#666B63" text-anchor="middle">起飞、拍摄</text>
 <path d="M825 186 h14" stroke="#666B63" stroke-width="2"/><path d="M839 181 l6 5 l-6 5 z" fill="#666B63"/>
-<rect x="844" y="140" width="134" height="92" rx="14" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="844" y="140" width="134" height="92" rx="14" fill="#F5F6F3" stroke="#E3E5DE" stroke-width="1"/>
 <text x="911.0" y="180" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700" text-anchor="middle">巡检员</text>
 <text x="911.0" y="210" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="18" fill="#666B63" text-anchor="middle">初筛与复核</text>
 <path d="M981 186 h14" stroke="#666B63" stroke-width="2"/><path d="M995 181 l6 5 l-6 5 z" fill="#666B63"/>
-<rect x="1000" y="140" width="134" height="92" rx="14" fill="#F3F3EF" stroke="#E3E3DC" stroke-width="1"/>
+<rect x="1000" y="140" width="134" height="92" rx="14" fill="#F5F6F3" stroke="#E3E5DE" stroke-width="1"/>
 <text x="1067.0" y="180" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="22" fill="#1F2420" font-weight="700" text-anchor="middle">报告员</text>
 <text x="1067.0" y="210" font-family="&quot;Microsoft YaHei&quot;, &quot;PingFang SC&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif" font-size="18" fill="#666B63" text-anchor="middle">证据报告</text>
 <path d="M443.0 140 C 443.0 96, 287.0 96, 287.0 136" stroke="#D9572B" stroke-width="2" fill="none" stroke-dasharray="5 5"/>
